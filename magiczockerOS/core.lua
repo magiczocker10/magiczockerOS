@@ -128,9 +128,11 @@ local function fallback_serialise(data, processed)
 	end
 	return "{" .. to_return .. "}"
 end
-local function _unpack(a,b)
+local function _unpack(a, b)
 	local b = (b or 1) + 1
-	return a[b - 1], a[b] and _unpack(a, b) or nil
+	if a[b - 1] then
+		return a[b - 1], _unpack(a, b)
+	end
 end
 local function _ceil(a)
 	local b = a .. ".0"
