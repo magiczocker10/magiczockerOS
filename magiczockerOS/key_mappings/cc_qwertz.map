@@ -1,0 +1,66 @@
+Esc Esc 1  
+1 ! 2 empty
+2 " 3 empty
+3 | 4 empty
+4 empty 5 empty
+5 % 6 empty
+6 & 8 empty
+7 / 7 52
+8 ( 9 empty
+9 ) 10 empty
+0 = 11 13
+/ ? 52 52
+= ' 13 empty
+<- <- 14
+next_row
+tab tab 15
+q Q 16 empty
+w W 17 empty
+e E 18 empty
+r R 19 empty
+t T 20 empty
+y Y 21 empty
+u U 22 empty
+i I 23 empty
+o O 24 empty
+p P 25 empty
+[ empty 26 empty
+] empty 27 empty
+space_1 space_1 empty empty space_0
+| | 28 28 space_0
+next_row
+caps caps 58
+a A 30
+s S 31
+d D 32
+f F 33
+g G 34
+h H 35
+j J 36
+k K 37
+l L 38
+; : 52
+' @ 53
+# ~ 53
+<' <' 28 28 space_0
+next_row
+shift shift 42
+\ | 26
+z Z 44
+x X 45
+v V 47
+b B 48
+n N 49
+m M 50
+, < 51
+. > 52
+/ ? 52
+space_1 space_1 empty empty space_0
+^ ^ 200 200 space_0
+next_row
+space_11 space_11 empty empty space_0
+space space 57 57 space_0
+space_7 space_7 empty empty space_0
+< < 203 203 space_0
+v v 208 208 space_0
+> > 205 205 space_0
