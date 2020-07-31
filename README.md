@@ -1,6 +1,11 @@
 # magiczockerOS
 Official repository of magiczockerOS
 
+**About this OS**
+The magiczockerOS is designed to run on all [ComputerCraft](https://github.com/dan200/computercraft) and [CCTweaked](https://github.com/squiddev-cc/cc-tweaked) versions
+and on some [OpenComputer](https://github.com/MightyPirates/OpenComputers) Versions as well.
+Also the OS can highly be customizable through the build-in settings.
+
 **How to install:**
 1. Download the files from this repository.
 2. Create "/magiczockerOS/CC" and "/magiczockerOS/CCTweaked"
