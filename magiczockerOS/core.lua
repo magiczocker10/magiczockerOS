@@ -18,7 +18,7 @@
 
 	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -700,7 +700,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end,
 				startTimer = function(nTime)
 					local var = 0
-					if nTime  <= 0 then
+					if nTime <= 0 then
 						var = 1
 						env.os.queueEvent("timer", 1)
 					else
@@ -806,7 +806,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					on_menu_key = function(no, x, y)
 						if type(no) == "number" and type(x) == "number" and type(y) == "number" and my_windows.contextmenu_data and my_windows.contextmenu_data[no] then
 							local _, _, win_w, win_h = my_windows.window.get_data()
-							if x > 0 and y > 0 and x  <= win_w and y < win_h then
+							if x > 0 and y > 0 and x <= win_w and y < win_h then
 								my_windows.contextmenu_on_key = my_windows.contextmenu_on_key or {data = nil, x = 0, y = 0}
 								local tmp = my_windows.contextmenu_on_key
 								tmp.data = my_windows.contextmenu_data[no][5]
@@ -1360,7 +1360,7 @@ local function create_system_windows(i)
 				on_menu_key = function(no, x, y)
 					if type(no) == "number" and type(x) == "number" and type(y) == "number" and system_windows[temp].contextmenu_data and system_windows[temp].contextmenu_data[no] then
 						local _, _, win_w, win_h = system_windows[temp].window.get_data()
-						if x > 0 and y > 0 and x  <= win_w and y  <= win_h then
+						if x > 0 and y > 0 and x <= win_w and y <= win_h then
 							system_windows[temp].contextmenu_on_key = system_windows[temp].contextmenu_on_key or {data = nil, x = 0, y = 0}
 							local tmp = system_windows[temp].contextmenu_on_key
 							tmp.data = system_windows[temp].contextmenu_data[no][5]
@@ -1379,7 +1379,7 @@ local function create_system_windows(i)
 		env.os = {
 			startTimer = function(nTime)
 				local var = 0
-				if nTime  <= 0 then
+				if nTime <= 0 then
 					var = 1
 					env.os.queueEvent("timer", 1)
 				else
@@ -1532,7 +1532,7 @@ local function load_keys()
 	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
 		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
 	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check  >= 1132 then -- GLFW
+	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
 		key_maps[67] = "c"
 		key_maps[77] = "m"
 		key_maps[78] = "n"
@@ -1677,7 +1677,7 @@ repeat
 			total_size[1], total_size[2] = apis.window.get_size()
 		end
 	end
-	if (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4]  <= total_size[2] and e[3]  <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
+	if (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
@@ -1774,14 +1774,14 @@ repeat
 		os.queueEvent("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
 	elseif e[1] == "monitor_touch" then
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
-			os.queueEvent(os.clock() - monitor_last_clicked  <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", user_data.settings and user_data.settings.mouse_left_handed and 2 or 1, e[3] + monitor_order[monitor_devices[e[2]]].offset, e[4])
+			os.queueEvent(os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", user_data.settings and user_data.settings.mouse_left_handed and 2 or 1, e[3] + monitor_order[monitor_devices[e[2]]].offset, e[4])
 			monitor_last_clicked = os.clock()
 		end
 	elseif e[1] == "double_click" then
 		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
 			local temp_window = user_data.windows[1].window
 			local win_x, win_y, win_w = temp_window.get_data()
-			if e[3]  >= win_x and e[3] < win_x + win_w and e[4] == win_y then
+			if e[3] >= win_x and e[3] < win_x + win_w and e[4] == win_y then
 				temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
 				apis.window.set_global_visible(false)
 				resume_user(user_data.windows[1].coroutine, "term_resize")
@@ -1886,7 +1886,7 @@ repeat
 			if pos_y < 2 then
 				pos_y = 2
 			end
-			if pos_x > 0 and pos_x  <= w and pos_y > 1 and pos_y  <= h then
+			if pos_x > 0 and pos_x <= w and pos_y > 1 and pos_y <= h then
 				if pos_y == 2 and temp_window.get_state() == "normal" then
 					temp_window.set_state("maximized")
 					has_changed = true
@@ -1911,7 +1911,7 @@ repeat
 			end
 		end
 		key_timer = nil
-	elseif (monitor_devices.computer and (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll") or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4]  <= total_size[2] and e[3]  <= total_size[1] then
+	elseif (monitor_devices.computer and (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll") or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size[2] and e[3] <= total_size[1] then
 		drag_old[1] = 0
 		drag_old[2] = 0
 		last_window = nil
@@ -1997,7 +1997,7 @@ repeat
 				if e[2] == 2 and tmp_ then
 					local tmpcord = {e[3] - win_x + 1, e[4] - win_y + 1}
 					for i = #tmp_, 1, -1 do
-						if tmpcord[1]  >= tmp_[i][1] and tmpcord[1]  <= tmp_[i][1] + tmp_[i][2] - 1 and tmpcord[2]  >= tmp_[i][3] and tmpcord[2]  <= tmp_[i][3] + tmp_[i][4] - 1 then
+						if tmpcord[1] >= tmp_[i][1] and tmpcord[1] <= tmp_[i][1] + tmp_[i][2] - 1 and tmpcord[2] >= tmp_[i][3] and tmpcord[2] <= tmp_[i][3] + tmp_[i][4] - 1 then
 							tmp = true
 							resume_system("11contextmenu", system_windows.contextmenu.coroutine, "set_data", tmp_[i][5], e[3], e[4], cur_window)
 							resume_system("10contextmenu", system_windows.contextmenu.coroutine, "redraw_items")
