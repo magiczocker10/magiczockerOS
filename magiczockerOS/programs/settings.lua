@@ -28,6 +28,7 @@ local view = 0
 local w, h = term.getSize()
 local filter_calendar = not fs.exists("/magiczockerOS/programs/calendar.lua")
 local filter_contextmenu = not fs.exists("/magiczockerOS/programs/contextmenu.lua")
+local filter_desktop = not fs.exists("/magiczockerOS/programs/desktop.lua")
 local filter_login = not fs.exists("/magiczockerOS/programs/login.lua")
 local filter_osk = not fs.exists("/magiczockerOS/programs/osk.lua")
 local filter_search = not fs.exists("/magiczockerOS/programs/search.lua")
@@ -92,9 +93,21 @@ local categories = {
 		},
 	},
 	{
+		active = not filter_desktop,
 		title = "Desktop",
 		entries = {
 			{title = "Background", value = "desktop_back", default = 2, type = "color"},
+		},
+	},
+	{
+		active = not filter_desktop,
+		title = "Desktop-Dialogs",
+		entries = {
+			{title = "Bar-Background", value = "dialog_bar_background", default = 1, type = "color"},
+			{title = "Bar-Textcolor", value = "dialog_bar_text", default = 32768, type = "color"},
+			{title = "Background", value = "dialog_background", default = 16, type = "color"},
+			{title = "Button-Background", value = "dialog_button_background", default = 32, type = "color"},
+			{title = "Button-Textcolor", value = "dialog_button_text", default = 1, type = "color"},
 		},
 	},
 	{

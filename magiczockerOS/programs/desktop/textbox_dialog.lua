@@ -7,6 +7,7 @@ local w,h = term.getSize()
 local button_text = other[2]
 local empty = (" "):rep(w)
 local key_maps = {}
+local settings = get_settings()
 
 -- Textfield variables
 local user_input = ""
@@ -35,8 +36,6 @@ local function draw_text_line(blink)
 	if not blink then
 		term.setCursorPos(2, 2)
 	end
-	background_color(1, 1, 1)
-	text_color(32768, 32768, 32768)
 	term.write((user_input .. (not term.isColor and "_" or " "):rep(textline_width)):sub(1 + textline_offset, textline_width + textline_offset))
 	if not blink then
 		term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
@@ -64,7 +63,7 @@ local function draw()
 	term.write(empty)
 	term.setCursorPos(1, 2)
 	term.write" "
-	background_color(1, 1, settings.dialogh_bar_background or 1)
+	background_color(1, 1, settings.dialog_bar_background or 1)
 	text_color(32768, 32768, settings.dialog_bar_text or 32768)
 	set_cursor(true)
 	background_color(32768, 256, settings.dialog_background or 16)
@@ -154,6 +153,9 @@ while running do
 	elseif e == "term_resize" then
 		w,h = term.getSize()
 		empty = (" "):rep(w)
+		draw()
+	elseif e == "refresh_settings" then
+		settings = get_settings()
 		draw()
 	end
 end
