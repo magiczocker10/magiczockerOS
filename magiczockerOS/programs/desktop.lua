@@ -328,7 +328,7 @@ while true do
 		user = e[2]
 		position_icons()
 		draw()
-	else
+	elseif e[1] then
 		local a = e[1]:find("_") and e[1]:sub(1, e[1]:find("_") - 1) or e[1]
 		if available[a] then
 			windows[#windows+1]={data=false, title = a, mode = a, other = available[a], file = e[1]:sub(#a+2)}

@@ -164,11 +164,7 @@ local function handle_click(a)
 		setup_data(tmp)
 		draw()
 	else
-		if caller.is_system then
-			resume_system("",caller.coroutine,unpack(items[a].raw,2))
-		else
-			coroutine.resume(caller.coroutine,unpack(items[a].raw,2))
-		end
+		os.queueEvent(caller.id .. "", caller.user or "", unpack(items[a].raw, 2))
 		set_visible("contextmenu", false)
 	end
 end

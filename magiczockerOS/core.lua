@@ -597,6 +597,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	if is_remote and is_system_program then
 		is_remote = nil
 	end
+	my_windows.user = user_
 	my_windows.window = apis.window.create(2, 3, 25, 10, true, true)
 	my_windows.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
 	user_data.desktop = {}
