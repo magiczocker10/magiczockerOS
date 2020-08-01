@@ -375,7 +375,7 @@ function create(root_path,is_remote,server_id)
 			file1.close()
 			file2.close()
 			if tmp=="move" then
-				filesystem.delete(file1)
+				filesystem.delete(path1)
 			end
 			return true
 		end

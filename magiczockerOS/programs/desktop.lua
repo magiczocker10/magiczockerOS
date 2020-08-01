@@ -78,7 +78,7 @@ end
 local function draw()
 	if magiczockerOS.contextmenu then
 		magiczockerOS.contextmenu.clear_map()
-		magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Refresh","refresh"},{"New background","new_background"},{"Rename","Rename"},{"New Shortcut","New Shortcut"}})
+		magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Refresh","refresh"},{"New background","new_background"},{"New Shortcut","New Shortcut"}})
 	end
 	space_right_tabs = floor((w - #pages * 2 + 1) * 0.5)
 	local line = 0
@@ -122,11 +122,11 @@ local function draw()
 				for j = max_icons_per_row * (line - 1) + 1, __ do
 					if pages[page][j] then
 						if magiczockerOS.contextmenu then
-							magiczockerOS.contextmenu.add_map(pages[page][j].x,pages[page][j].y,6,5,{{"Open"},{"Delete"}})
+							magiczockerOS.contextmenu.add_map(pages[page][j].x, pages[page][j].y, 6, 5, {{"Open"}, {"Delete"}, {"Rename", "Rename_" .. pages[page][j].name}})
 						end
 						term.setBackgroundColor(1)
 						text_color(1, 128, 16)
-						term.write"1	 "
+						term.write"1	    "
 						back_color(32768, 256, my_background or settings.desktop_back or 2)
 						text_color(1, 1, 1)
 						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
@@ -141,7 +141,7 @@ local function draw()
 					if pages[page][j] then
 						term.setBackgroundColor(1)
 						text_color(1, 128, 16)
-						term.write"2	 "
+						term.write"2	    "
 						back_color(32768, 256, my_background or settings.desktop_back or 2)
 						text_color(1, 1, 1)
 						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
@@ -156,7 +156,7 @@ local function draw()
 					if pages[page][j] then
 						term.setBackgroundColor(1)
 						text_color(1, 128, 16)
-						term.write"3	 "
+						term.write"3	    "
 						back_color(32768, 256, my_background or settings.desktop_back or 2)
 						text_color(1, 1, 1)
 						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
@@ -220,8 +220,8 @@ local function check_windows()
 	end
 end
 if textbox_available then
-	available["Rename"]="textbox_dialog"
-	available["New Shortcut"]="textbox_dialog"
+	available["Rename"]={"textbox_dialog", "Rename"}
+	available["New Shortcut"]={"textbox_dialog", "Create"}
 end
 -- start
 load_keys()
@@ -231,8 +231,11 @@ draw()
 while true do
 	local e = {coroutine.yield()}
 	if e[1] == "new_background" then
-		--check_windows()
+		check_windows()
 		my_background = 2^math.random(0,15)
+		draw()
+	elseif e[1] == "refresh" then
+		position_icons()
 		draw()
 	elseif e[1] == "mouse_click" and user ~= "" and e[4] == h - 1 and e[3] > space_right_tabs then
 		local tmp = (e[3] - space_right_tabs + 1) * 0.5
@@ -321,12 +324,15 @@ while true do
 	elseif e[1] == "refresh_settings" then
 		settings = get_settings()
 		draw()
-	elseif available[e[1]] then
-		windows[#windows+1]={data=false,title="ABCD",mode=e[1]}
-		create_window("/magiczockerOS/programs/desktop/"..available[e[1]]..".lua",true,windows[#windows])
 	elseif e[1] == "user" then
 		user = e[2]
 		position_icons()
 		draw()
+	else
+		local a = e[1]:find("_") and e[1]:sub(1, e[1]:find("_") - 1) or e[1]
+		if available[a] then
+			windows[#windows+1]={data=false, title = a, mode = a, other = available[a], file = e[1]:sub(#a+2)}
+			create_window("/magiczockerOS/programs/desktop/"..available[a][1]..".lua",true,windows[#windows])
+		end
 	end
 end

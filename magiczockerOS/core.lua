@@ -225,6 +225,7 @@ local function error_message(program, message)
 		term.setCursorPos(1, 1)
 		term.write(program .. "\n")
 	end
+	running = false
 	error_org(program .. ":" .. message)
 end
 local function resume_user(coro, ...)
@@ -531,13 +532,13 @@ local function setup_user(username, session)
 	end
 	last_window = nil
 	if not session then
-		if fs.exists("/magiczockerOS/users/" .. name .. "/files") and not fs.isDir("/magiczockerOS/users/" .. name .. "/files") then
+		if name ~= "" and fs.exists("/magiczockerOS/users/" .. name .. "/files") and not fs.isDir("/magiczockerOS/users/" .. name .. "/files") then
 			fs.delete("/magiczockerOS/users/" .. name .. "/files")
 		end
-		if not fs.exists("/magiczockerOS/users/" .. name .. "/files") then
+		if name ~= "" and not fs.exists("/magiczockerOS/users/" .. name .. "/files") then
 			fs.makeDir("/magiczockerOS/users/" .. name .. "/files")
 		end
-		if not fs.exists("/magiczockerOS/users/" .. name .. "/files/desktop") then
+		if name ~= "" and not fs.exists("/magiczockerOS/users/" .. name .. "/files/desktop") then
 			fs.makeDir("/magiczockerOS/users/" .. name .. "/files/desktop")
 		end
 		apis.filesystem.add_listener("/magiczockerOS/users/" .. name .. "/files/desktop", {makeDir = true, open = true, delete = true})
