@@ -8,6 +8,7 @@ local button_text = other[2]
 local empty = (" "):rep(w)
 local key_maps = {}
 local settings = get_settings()
+local btmp1, btmp2 = "#" .. button_text .. "#", " " .. button_text .. " "
 
 -- Textfield variables
 local user_input = ""
@@ -31,6 +32,9 @@ local function text_color(a, b, c)
 	if term and term.isColor then
 		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
 	end
+end
+local function write_text(a, b, c, d)
+	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
 end
 local function draw_text_line(blink)
 	if not blink then
@@ -73,8 +77,8 @@ local function draw()
 	term.setCursorPos(1, 4)
 	term.write(empty:sub(1,-#button_text-4))
 	background_color(1, 128, settings.dialog_button_background or 32)
-	text_color(32768, 256, settings.dialog_button_text or 1)
-	term.write(" " .. button_text .. " ")
+	text_color(32768, 1, settings.dialog_button_text or 1)
+	write_text(btmp1, btmp2, btmp2, btmp2)
 	background_color(32768, 256, settings.dialog_background or 16)
 	term.write" "
 	term.setCursorPos(1, 5)
