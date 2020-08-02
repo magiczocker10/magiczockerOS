@@ -359,6 +359,34 @@ function redraw_global_cache(check_changes)
 	end
 	monitor_mode=monitor_mode_
 end
+function get_global_cache(a, b, c) -- Returns the screen / the specified window in the nft-format.
+	local d = {}
+	local e = {(" "):rep(total_size[1])}
+	local f = {b = 32768}
+	for i = c and 2 or 1, c or total_size[2] do
+		local old_col = {nil, nil} -- back, text
+		d[#d + 1] = {}
+		local g, h = global_cache_old[i] or f, d[#d]
+		d[#d] = g and d[#d] or e
+		for j = 1, b or total_size[1] do
+			if g[j] then
+				if (g[j].b or g[j].back) ~= old_col[1] then
+					h[#h + 1] = ("30"):char()
+					old_col[1] = g[j].b or g[j].back
+					h[#h + 1] = old_col[1]
+				end
+				if (g[j].t or g[j].text or old_col[2]) ~= old_col[2] then
+					h[#h + 1] = ("31"):char()
+					old_col[2] = g[j].t or g[j].text
+					h[#h + 1] = old_col[2]
+				end
+			end
+			h[#h + 1] = g[j] and (g[j].s or g[j].char) or " "
+		end
+		d[#d] = h and table.concat(h, "") or d[#d]
+	end
+	return table.concat(d, "\n")
+end
 local cp={
 	nil,
 	{.618,.320,.062,.163,.775,.062,.163,.320,.516}, -- achromatomaly *
@@ -527,6 +555,9 @@ function create(x,y,width,height,visible,bar)
 				end
 			end
 		end
+	end
+	function window.get_screen()
+		return get_global_cache(screen2, data[state].width, data[state].height - (bar and 1 or 0))
 	end
 	function window.toggle_cursor_blink()
 		if blink or my_blink then

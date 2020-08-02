@@ -794,6 +794,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			user_data = is_system_program and function() return user_data end or nil,
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
 			magiczockerOS = {
+				getScreenImage = function(a) return a and user_data.windows[a] and user_data.windows[a].window.get_screen() or user_ == cur_user and not a and apis.window.get_global_cache() or nil end,
 				contextmenu = system_windows.contextmenu.window and {
 					clear_map = function() my_windows.contextmenu_data = nil end,
 					add_map = function(from_x, from_y, width_x, width_y, items)
