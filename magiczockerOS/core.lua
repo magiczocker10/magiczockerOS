@@ -869,11 +869,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end
 		end
-		do
-			local test = env
-			env = uenv
-			uenv = test
-		end
+		env, uenv = uenv, env
 		for k, v in next, uenv do
 			env[k] = v
 		end
