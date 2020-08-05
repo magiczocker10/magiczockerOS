@@ -36,9 +36,6 @@ local function text_color(a, b, c)
 		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
 	end
 end
-local function write_text(a, b, c, d)
-	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
-end
 local function set_blink()
 	if #field > 0 then
 		local cur_field = fields[field]
@@ -89,7 +86,7 @@ local function draw()
 			term.write((" "):rep(w-8))
 			term.setBackgroundColor(256)
 			if field == "" then
-				write_text(L2, L2, L1, L1)
+				term.write(not term.isColor and L2 or term.isColor() and L1 or textutils and type(textutils.complete) == "function" and L1 or L2)
 			else
 				term.write(L1)
 			end
@@ -175,13 +172,7 @@ while true do
 			cur_field.text = cur_field.text:sub(1, cur_field.cursor - 2) .. cur_field.text:sub(cur_field.cursor)
 			cur_field.cursor = cur_field.cursor - 1
 		elseif _key == "tab" then
-			if field == "username" then
-				field = "password"
-			elseif field == "password" then
-				field = ""
-			elseif field == "" then
-				field = "username"
-			end
+			field = field == "username" and "password" or field == "password" and "" or "username"
 			draw()
 		elseif (_key == "space" or _key == "enter") and #field == 0 then
 			login()
@@ -197,13 +188,9 @@ while true do
 			set_blink()
 		end
 	elseif a == "mouse_click" then
-		if c > 1 and c < w and d == fields.username.height then
-			field = "username"
-			fields.username.cursor = c - 1 + fields.username.offset
-			draw_field(field)
-		elseif c > 1 and c < w and d == fields.password.height then
-			field = "password"
-			fields.password.cursor = c - 1 + fields.password.offset
+		if c > 1 and c < w and (d == 3 or d == 6) then
+			field = d==3 and "username" or "password"
+			fields[field].cursor = c - 1 + fields[field].offset
 			draw_field(field)
 		elseif c > w - 9 and c < w and d == 8 then
 			login()

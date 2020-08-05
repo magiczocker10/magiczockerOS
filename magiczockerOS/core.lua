@@ -1024,8 +1024,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if env.setfenv then
 					env.setfenv(program, tEnv)
 				end
-			end
-			if program then
 				local ok = run_program(function() return program() end, function(err) return err end)
 				if ok then
 					env.io = {}
