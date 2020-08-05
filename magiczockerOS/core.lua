@@ -129,20 +129,17 @@ local function fallback_serialise(data, processed)
 	return "{" .. to_return .. "}"
 end
 local function _unpack(a, b)
-	local b = (b or 1) + 1
-	if a[b - 1] then
-		return a[b - 1], _unpack(a, b)
+	local b = b or 1
+	if a[b] then
+		return a[b], _unpack(a, b + 1)
 	end
 end
 local function _ceil(a)
-	local b = a .. ".0"
-	local c = b:find("%.")
-	return a > 0 and (b:sub(c + 1, c + 1) .. 0):sub(1, 1) + 0 > 0 and b:sub(1, c) + 1 or b:sub(1, c) + 0
+	local b = a % 1
+	return a + (b > 0 and 1 or 0) - b
 end
 local function _floor(a)
-	local b = a .. ".0"
-	local c = b:find("%.")
-	return a < 0 and (b:sub(c + 1, c + 1) .. 0):sub(1, 1) + 0 > 0 and b:sub(1, c) - 1 or b:sub(1, c) + 0
+	return a - a % 1
 end
 local function add_timer(duration)
 	last_timer = last_timer + 1
