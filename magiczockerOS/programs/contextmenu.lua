@@ -24,30 +24,17 @@ local function text_color(a, b, c)
 		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
 	end
 end
-local function _min(...)
-	local args = {...}
-	local a = #args > 0 and tonumber(args[1]) or 0
-	if type(a) ~= "number" then
-		a = 0
-	end
-	for i = 2, #args do
-		if type(args[i]) == "number" and args[i] < a then
-			a = args[i]
-		end
-	end
-	return a
-end
 local function process_data(x,y)
 	local maxw,maxh=get_total_size()
 	local maxtw,maxth=maxw,maxh
-	maxw,maxh=_min(maxw-2,max_width),_min(maxh-3,max_height)
-	local curw,curh=1,_min(#items,maxh)
+	maxw,maxh=math.min(maxw-2,max_width),math.min(maxh-3,max_height)
+	local curw,curh=1,math.min(#items,maxh)
 	for i=1,#items do
 		if #items[i].txt > curw then
 			curw = #items[i].txt
 		end
 	end
-	curw=_min(curw + 2, maxw)
+	curw=math.min(curw + 2, maxw)
 	if x+curw>maxtw then
 		x=x-((x+curw)-maxtw)
 	end
@@ -101,7 +88,7 @@ local function draw()
 				tmp=tmp:sub(1,my_size[1]-2)
 			end
 			tmp = (align==1 and "" or to_add)..tmp..(align==3 and "" or to_add)
-			local half = align==2 and floor((#tmp-my_size[1]+1)*0.5)+2
+			local half = align==2 and math.floor((#tmp-my_size[1]+1)*0.5)+2
 			local part_one = (align==2 and half or align==1 and 1 or (my_size[1]-2)*-1)
 			local part_two = (align==2 and half-3+my_size[1] or align==1 and my_size[1]-2 or nil)
 			tmp = tmp:sub(part_one,part_two)
@@ -181,31 +168,21 @@ while true do
 	elseif e == "redraw_items" then
 		draw()
 	elseif e == "mouse_click" then
-		if scrollable and y == 1 and scroll > 0 then
-			scroll = scroll - 1
-			draw()
-		elseif scrollable and y == my_size[2] and #items-scroll > my_size[2] then
-			scroll = scroll + 1
+		if scrollable and (y == 1 and scroll > 0 or y == my_size[2] and #items-scroll > my_size[2]) then
+			scroll = scroll + (y == 1 and scroll > 0 and -1 or 1)
 			draw()
 		elseif items[y+scroll].event then
 			handle_click(y+scroll)
 		end
 	elseif e == "mouse_scroll" and scrollable then -- not tested (ToDo testing)
-		if d == 1 and #items-scroll > my_size[2] then
-			scroll = scroll + 1
-			draw()
-		elseif d == -1 and scroll > 0 then
-			scroll = scroll - 1
+		if d > 0 and #items-scroll > my_size[2] or d < 0 and scroll > 0 then
+			scroll = scroll + d > 0 and 1 or -1
 			draw()
 		end
 	elseif e == "key" and (not term.isColor or not term.isColor()) then
 		local _key = key_maps[d]
-		if _key == "up" and cursor > 0 then
-			cursor = cursor - 1
-			correct_scroll()
-			draw()
-		elseif _key == "down" and cursor < #items - (scollable and 1 or 0) then
-			cursor = cursor + 1
+		if _key == "up" and cursor > 0 or _key == "down" and cursor < #items - (scollable and 1 or 0) then
+			cursor = cursor + (_key == "up" and -1 or 1)
 			correct_scroll()
 			draw()
 		elseif _key == "enter" and items[cursor].event then

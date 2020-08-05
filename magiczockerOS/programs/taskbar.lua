@@ -43,8 +43,8 @@ local function get_time()
 					b=b-12
 				end
 			end
-			local hour="0"..floor(b)
-			local minute="0"..floor((b-hour)*60)
+			local hour="0"..math.floor(b)
+			local minute="0"..math.floor((b-hour)*60)
 			local tmp = (not term.isColor and (get_visible("calendar") and "-" or "_") or " ")
 			return tmp..hour:sub(-2)..":"..minute:sub(-2)..""..(a and " "..a or "")..tmp
 		end

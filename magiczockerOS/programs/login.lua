@@ -6,6 +6,8 @@
 local w, h = term.getSize()
 -- strings
 local field = "username"
+local L1=" Login "
+local L2=">Login<"
 -- tables
 local fields = {
 	username = {
@@ -74,28 +76,22 @@ end
 local function draw()
 	local line = (" "):rep(w - 9)
 	text_color(1, 1, 1)
+	back_color(32768, 128, 2048)
 	for y = 1, h do
 		term.setCursorPos(1,y)
-		back_color(32768, 128, 2048)
-		if y == 2 then
-			term.write(" Username"..line)
-		elseif y == 3 then
+		if y == 2 or y == 5 then
+			term.write((y==2 and " Username" or " Password")..line)
+		elseif y == 3 or y == 6 then
 			term.write" "
-			draw_field("username")
-			term.write" "
-		elseif y == 5 then
-			term.write(" Password"..line)
-		elseif y == 6 then
-			term.write" "
-			draw_field("password")
+			draw_field(y==3 and "username" or "password")
 			term.write" "
 		elseif y == 8 then
 			term.write((" "):rep(w-8))
 			term.setBackgroundColor(256)
 			if field == "" then
-				write_text(">Login<", ">Login<", " Login ", " Login ")
+				write_text(L2, L2, L1, L1)
 			else
-				term.write" Login "
+				term.write(L1)
 			end
 			back_color(32768, 128, 2048)
 			term.write(" ")

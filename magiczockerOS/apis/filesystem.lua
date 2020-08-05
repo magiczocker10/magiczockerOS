@@ -11,6 +11,7 @@ local _peri_type = peripheral and peripheral.getType
 local _peri_call = peripheral and peripheral.call
 local path_to_listen={}
 local event_active=true
+local write_modes = {w = true, wb = true, ab = true, a = true}
 local function call_func(remote,is_remote,id,func,...)
 	if is_remote and id and remote then
 		return remote(id,func,...)
@@ -241,7 +242,7 @@ function create(root_path,is_remote,server_id)
 			file = content and {
 				close=function()
 					check_open()
-					if mode == "w" or mode == "wb" or mode=="ab" or mode == "a" then
+					if write_modes[mode] then
 						call(true,"send_file",path,content)
 					end
 					for k in next,file do
@@ -249,7 +250,7 @@ function create(root_path,is_remote,server_id)
 					end
 					is_open=false
 				end,
-				flush=(mode=="a" or mode=="ab" or mode=="w" or mode=="wb") and function()
+				flush=write_modes[mode] and function()
 					check_open()
 					call(true,"send_file",path,content)
 				end,
@@ -278,7 +279,7 @@ function create(root_path,is_remote,server_id)
 						return tmp
 					end
 				end,
-				write=(mode=="w" or mode=="wb" or mode == "a" or mode == "ab") and function(txt)
+				write=write_modes[mode] and function(txt)
 					check_open()
 					if (mode=="wb" or mode=="ab") and type(txt)=="number" then
 						txt=txt:char()
@@ -290,15 +291,15 @@ function create(root_path,is_remote,server_id)
 					content=content..(#content>0 and "\n" or "")..txt
 				end
 			}
-		elseif mode=="w" or mode=="wb" or mode == "a" or mode == "ab" or fs.exists(tmp) then
-			if mode=="w" or mode=="wb" or mode == "a" or mode == "ab" then
+		elseif write_modes[mode] or fs.exists(tmp) then
+			if write_modes[mode] then
 				local tmpdir=filesystem.getDir(path)
 				filesystem.makeDir(tmpdir)
 			end
 			file = fs.open(tmp, mode)
 			if file then
 				local org_close = file.close
-				if mode=="w" or mode=="wb" or mode == "a" or mode == "ab" then
+				if write_modes[mode] then
 					file.close = function() send_event(tmp,"open") org_close() end
 				end
 			else

@@ -69,36 +69,31 @@ local supported_mouse_events = {mouse_click = true, mouse_drag = true, mouse_up 
 local total_size = {0, 0}
 local system_settings = {}
 local window_timers = {}
-local position_to_add = {
-	["left"] = {-1, 0},
-	["right"] = {1, 0},
-	["up"] = {0, -1},
-	["down"] = {0, 1},
-}
+local position_to_add = {left = {-1, 0}, right = {1, 0}, up = {0, -1}, down = {0, 1}}
 local number_to_check
 local overrides
 local monitor_order
 local monitor_devices
-local dont_use_xpcall = true -- experimental
 local apis = {}
 local click = {x = 0, y = 0}
 local key_maps = {}
 local last_click = {x = 0, y = 0, time = 0}
 local screen = {}
 local system_windows = {
-	calendar = {need_resize = true, fs = true, x = w - 24, y = 2, w = 25, h = 9, visible = false, path = "/magiczockerOS/programs/calendar.lua", click_outside = true, bluescreen = true},
-	contextmenu = {x = 1, y = 1, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true, bluescreen = true},
-	desktop = {need_resize = true, fs = true, x = 1, y = 2, w = w, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false, bluescreen = true},
-	startmenu = {x = 1, y = 2, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/startmenu.lua", click_outside = true, bluescreen = true},
-	taskbar = {need_resize = true, x = 1, y = 1, w = w, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false, bluescreen = true},
-	search = {need_resize = true, fs = true, x = w - 15, y = 2, w = 20, h = h - 1, visible = false, path = "/magiczockerOS/programs/search.lua", click_outside = true, bluescreen = true},
-	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false, bluescreen = true},
+	calendar = {need_resize = true, fs = true, x = w - 24, y = 2, w = 25, h = 9, visible = false, path = "/magiczockerOS/programs/calendar.lua", click_outside = true},
+	contextmenu = {x = 1, y = 1, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true},
+	desktop = {need_resize = true, fs = true, x = 1, y = 2, w = w, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
+	startmenu = {x = 1, y = 2, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/startmenu.lua", click_outside = true},
+	taskbar = {need_resize = true, x = 1, y = 1, w = w, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
+	search = {need_resize = true, fs = true, x = w - 15, y = 2, w = 20, h = h - 1, visible = false, path = "/magiczockerOS/programs/search.lua", click_outside = true},
+	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false},
 }
 local system_window_order = {"osk", "contextmenu", "taskbar", "calendar", "search", "startmenu", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
 local term = term or nil
 local textutils = textutils or nil
 local peripheral = peripheral or nil
+local math = math or nil
 if term then
 	w, h = term.getSize()
 end
@@ -133,13 +128,6 @@ local function _unpack(a, b)
 	if a[b] then
 		return a[b], _unpack(a, b + 1)
 	end
-end
-local function _ceil(a)
-	local b = a % 1
-	return a + (b > 0 and 1 or 0) - b
-end
-local function _floor(a)
-	return a - a % 1
 end
 local function add_timer(duration)
 	last_timer = last_timer + 1
@@ -249,8 +237,7 @@ end
 local function unserialise(str)
 	local ok, err = (load or loadstring)("return " .. str, "core: unserialize", "t", {})
 	if ok then
-		local _func = dont_use_xpcall and run_program or xpcall
-		local ok, result = _func(function() return ok() end, function(err) return err end)
+		local ok, result = run_program(function() return ok() end, function(err) return err end)
 		if ok then
 			return result
 		end
@@ -273,7 +260,7 @@ local function load_api(name)
 	local file = fs.open("/magiczockerOS/apis/" .. name .. ".lua", "r")
 	if file then
 		setmetatable(env, {__index = _G})
-		env.floor, env.ceil, env.unpack = _floor, _ceil, _unpack
+		env.math, env.unpack = math, _unpack
 		local content = file.readAll()
 		file.close()
 		local api, err = (load or loadstring)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
@@ -281,8 +268,7 @@ local function load_api(name)
 			if setfenv then
 				setfenv(api, env)
 			end
-			local _func = dont_use_xpcall and run_program or xpcall
-			local ok, err = _func(function() return api() end, function(err) return err end)
+			local ok, err = run_program(function() return api() end, function(err) return err end)
 			if not ok then
 				if err and err ~= "" then
 					error(err, 0)
@@ -419,7 +405,7 @@ local function move_windows_to_screen()
 	end
 end
 local function resume_system(name, coro, ...)
-	if coroutine.status(coro) ~= "dead" then
+	if coro_status(coro) ~= "dead" then
 		local cor_system_ok, cor_system_err = coro_resume(coro, ...)
 		if not cor_system_ok then
 			return error_message(name, cor_system_err)
@@ -577,6 +563,36 @@ local function get_remote(id, suser, environment)
 		end
 	end
 end
+local function get_os_commands(win)
+	return {
+		contextmenu = system_windows.contextmenu.window and {
+			clear_map = function() win.contextmenu_data = nil end,
+			add_map = function(from_x, from_y, width_x, width_y, items)
+				if type(from_x) == "number" and type(width_x) == "number" and type(from_y) == "number" and type(width_y) == "number" and type(items) == "table" and width_x > 0 and width_y > 0 then
+					win.contextmenu_data = win.contextmenu_data or {}
+					local tmp = win.contextmenu_data
+					tmp[#tmp + 1] = {from_x, width_x, from_y, width_y, items}
+					return #tmp
+				end
+			end,
+			on_menu_key = function(no, x, y)
+				if type(no) == "number" and type(x) == "number" and type(y) == "number" and win.contextmenu_data and win.contextmenu_data[no] then
+					local _, _, win_w, win_h = win.window.get_data()
+					if x > 0 and y > 0 and x <= win_w and y <= win_h then
+						win.contextmenu_on_key = win.contextmenu_on_key or {data = nil, x = 0, y = 0}
+						local tmp = win.contextmenu_on_key
+						tmp.data = win.contextmenu_data[no][5]
+						tmp.x = x
+						tmp.y = y
+						return true
+					end
+				elseif type(no) == "nil" then
+					win.contextmenu_on_key = nil
+				end
+			end,
+		},
+	}
+end
 local function create_user_window(sUser, os_root, uenv, path, ...)
 	local args = {...}
 	local message = ""
@@ -608,6 +624,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local function set_env()
 		local native_id = os.getComputerID and os.getComputerID() or 0
 		env = {
+			math = math,
 			debug = debug,
 			fs = {},
 			multishell = {
@@ -692,7 +709,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					resume_system("28taskbar", system_windows.taskbar.coroutine, "window_change")
 					draw_windows()
 				end,
-				version = function() return "magiczockerOS 4.0 Preview 3" end,
+				version = function() return "magiczockerOS 4.0 Preview 4" end,
 				queueEvent = function(...)
 					os.queueEvent(id .. "", user_, ...)
 				end,
@@ -743,7 +760,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				else
 					local tmp = "/magiczockerOS/users/" .. user_data.name .. "/settings.json"
 					if fs.exists(tmp) and not fs.isReadOnly(tmp) then
-						fs.delete("/magiczockerOS/users/" .. user_data.name .. "/settings.json")
+						fs.delete(tmp)
 						env.set_settings(user_)
 						return true
 					end
@@ -784,42 +801,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				env.switch_user(true, username)
 				return true
 			end or nil,
-			floor = is_system_program and _floor or nil,
-			ceil = is_system_program and _ceil or nil,
 			term = {},
 			user = is_system_program and user_ or nil,
 			user_data = is_system_program and function() return user_data end or nil,
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
-			magiczockerOS = {
-				getScreenImage = function(a) return a and user_data.windows[a] and user_data.windows[a].window.get_screen() or user_ == cur_user and not a and apis.window.get_global_cache() or nil end,
-				contextmenu = system_windows.contextmenu.window and {
-					clear_map = function() my_windows.contextmenu_data = nil end,
-					add_map = function(from_x, from_y, width_x, width_y, items)
-						if type(from_x) == "number" and type(width_x) == "number" and type(from_y) == "number" and type(width_y) == "number" and type(items) == "table" and width_x > 0 and width_y > 0 then
-							my_windows.contextmenu_data = my_windows.contextmenu_data or {}
-							local tmp = my_windows.contextmenu_data
-							tmp[#tmp + 1] = {from_x, width_x, from_y, width_y, items}
-							return #tmp
-						end
-					end,
-					on_menu_key = function(no, x, y)
-						if type(no) == "number" and type(x) == "number" and type(y) == "number" and my_windows.contextmenu_data and my_windows.contextmenu_data[no] then
-							local _, _, win_w, win_h = my_windows.window.get_data()
-							if x > 0 and y > 0 and x <= win_w and y < win_h then
-								my_windows.contextmenu_on_key = my_windows.contextmenu_on_key or {data = nil, x = 0, y = 0}
-								local tmp = my_windows.contextmenu_on_key
-								tmp.data = my_windows.contextmenu_data[no][5]
-								tmp.x = x
-								tmp.y = y + 1
-								return true
-							end
-						elseif type(no) == "nil" then
-							my_windows.contextmenu_on_key = nil
-						end
-					end,
-				},
-			},
+			magiczockerOS = get_os_commands(my_windows),
 		}
+		env.magiczockerOS.get_screen_image = function(a) return a and user_data.windows[a] and user_data.windows[a].window.get_screen() or user_ == cur_user and not a and apis.window.get_global_cache() or nil end
 		env.os.reboot = env.os.shutdown
 		for k, v in next, my_windows.window do
 			if term[k] or k == "setCursorBlink" then
@@ -922,8 +910,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if env.setfenv then
 						env.setfenv(program, tEnv)
 					end
-					local _func = dont_use_xpcall and run_program or xpcall
-					local ok, err = _func(function() return program(_unpack(args)) end, function(err) return err end)
+					local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
 					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
 						for i = 1, #user_data.labels do
 							if user_data.labels[i].id == id then
@@ -999,8 +986,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if setfenv then
 						setfenv(api, env2)
 					end
-					local _func = dont_use_xpcall and run_program or xpcall
-					local ok, err = _func(function() return api() end, function(err) return err end)
+					local ok, err = run_program(function() return api() end, function(err) return err end)
 					if not ok then
 						if err and err ~= "" then
 							env.error(path .. err)
@@ -1040,8 +1026,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end
 			if program then
-				local _func = dont_use_xpcall and run_program or xpcall
-				local ok = _func(function() return program() end, function(err) return err end)
+				local ok = run_program(function() return program() end, function(err) return err end)
 				if ok then
 					env.io = {}
 					for k, v in next, tEnv do
@@ -1082,12 +1067,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 	end
 	path = path or "/rom/programs/shell"
-	if fs.exists(path .. ".lua") then
-		path = path .. ".lua"
-	end
-	if path:sub(1, 1) ~= "/" then
-		path = "/" .. path
-	end
+	path = fs.exists(path .. ".lua") and path .. ".lua" or path
+	path = path:sub(1, 1) ~= "/" and "/" .. path or path
 	set_env()
 	do
 		local name = path
@@ -1176,8 +1157,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				wait_error()
 				kill_window()
 			else
-				local _func = dont_use_xpcall and run_program or xpcall
-				local ok, err = _func(function() return program(_unpack(args)) end, function(err) return err end)
+				local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
 				if not ok then
 					if err and err ~= "" then
 						message = err
@@ -1211,6 +1191,7 @@ local function create_system_windows(i)
 		system_windows[temp].window.set_title("On-Screen Keyboard", true)
 	end
 	env = {
+		math = math,
 		fs = system_windows[temp].filesystem or fs,
 		native_fs = fs,
 		close_os = function() running = false end,
@@ -1339,36 +1320,7 @@ local function create_system_windows(i)
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
 		unpack = _unpack,
-		floor = _floor,
-		ceil = _ceil,
-		magiczockerOS = {
-			contextmenu = system_windows.contextmenu.window and {
-				clear_map = function() system_windows[temp].contextmenu_on_key = nil system_windows[temp].contextmenu_data = nil end,
-				add_map = function(from_x, from_y, width_x, width_y, items)
-					if type(from_x) == "number" and type(width_x) == "number" and type(from_y) == "number" and type(width_y) == "number" and type(items) == "table" and width_x > 0 and width_y > 0 then
-						system_windows[temp].contextmenu_data = system_windows[temp].contextmenu_data or {}
-						local tmp = system_windows[temp].contextmenu_data
-						tmp[#tmp + 1] = {from_x, width_x, from_y, width_y, items}
-						return #tmp
-					end
-				end,
-				on_menu_key = function(no, x, y)
-					if type(no) == "number" and type(x) == "number" and type(y) == "number" and system_windows[temp].contextmenu_data and system_windows[temp].contextmenu_data[no] then
-						local _, _, win_w, win_h = system_windows[temp].window.get_data()
-						if x > 0 and y > 0 and x <= win_w and y <= win_h then
-							system_windows[temp].contextmenu_on_key = system_windows[temp].contextmenu_on_key or {data = nil, x = 0, y = 0}
-							local tmp = system_windows[temp].contextmenu_on_key
-							tmp.data = system_windows[temp].contextmenu_data[no][5]
-							tmp.x = x
-							tmp.y = y
-							return true
-						end
-					elseif type(no) == "nil" then
-						system_windows[temp].contextmenu_on_key = nil
-					end
-				end,
-			},
-		},
+		magiczockerOS = get_os_commands(system_windows[temp]),
 	}
 	if system_windows[temp].filesystem then
 		env.os = {
@@ -1395,24 +1347,17 @@ local function create_system_windows(i)
 			env.os[k] = v
 		end
 	end
-	if print then
-		env.print = (env.load or env.loadstring)(overrides.print or string.dump(_G.print), nil, nil, env)
-		if overrides.print then
-			env.print = env.print()
-		end
-		if setfenv then
-			setfenv(env.print, env)
-		end
-	end
-	if printError then
-			env.printError = (env.load or env.loadstring)(overrides.printError or string.dump(_G.printError), nil, nil, env)
-			if overrides.printError then
-				env.printError = env.printError()
+	for _, v in next, {"print", "printError"} do
+		if _G[v] then
+			env[v] = (env.load or env.loadstring)(overrides[v] or string.dump(_G[v]), nil, nil, env)
+			if overrides[v] then
+				env[v] = env[v]()
 			end
 			if setfenv then
-				setfenv(env.printError, env)
+				setfenv(env[v], env)
 			end
 		end
+	end
 	local file = fs.open(path, "r")
 	local program, err
 	if file then
@@ -1433,43 +1378,19 @@ local function create_system_windows(i)
 	else
 		message = "File not exists"
 	end
-	local function wait_error()
-		if system_windows[temp].bluescreen then
-			error_org(message or "D:")
-		end
-		if env.term.setBackgroundColor then
-			env.term.setBackgroundColor(32768)
-		end
-		if env.term.setTextColor then
-			env.term.setTextColor(1)
-		end
-		env.term.clear()
-		env.term.setCursorPos(1, 1)
-		env.print(message)
-		env.print("Press any key to continue")
-		local _running = true
-		repeat
-			local e = {coroutine.yield()}
-			if e[1] == "key" then
-				_running = false
-			end
-		until not _running
-		return false
-	end
 	system_windows[temp].coroutine = coroutine.create(
 		function()
 			if #message > 0 then
-				wait_error()
+				error_org(message or "D:")
 			else
-				local _func = dont_use_xpcall and run_program or xpcall
-				local ok, err = _func(function() return program() end, function(err) return err end)
+				local ok, err = run_program(function() return program() end, function(err) return err end)
 				if not ok then
 					if err and err ~= "" then
 						message = err
 					else
 						message = "unknown error"
 					end
-					wait_error()
+					error_org(message or "D:")
 				end
 			end
 		end
@@ -1480,13 +1401,7 @@ end
 local function load_bios()
 	add_to_log("Loading bios...")
 	overrides = {}
-	local function_list = {
-		["read"] = true,
-		["print"] = true,
-		["printError"] = true,
-		["loadfile"] = true,
-		["write"] = true,
-	}
+	local function_list = {read = true, print = true, printError = true, loadfile = true, write = true}
 	local start
 	local function check_expect_path(path)
 		if not _G["~expect"] and fs.exists(path) and not fs.isDir(path) then
@@ -1527,39 +1442,27 @@ local function load_keys()
 	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
 		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
 	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
-		key_maps[67] = "c"
-		key_maps[77] = "m"
-		key_maps[78] = "n"
-		key_maps[82] = "r"
-		key_maps[83] = "s"
-		key_maps[84] = "t"
-		key_maps[88] = "x"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-		key_maps[345] = "right_ctrl"
-		key_maps[348] = "context_menu"
-	else -- LWJGL
-		key_maps[19] = "r"
-		key_maps[20] = "t"
-		key_maps[31] = "s"
-		key_maps[45] = "x"
-		key_maps[46] = "c"
-		key_maps[49] = "n"
-		key_maps[50] = "m"
-		key_maps[56] = "context_menu"
-		key_maps[157] = "right_ctrl"
-		key_maps[200] = "up"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[208] = "down"
-	end
+	local a = number_to_check and type(number_to_check) == "number" and number_to_check >= 1132
+	-- LWJGL or GLFW
+	key_maps[a and 46 or 67] = "c"
+	key_maps[a and 50 or 77] = "m"
+	key_maps[a and 49 or 78] = "n"
+	key_maps[a and 19 or 82] = "r"
+	key_maps[a and 31 or 83] = "s"
+	key_maps[a and 20 or 84] = "t"
+	key_maps[a and 45 or 88] = "x"
+	key_maps[a and 205 or 262] = "right"
+	key_maps[a and 203 or 263] = "left"
+	key_maps[a and 208 or 264] = "down"
+	key_maps[a and 200 or 265] = "up"
+	key_maps[a and 157 or 345] = "right_ctrl"
+	key_maps[a and 56 or 348] = "context_menu"
 end
 -- start
 load_keys()
 load_system_settings()
+load_api("math")
+math = apis.math.create() or math
 load_api("filesystem")
 load_api("peripheral")
 load_api("window")
@@ -1676,7 +1579,7 @@ repeat
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
-		local t_id = last_window.id
+		local t_id = tmp_window.id
 		if tmp_window then
 			apis.window.set_global_visible(false)
 			local win_x, win_y, win_w, win_h = tmp_window.window.get_data()
@@ -1705,7 +1608,7 @@ repeat
 					tmp_window.window.set_state("normal")
 					win_x, win_y, win_w, win_h = tmp_window.window.get_data()
 					if win_x > e[3] or win_x + win_w - 1 < e[3] then
-						win_x = _ceil(e[3] - win_w * 0.5)
+						win_x = math.ceil(e[3] - win_w * 0.5)
 					end
 					tmp_window.window.reposition(win_x, e[4], win_w, win_h)
 					win_y = e[4]

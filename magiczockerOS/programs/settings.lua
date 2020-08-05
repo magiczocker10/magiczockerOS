@@ -224,7 +224,7 @@ local categories = {
 	{
 		title = "About",
 		entries = {
-			{title = "magiczockerOS 4.0 Preview 3", default = "", on_save = nil, type = "label", changeable = false},
+			{title = os.version(), default = "", on_save = nil, type = "label", changeable = false},
 		},
 	},
 }
@@ -780,11 +780,11 @@ local function draw_menu(a)
 			if a > 1 and a < h - 2 and menu[a - 1 + menu_scroll] then
 				text_color(32768, a - 1 + menu_scroll == menu_selection and 1 or 256, 1)
 				local c = (menu_width - #menu[a - 1 + menu_scroll].txt) * 0.5
-				d = (a - 1 + menu_scroll == menu_selection and menu_select or " ") .. (" "):rep(floor(c) - 1) .. menu[a - 1 + menu_scroll].txt .. (" "):rep(ceil(c) - 1) .. (a - 1 + menu_scroll == menu_selection and menu_select or " ")
+				d = (a - 1 + menu_scroll == menu_selection and menu_select or " ") .. (" "):rep(math.floor(c) - 1) .. menu[a - 1 + menu_scroll].txt .. (" "):rep(math.ceil(c) - 1) .. (a - 1 + menu_scroll == menu_selection and menu_select or " ")
 			elseif a == h - 1 then
 				text_color(32768, 0 == menu_selection and 1 or 256, 1)
 				local c = (menu_width - #version) * 0.5
-				d = (0 == menu_selection and menu_select or " ") .. (" "):rep(floor(c) - 1) .. version .. (" "):rep(ceil(c) - 1) .. (0 == menu_selection and menu_select or " ")
+				d = (0 == menu_selection and menu_select or " ") .. (" "):rep(math.floor(c) - 1) .. version .. (" "):rep(math.ceil(c) - 1) .. (0 == menu_selection and menu_select or " ")
 			else
 				d = (" "):rep(offset)
 			end
@@ -1439,7 +1439,7 @@ while true do
 				mon_settings.mon_cursor = mon_settings.mon_cursor + 1
 				draw_bottom()
 			elseif view == 2 and not menu_open and e[4] > 3 and e[4] < 13 and e[3] <= (#mon_settings.mon_order - mon_settings.mon_cursor + 1) * 10 + 5 then
-				mon_settings.mon_selected = ceil((e[3] + (mon_settings.mon_cursor - 1) * 10) * 0.1)
+				mon_settings.mon_selected = math.ceil((e[3] + (mon_settings.mon_cursor - 1) * 10) * 0.1)
 				setup_entries()
 				draw_bottom()
 			elseif view == 2 and not menu_open and e[4] > 12 and mon_settings.list_entries[e[4] - 13 + mon_settings.list_scroll] then
@@ -1460,7 +1460,7 @@ while true do
 					mon_settings.mon_order[mon_settings.mon_selected + 1] = tmp
 					mon_settings.mon_selected = mon_settings.mon_selected + 1
 					if (#mon_settings.mon_order - mon_settings.mon_cursor + 1) * 10 > w then
-						mon_settings.mon_cursor = mon_settings.mon_cursor + ceil(((w-(#mon_settings.mon_order-mon_settings.cursor+1)*10)*0.1))
+						mon_settings.mon_cursor = mon_settings.mon_cursor + math.ceil(((w-(#mon_settings.mon_order-mon_settings.cursor+1)*10)*0.1))
 					end
 					if mon_settings.mon_cursor > mon_settings.mon_selected then
 						mon_settings.mon_cursor = mon_settings.mon_selected
@@ -1483,7 +1483,7 @@ while true do
 					mon_settings.mon_order[#mon_settings.mon_order] = mon_settings.mon_order[mon_settings.mon_selected]
 					mon_settings.mon_selected = #mon_settings.mon_order
 					if (#mon_settings.mon_order - mon_settings.mon_cursor + 1) * 10 > w then
-						mon_settings.mon_cursor = mon_settings.mon_cursor + ceil(((w-(#mon_settings.mon_order-mon_settings.cursor+1)*10)*0.1))
+						mon_settings.mon_cursor = mon_settings.mon_cursor + math.ceil(((w-(#mon_settings.mon_order-mon_settings.cursor+1)*10)*0.1))
 					end
 					if mon_settings.mon_cursor > mon_settings.mon_selected then
 						mon_settings.mon_cursor = mon_settings.mon_selected

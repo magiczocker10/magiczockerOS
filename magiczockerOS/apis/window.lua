@@ -404,18 +404,15 @@ function reload_color_palette(settings)
 		if (settings.color_mode or 1)~=last_palette.mode or (settings.invert_colors or false)~=last_palette.inverted or (settings.original_colors or false)~=last_palette.original then
 			last_palette={mode=settings.color_mode or 1,inverted=settings.invert_colors,original=settings.original_colors}
 			local _=settings.original_colors and "original" or "new"
-			local function round(num)
-				return (num%1>=0.5 and ceil(num)) or floor(num)
-			end
 			for i = 1, 16 do
 				local temp_color={color_palette[_][i][1],color_palette[_][i][2],color_palette[_][i][3]}
 				local red
 				local green
 				local blue
 				local b=cp[settings.color_mode]
-				red=b and round(temp_color[1]*b[1]+temp_color[2]*b[2]+temp_color[3]*b[3]) or nil
-				green=b and round(temp_color[1]*b[4]+temp_color[2]*b[5]+temp_color[3]*b[6]) or nil
-				blue=b and round(temp_color[1]*b[7]+temp_color[2]*b[8]+temp_color[3]*b[9]) or nil
+				red=b and math.round(temp_color[1]*b[1]+temp_color[2]*b[2]+temp_color[3]*b[3]) or nil
+				green=b and math.round(temp_color[1]*b[4]+temp_color[2]*b[5]+temp_color[3]*b[6]) or nil
+				blue=b and math.round(temp_color[1]*b[7]+temp_color[2]*b[8]+temp_color[3]*b[9]) or nil
 				local c = settings.color_mode and settings.color_mode > 1
 				temp_color[1] = c and (red>255 and 255 or red) or temp_color[1]
 				temp_color[2] = c and (green>255 and 255 or green) or temp_color[2]
@@ -634,7 +631,7 @@ function create(x,y,width,height,visible,bar)
 						global_cache[_ypos]=global_cache[_ypos] or {}
 						if border and (line==cur_data.height or ((i==1 or i==cur_data.width) and line>1)) then
 							local a = not border_w or not border_h
-							border_w, border_h=a and ceil(cur_data.width*.5) or border_w, a and ceil(cur_data.height*.5) or border_h
+							border_w, border_h=a and math.ceil(cur_data.width*.5) or border_w, a and math.ceil(cur_data.height*.5) or border_h
 							global_cache[_ypos][_pos]={t=settings.window_resize_border_text or 1,b=settings.window_resize_border_back or 128,s=(line==border_h and "|") or (i==border_w and "-") or " "}
 						else
 							local _line=screen[line]
@@ -857,7 +854,7 @@ function create(x,y,width,height,visible,bar)
 			my_blink = false
 			set_cursor()
 		end
-		cursor[1], cursor[2], my_blink = floor(x_), floor(y_), mb
+		cursor[1], cursor[2], my_blink = math.floor(x_), math.floor(y_), mb
 		set_cursor()
 	end
 	if term.setTextColor then

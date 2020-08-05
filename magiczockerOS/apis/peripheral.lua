@@ -21,8 +21,8 @@ function get_type(side)
 		return nil
 	end
 end
-local colorstest={
-	[1]=0xF0F0F0,   [2]=0xF2B233,   [4]=0xE57FD8,	[8]=0x99B2F2,
+local colorstest = {
+	[1]=0xF0F0F0,   [2]=0xF2B233,   [4]=0xE57FD8,    [8]=0x99B2F2,
 	[16]=0xDEDE6C,  [32]=0x7FCC19,  [64]=0xF2B2CC,   [128]=0x4C4C4C,
 	[256]=0x999999, [512]=0x4C99B2, [1024]=0xB266E5, [2048]=0x3366CC,
 	[4096]=0x7F664C,[8192]=0x57A64E,[16384]=0xCC4C4C,[32768]=0x000000

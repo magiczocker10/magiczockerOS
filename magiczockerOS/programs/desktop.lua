@@ -51,10 +51,10 @@ local function position_icons()
 	if w - 1 < 7 then
 		return
 	end
-	max_icons_per_row = floor((w - 1) / 7)
-	max_rows = floor((h - 3) / 6)
-	space_left = floor((w - max_icons_per_row * 7) * 0.5)
-	space_right = ceil((w - max_icons_per_row * 7) * 0.5)
+	max_icons_per_row = math.floor((w - 1) / 7)
+	max_rows = math.floor((h - 3) / 6)
+	space_left = math.floor((w - max_icons_per_row * 7) * 0.5)
+	space_right = math.ceil((w - max_icons_per_row * 7) * 0.5)
 	local file_list = fs.exists("desktop") and fs.list("desktop") or {}
 	page = 1
 	local cur_x, cur_y = space_left + 1, 2
@@ -80,7 +80,7 @@ local function draw()
 		magiczockerOS.contextmenu.clear_map()
 		magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Refresh","refresh"},{"New background","new_background"},{"New Shortcut","New Shortcut"}})
 	end
-	space_right_tabs = floor((w - #pages * 2 + 1) * 0.5)
+	space_right_tabs = math.floor((w - #pages * 2 + 1) * 0.5)
 	local line = 0
 	local _width = (" "):rep(w)
 	local s_r = (" "):rep(space_right)
@@ -102,7 +102,7 @@ local function draw()
 				end
 			end
 			back_color(32768, 256, my_background or settings.desktop_back or 2)
-			term.write((" "):rep(ceil((w - #pages * 2 + 1) * 0.5)))
+			term.write((" "):rep(math.ceil((w - #pages * 2 + 1) * 0.5)))
 		else
 			back_color(32768, 256, my_background or settings.desktop_back or 2)
 			local tmp = i % 6
@@ -306,7 +306,7 @@ while true do
 		elseif _key == "up" and selected > max_icons_per_row then
 			selected = selected - max_icons_per_row
 			draw()
-		elseif _key == "down" and ceil(selected / max_icons_per_row) < ceil(#pages[page] / max_icons_per_row) then
+		elseif _key == "down" and math.ceil(selected / max_icons_per_row) < math.ceil(#pages[page] / max_icons_per_row) then
 			selected = selected + max_icons_per_row
 			if selected > #pages[page] then
 				selected = #pages[page]
@@ -334,5 +334,7 @@ while true do
 			windows[#windows+1]={data=false, title = a, mode = a, other = available[a], file = e[1]:sub(#a+2)}
 			create_window("/magiczockerOS/programs/desktop/"..available[a][1]..".lua",true,windows[#windows])
 		end
+	elseif not e[1] then
+		error"D:"
 	end
 end

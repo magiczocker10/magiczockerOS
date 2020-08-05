@@ -11,12 +11,7 @@ local week_days = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}
 local user = user or ""
 local settings = settings or {}
 local last_views = {}
-local month_names_short = {
-	"Jan", "Feb", "Mar", "Apr",
-	"May", "Jun", "Jul", "Aug",
-	"Sep", "Oct", "Nov", "Dec",
-}
-local month_names_long = {
+local month_names = {
 	"January",
 	"February",
 	"March",
@@ -77,21 +72,14 @@ local function get_week_number(dat, total)
 	local day_one = convert_date_to_number({1, 1, dat[3]})
 	local day_two = convert_date_to_number(total and {31, 12, dat[3]} or dat)
 	local wd_one = day_one % 7
-	if wd_one == 0 then
-		wd_one = 7
-	end
+	wd_one = wd_one == 0 and 7 or wd_one
 	local wd_two = day_two % 7
-	if wd_two == 0 then
-		wd_two = 7
-	end
+	wd_two = wd_two == 0 and 7 or wd_two
 	local to_return = day_two - day_one + 1
 	to_return = wd_one > 4 and to_return - 8 + wd_one or to_return + wd_one - 1
-	if total then
-		to_return = wd_two > 3 and to_return + 7 - wd_two or to_return - wd_two
-	end
-	to_return = to_return / 7
+	to_return = (total and (wd_two > 3 and to_return + 7 - wd_two or to_return - wd_two) or to_return) / 7
 	if not total then
-		to_return = to_return % 1 > 0 and floor(to_return) + 1 or to_return
+		to_return = to_return % 1 > 0 and math.floor(to_return) + 1 or to_return
 		if to_return > get_week_number({31, 12, dat[3]}, true) then
 			to_return = 1
 		elseif to_return == 0 then
@@ -106,12 +94,10 @@ local function draw_month()
 	local wd = convert_date_to_number({1, cur_day[2], cur_day[3]}) % 7
 	local wn = get_week_number({1, cur_day[2], cur_day[3]})
 	local wnt = get_week_number({1, cur_day[2], cur_day[3]}, true)
-	if wd == 0 then
-		wd = 7
-	end
+	wd = wd == 0 and 7 or wd
 	if set_size then
 		local height_ = height
-		height = ceil((td + wd - 1) / 7) + 5
+		height = math.ceil((td + wd - 1) / 7) + 5
 		if height ~= height_ then
 			height_ = height
 			size(25, height)
@@ -122,9 +108,9 @@ local function draw_month()
 	term.setCursorPos(1, 2)
 	term.write((not term.isColor or not term.isColor()) and cur_view_cursor == 0 and " - " or "   ")
 	term.write((cur_day[3] > 1900 or cur_day[2] > 1) and "<" or " ")
-	local temp = month_names_long[cur_day[2]] .. " " .. cur_day[3]
+	local temp = month_names[cur_day[2]] .. " " .. cur_day[3]
 	local to_add = (17 - #temp) * .5
-	term.write((" "):rep(floor(to_add)) .. temp .. (" "):rep(ceil(to_add)))
+	term.write((" "):rep(math.floor(to_add)) .. temp .. (" "):rep(math.ceil(to_add)))
 	term.write((cur_day[3] < 9999 or cur_day[2] < 12) and ">" or " ")
 	term.write((not term.isColor or not term.isColor()) and cur_view_cursor == 0 and " - " or "   ")
 	term.setCursorPos(1, 3)
@@ -144,24 +130,17 @@ local function draw_month()
 	for i = 1, td do
 		if selected[3] == cur_day[3] and selected[2] == cur_day[2] and selected[1] == i then
 			text_color(1, 128, settings.calendar_text_hightlight or 128)
-			local tmp = " " .. i
-			term.write(tmp:sub(-2))
+			term.write((" " .. i):sub(-2))
 			text_color(1, 1, settings.calendar_text or 1)
 		else
-			local tmp = " " .. i
-			term.write(tmp:sub(-2))
+			term.write((" " .. i):sub(-2))
 		end
 		wd = wd + 1
 		if i == td then
 			term.write((" "):rep((8 - wd) * 3) .. " ")
 		elseif wd == 8 then
 			term.write" "
-			wn = wn + 1
-			if wn > wnt then
-				wn = 1
-			end
-			wd = 1
-			row = row + 1
+			wn, wd, row = wn >= wnt and 1 or wn, 1, row + 1
 			term.setCursorPos(1, row)
 			local _wn = " " .. wn
 			_wn = _wn:sub(#_wn - 1)
@@ -196,7 +175,7 @@ local function draw_months()
 			else
 				text_color(1, 1, settings.calendar_text or 1)
 			end
-			term.write(month_names_short[temp])
+			term.write(month_names[temp]:sub(1, 3))
 			if cur_view_cursor == i then
 				term.write"<"
 			elseif cur_view_cursor == i + 1 and i ~= 6 then
@@ -362,7 +341,7 @@ while true do
 				local x = (x - 1) * 0.25
 				if x % 1 > 0 then
 					cur_view = 1
-					cur_day[2] = 6 * (y == 4 and 0 or 1) + ceil(x)
+					cur_day[2] = 6 * (y == 4 and 0 or 1) + math.ceil(x)
 					draw()
 				end
 			end
@@ -375,7 +354,7 @@ while true do
 				local x = (x - 3) * .2
 				if x % 1 > 0 then
 					cur_view = 2
-					cur_day[3] = cur_day[3] - 1 + 4 * (y == 4 and 0 or 1) + ceil(x)
+					cur_day[3] = cur_day[3] - 1 + 4 * (y == 4 and 0 or 1) + math.ceil(x)
 					draw()
 				end
 			end
@@ -399,11 +378,7 @@ while true do
 				cur_view = 2
 				local year = cur_day[3]
 				local year_mod = year % 8
-				if year_mod < 4 then
-					year = year - 4 - year_mod
-				elseif year_mod > 4 then
-					year = year - year_mod + 4
-				end
+				year = year_mod < 4 and year - 4 - year_mod or year_mode > 4 and year - year_mode + 4 or year
 				cur_day[3] = year - 1 + cur_view_cursor
 				cur_view_cursor = 1
 				draw()
@@ -485,30 +460,10 @@ while true do
 		settings = get_settings()
 		draw()
 	elseif e == "user" then
-		if x then
-			last_views[user] = nil
-		else
-			last_views[user] = {
-				{
-					cur_day[1],
-					cur_day[2],
-					cur_day[3],
-				},
-				cur_view,
-				cur_view_cursor,
-			}
-		end
-		user = d
-		cur_day[1] = selected[1]
-		cur_day[2] = selected[2]
-		cur_day[3] = selected[3]
-		cur_view = 1
+		last_views[user] = not x and {{cur_day[1], cur_day[2], cur_day[3]}, cur_view, cur_view_cursor} or nil
+		user, cur_view, cur_day[1], cur_day[2], cur_day[3] = d, 1, selected[1], selected[2], selected[3]
 		if last_views[user] then
-			cur_day[1] = last_views[user][1][1]
-			cur_day[2] = last_views[user][1][2]
-			cur_day[3] = last_views[user][1][3]
-			cur_view = last_views[user][2]
-			cur_view_cursor = last_views[user][3]
+			cur_day[1], cur_day[2], cur_day[3], cur_view, cur_view_cursor = last_views[user][1][1], last_views[user][1][2], last_views[user][1][3], last_views[user][2], last_views[user][3]
 		end
 		height = 0
 		draw()
@@ -516,17 +471,11 @@ while true do
 		draw()
 	elseif e == "set_date" then
 		local tmp=windows[d]
-		cur_day[1] = tonumber(tmp.day)
-		cur_day[2] = tonumber(tmp.month)
-		cur_day[3] = tonumber(tmp.year)
-		selected[1] = cur_day[1]
-		selected[2] = cur_day[2]
-		selected[3] = cur_day[3]
-		cur_view = 1
-		height = 0
+		cur_day[1], cur_day[2], cur_day[3] = tonumber(tmp.day), tonumber(tmp.month), tonumber(tmp.year)
+		cur_view, height, selected[1], selected[2], selected[3] = 1, 0, cur_day[1], cur_day[2], cur_day[3]
 		draw()
 	elseif e == "goto_date" then
-		windows[#windows+1]={done=false,day=1,month=1,year=1,queue=os.queueEvent,num=#windows+1}
-		create_window("/magiczockerOS/programs/calendar/goto_date.lua",true,windows[#windows])
+		windows[#windows + 1] = {done = false,day = 1, month = 1, year = 1, queue = os.queueEvent, num = #windows + 1}
+		create_window("/magiczockerOS/programs/calendar/goto_date.lua", true, windows[#windows])
 	end
 end
