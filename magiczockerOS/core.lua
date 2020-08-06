@@ -61,6 +61,7 @@ local os_timer = 0
 local cursorblink_timer
 local printError = printError or nil
 local user
+local _HOSTver = tonumber(({(_HOST or ""):match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
 -- tables
 local drag_old = {0, 0}
 local bios_to_reload = {"loadfile", "write", "print", "printError", "read"}
