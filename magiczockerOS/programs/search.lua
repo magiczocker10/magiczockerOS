@@ -17,20 +17,20 @@ local user_input_cursor = 1
 local entry_selected
 local settings = settings or {}
 local function return_text(a, b, c, d)
-	return not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b
+	return not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b
 end
 local function background_color(a, b, c)
 	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function text_color(a, b, c)
 	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function write_text(a, b, c, d)
-	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
+	term.write(not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b)
 end
 local function search(search_term)
 	local search_term = search_term:lower()
@@ -212,11 +212,7 @@ local function draw()
 	term.setCursorBlink(true)
 end
 local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
+	if _HOSTver and _HOSTver >= 1132 then -- GLFW
 		key_maps[257] = "enter"
 		key_maps[259] = "backspace"
 		key_maps[261] = "delete"

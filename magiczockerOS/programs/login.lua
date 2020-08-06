@@ -5,23 +5,22 @@
 -- numbers
 local w, h = term.getSize()
 -- strings
-local field = "username"
+local field = 1
 local L1=" Login "
-local L2=">Login<"
 -- tables
-local fields = {
-	username = {
-		cursor = 1,
-		height = 3,
-		offset = 0,
-		text = "",
+local fields = { -- cursor, height, offset, text, symbol
+	{ -- username
+		1,
+		3,
+		0,
+		"test",
 	},
-	password = {
-		cursor = 1,
-		height = 6,
-		offset = 0,
-		symbol = "*",
-		text = "",
+	{ -- password
+		1,
+		6,
+		0,
+		"",
+		"*",
 	},
 }
 local key_maps = {}
@@ -37,22 +36,22 @@ local function text_color(a, b, c)
 	end
 end
 local function set_blink()
-	if #field > 0 then
-		local cur_field = fields[field]
+	if field > 0 then
+		local a = fields[field]
 		local length = w - 2
-		if cur_field.cursor > #cur_field.text + 1 then
-			cur_field.cursor = #cur_field.text + 1
+		if a[1] > #a[4] + 1 then
+			a[1] = #a[4] + 1
 		end
-		if cur_field.cursor - cur_field.offset > length then
-			cur_field.offset = cur_field.offset + 1
-		elseif cur_field.cursor - cur_field.offset < 1 then
-			cur_field.offset = cur_field.offset - 1
+		if a[1] - a[3] > length then
+			a[3] = a[3] + 1
+		elseif a[1] - a[3] < 1 then
+			a[3] = a[3] - 1
 		end
-		if cur_field.offset > 0 and #cur_field.text - cur_field.offset < length then
-			cur_field.offset = #cur_field.text - length + 1 > 0 and #cur_field.text - length + 1 or 0
+		if a[3] > 0 and #a[4] - a[3] < length then
+			a[3] = #a[4] - length + 1 > 0 and #a[4] - length + 1 or 0
 		end
 		text_color(32768, 32768, 32768)
-		term.setCursorPos(1 + fields[field].cursor - fields[field].offset, fields[field].height)
+		term.setCursorPos(1 + fields[field][1] - fields[field][3], fields[field][2])
 		term.setCursorBlink(true)
 	else
 		term.setCursorBlink(false)
@@ -60,12 +59,12 @@ local function set_blink()
 end
 local function draw_field(a)
 	if fields[a] then
-		local b = ((not term.isColor or not term.isColor) and (not textutils or not textutils.serialize) and "_" or " "):rep(w)
-		local c = fields[a].text:sub(1 + fields[a].offset, w - 2 + fields[a].offset)
-		term.setCursorPos(2, fields[a].height)
+		local b = (not term.isColor and (not textutils or not textutils.serialize) and "_" or " "):rep(w)
+		local c = fields[a][4]:sub(1 + fields[a][3], w - 2 + fields[a][3])
+		term.setCursorPos(2, fields[a][2])
 		back_color(1, 1, 1)
 		text_color(32738, 32768, 32768)
-		term.write(((fields[a].symbol and c:gsub(".", "*") or c) .. b):sub(1, w - 2))
+		term.write(((fields[a][5] and c:gsub(".", fields[a][5]) or c) .. b):sub(1, w - 2))
 		back_color(32768, 128, 2048)
 		text_color(1, 1, 1)
 	end
@@ -80,13 +79,13 @@ local function draw()
 			term.write((y==2 and " Username" or " Password")..line)
 		elseif y == 3 or y == 6 then
 			term.write" "
-			draw_field(y==3 and "username" or "password")
+			draw_field(y==3 and 1 or 2)
 			term.write" "
 		elseif y == 8 then
 			term.write((" "):rep(w-8))
-			term.setBackgroundColor(256)
-			if field == "" then
-				term.write(not term.isColor and L2 or term.isColor() and L1 or textutils and type(textutils.complete) == "function" and L1 or L2)
+			back_color(1, 256, 256)
+			if field < 1 then
+				term.write((term.isColor and term.isColor() and L1) or textutils and type(textutils.complete) == "function" and L1 or ">Login<")
 			else
 				term.write(L1)
 			end
@@ -99,30 +98,31 @@ local function draw()
 	set_blink()
 end
 local function reset()
-	fields.password = {
-		cursor = 1,
-		height = 6,
-		offset = 0,
-		text = "",
+	fields[2] = {
+		1,
+		6,
+		0,
+		"",
+		"*",
 	}
-	draw_field("password")
+	draw_field(2)
 end
 local function login()
-	field = "username"
-	if fields.username.text:find("\\") then
-		local tmp = fields.username.text
-		local found= tmp:find("\\")
+	field = 1
+	if fields[1][4]:find("\\") then
+		local tmp = fields[1][4]
+		local found = tmp:find("\\")
 		signin_user(tonumber(tmp:sub(1,found-1)),tmp:sub(found+1))
-	elseif fields.username.text:match("[a-zA-Z0-9]") and fs.exists("/magiczockerOS/users/" .. fields.username.text) and fs.isDir("/magiczockerOS/users/" .. fields.username.text) then
+	elseif fields[1][4]:match("[a-zA-Z0-9]") and fs.exists("/magiczockerOS/users/" .. fields[1][4]) and fs.isDir("/magiczockerOS/users/" .. fields[1][4]) then
 		local a = ""
-		local file = fs.exists("/magiczockerOS/users/" .. fields.username.text .. "/password.txt") and fs.open("/magiczockerOS/users/" .. fields.username.text .. "/password.txt", "r")
+		local file = fs.exists("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt") and fs.open("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt", "r")
 		if file then
 			a = "" --file.readLine() or ""
 			file.close()
 		end
-		if #a == 0 or a == fields.password.text then
+		if #a == 0 or a == fields[2][4] then
 			reset()
-			switch_user(false, fields.username.text)
+			switch_user(false, fields[1][4])
 		end
 	else
 		reset()
@@ -153,35 +153,34 @@ local function load_keys()
 end
 -- start
 load_keys()
-fields.username.text = "test" -- 1\\
 draw()
 -- events
 while true do
 	local a, b, c, d = coroutine.yield()
-	local cur_field = fields[field]
-	if a == "char" and cur_field then
+	local e = fields[field]
+	if a == "char" and e then
 		if b:match("[a-zA-Z%d-_.]") then
-			cur_field.text = cur_field.text:sub(1, cur_field.cursor - 1) .. b .. cur_field.text:sub(cur_field.cursor)
-			cur_field.cursor = cur_field.cursor + 1
+			e[4] = e[4]:sub(1, e[1] - 1) .. b .. e[4]:sub(e[1])
+			e[1] = e[1] + 1
 			draw_field(field)
 			set_blink()
 		end
 	elseif a == "key" then
 		_key = key_maps[b]
-		if _key == "backspace" and cur_field and cur_field.cursor > 1 and #field > 0 then
-			cur_field.text = cur_field.text:sub(1, cur_field.cursor - 2) .. cur_field.text:sub(cur_field.cursor)
-			cur_field.cursor = cur_field.cursor - 1
+		if _key == "backspace" and e and e[1] > 1 and field > 0 then
+			e[4] = e[4]:sub(1, e[1] - 2) .. e[4]:sub(e[1])
+			e[1] = e[1] - 1
 		elseif _key == "tab" then
-			field = field == "username" and "password" or field == "password" and "" or "username"
+			field = field == 2 and 0 or field + 1
 			draw()
-		elseif (_key == "space" or _key == "enter") and #field == 0 then
+		elseif (_key == "space" or _key == "enter") and field == 0 then
 			login()
-		elseif _key == "left" and cur_field and cur_field.cursor > 1 and #field > 0 then
-			cur_field.cursor = cur_field.cursor - 1
-		elseif _key == "right" and cur_field and cur_field.cursor <= #cur_field.text and #field > 0 then
-			cur_field.cursor = cur_field.cursor + 1
-		elseif _key == "delete" and cur_field and #field > 0 then
-			cur_field.text = cur_field.text:sub(1, cur_field.cursor - 1) .. cur_field.text:sub(cur_field.cursor + 1)
+		elseif _key == "left" and e and e[1] > 1 and field > 0 then
+			e[1] = e[1] - 1
+		elseif _key == "right" and e and e[1] <= #e[4] and field > 0 then
+			e[1] = e[1] + 1
+		elseif _key == "delete" and e and field > 0 then
+			e[4] = e[4]:sub(1, e[1] - 1) .. e[4]:sub(e[1] + 1)
 		end
 		if _key ~= "tab" then
 			draw_field(field)
@@ -189,19 +188,19 @@ while true do
 		end
 	elseif a == "mouse_click" then
 		if c > 1 and c < w and (d == 3 or d == 6) then
-			field = d==3 and "username" or "password"
-			fields[field].cursor = c - 1 + fields[field].offset
+			field = d==3 and 1 or 2
+			fields[field][1] = c - 1 + fields[field][3]
 			draw_field(field)
 		elseif c > w - 9 and c < w and d == 8 then
 			login()
 		else
-			field = ""
+			field = 0
 		end
 		set_blink()
 	elseif a == "modem_message" then
 		if c then
 			reset()
-			switch_user(false, fields.username.text,c)
+			switch_user(false, fields[1][4],c)
 		else
 			error"Invalid user"
 		end

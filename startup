@@ -4,31 +4,29 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local fs = fs or nil
 local file = fs.open("/magiczockerOS/core.lua", "r")
-if file then
-    setmetatable(_G, {})
-    for _, v in next, _G do
-        if type(v) == "table" and type then
-            setmetatable(v, {})
-        end
-    end
-    if not _G.require and _ENV and _ENV.require then -- Fix for CC-Tweaked 1.85
-        _G.require = _ENV.require
-    end
-    local content, err = (loadstring or load)(file.readAll(), "@/magiczockerOS/core.lua", "t")
-    file.close()
-    if content then
-        local ok, err = xpcall(function() return content() end, function(err) return err end)
-        if not ok then
-            if err and err ~= "" then
-                error(err, 0)
-            end
-            return
-        end
-        return true
-    end
-    if err and err ~= "" then
-        error(err, 0)
-    end
-    return
+if not file then
+	error("/magiczockerOS/core.lua: File not exists", 0)
 end
-error("/magiczockerOS/core.lua: File not exists", 0)
+setmetatable(_G, {})
+for _, v in next, _G do
+	if type(v) == "table" and type then
+		setmetatable(v, {})
+	end
+end
+if not _G.require and _ENV and _ENV.require then -- Fix for CC-Tweaked 1.85
+	_G.require = _ENV.require
+end
+local content, err = (loadstring or load)(file.readAll(), "@/magiczockerOS/core.lua", "t")
+file.close()
+if not content then
+	if err and err ~= "" then
+		error(err, 0)
+	end
+	return
+end
+local ok, err = xpcall(function() return content() end, function(err) return err end)
+if not ok then
+	if err and err ~= "" then
+		error(err, 0)
+	end
+end

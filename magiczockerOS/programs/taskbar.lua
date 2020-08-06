@@ -19,16 +19,13 @@ local window_pos = {}
 -- functions
 local function back_color(a,b,c)
 	if term.isColor then
-		term.setBackgroundColor((term.isColor() and c) or (type(textutils.complete) == "function" and b) or a)
+		term.setBackgroundColor((term.isColor() and c) or (textutils.complete and b) or a)
 	end
 end
 local function text_color(a,b,c)
 	if term.isColor then
-		term.setTextColor((term.isColor() and c) or (type(textutils.complete) == "function" and b) or a)
+		term.setTextColor((term.isColor() and c) or (textutils.complete and b) or a)
 	end
-end
-local function write_text(a,b,c,d)
-	term.write((not term.isColor and a) or (term.isColor() and d) or (textutils and type(textutils.complete) == "function" and c) or b)
 end
 local function get_time()
 	if settings.clock_visible and (os.time or os.date) then
@@ -43,8 +40,8 @@ local function get_time()
 					b=b-12
 				end
 			end
-			local hour="0"..math.floor(b)
-			local minute="0"..math.floor((b-hour)*60)
+			local hour="0"..floor(b)
+			local minute="0"..floor((b-hour)*60)
 			local tmp = (not term.isColor and (get_visible("calendar") and "-" or "_") or " ")
 			return tmp..hour:sub(-2)..":"..minute:sub(-2)..""..(a and " "..a or "")..tmp
 		end
@@ -57,12 +54,11 @@ local function draw_start()
 	if get_visible("startmenu") then
 		back_color(32768,256,settings.startmenu_button_active_back or 256)
 		text_color(1,1,settings.startmenu_button_active_text or 1)
-		write_text("-m-"," m "," m "," m ")
 	else
 		back_color(1,128,settings.startmenu_button_inactive_back or 128)
 		text_color(32768,1,settings.startmenu_button_inactive_text or 1)
-		write_text("_m_"," m "," m "," m ")
 	end
+	term.write((not term.isColor and (get_visible("startmenu") and "-m-" or "_m_")) or " m ")
 end
 local function draw_search()
 	if user~="" and search then
@@ -70,12 +66,11 @@ local function draw_search()
 		if get_visible("search") then
 			back_color(32768,256,settings.search_button_active_back or 256)
 			text_color(1,1,settings.search_button_active_text or 1)
-			write_text("-S-"," S "," S "," S ")
 		else
 			back_color(1,128,settings.search_button_inactive_back or 128)
 			text_color(32768,1,settings.search_button_inactive_text or 1)
-			write_text("_S_"," S "," S "," S ")
 		end
+		term.write((not term.isColor and (get_visible("search") and "-S-" or "_S_")) or " S ")
 	end
 end
 local function draw_items()
@@ -85,7 +80,7 @@ local function draw_items()
 		w = w + 3
 	end
 	local a=line:sub(1+offset,w-#time-3-(user == "" and 0 or 3)+offset)
-	local b=line:sub(1+offset,w-#time-3-(user == "" and 0 or 3)+offset)
+	local b=a
 	local c=false -- inject
 	local d=0 -- start
 	if front.pos then
@@ -124,7 +119,7 @@ local function draw_items()
 		back_color(1,128,settings.taskbar_back or 128)
 		local e=w-(user == "" and (-1) or 2)-#time-({term.getCursorPos()})[1]
 		local f=(" "):rep(e)
-		write_text(("_"):rep(e),f,f,f)
+		term.write(not term.isColor and ("_"):rep(e) or f)
 	end
 	w = tmp
 end
@@ -203,13 +198,13 @@ set_items()
 draw_search()
 -- events
 while true do
-	local a,b,c,d=coroutine.yield()
+	local a, b, c = coroutine.yield()
 	if a == "user" or a == "refresh_settings" then
 		if a == "user" then
 			user = user_data().name
 		else
 			settings = get_settings()
-			if type(settings.clock_visible) == "nil" then
+			if settings.clock_visible == nil then
 				settings.clock_visible=true
 			end
 		end
@@ -218,15 +213,15 @@ while true do
 		draw_items()
 		draw_search()
 	elseif a == "mouse_click" then
-		if c<4 and d == 1 then -- open/close start menu
+		if c<4 then -- open/close start menu
 			set_vis("sm")
 			set_visible("startmenu",not get_visible("startmenu"))
 			draw_start()
-		elseif user~="" and c>=(w-(user == "" and (-1) or 2)-#time)+(search and 0 or 3) and c<(w-(user == "" and (-1) or 2))+(search and 0 or 3) and d == 1 then -- open/close calendar
+		elseif user~="" and c>=(w-(user == "" and (-1) or 2)-#time)+(search and 0 or 3) and c<(w-(user == "" and (-1) or 2))+(search and 0 or 3) then -- open/close calendar
 			set_vis("ca")
 			set_visible("calendar",not get_visible("calendar"))
 			draw_clock()
-		elseif search and user~="" and c>w-3 and d == 1 then -- open/close search
+		elseif search and user~="" and c>w-3 then -- open/close search
 			set_vis("se")
 			set_visible("search",not get_visible("search"))
 			draw_search()

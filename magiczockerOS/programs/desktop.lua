@@ -25,12 +25,12 @@ local textbox_available=native_fs.exists("/magiczockerOS/programs/desktop/textbo
 -- functions
 local function back_color(a, b, c)
 	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function text_color(a, b, c)
 	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function _max(...)
@@ -51,10 +51,10 @@ local function position_icons()
 	if w - 1 < 7 then
 		return
 	end
-	max_icons_per_row = math.floor((w - 1) / 7)
-	max_rows = math.floor((h - 3) / 6)
-	space_left = math.floor((w - max_icons_per_row * 7) * 0.5)
-	space_right = math.ceil((w - max_icons_per_row * 7) * 0.5)
+	max_icons_per_row = floor((w - 1) / 7)
+	max_rows = floor((h - 3) / 6)
+	space_left = floor((w - max_icons_per_row * 7) * 0.5)
+	space_right = ceil((w - max_icons_per_row * 7) * 0.5)
 	local file_list = fs.exists("desktop") and fs.list("desktop") or {}
 	page = 1
 	local cur_x, cur_y = space_left + 1, 2
@@ -80,7 +80,7 @@ local function draw()
 		magiczockerOS.contextmenu.clear_map()
 		magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Refresh","refresh"},{"New background","new_background"},{"New Shortcut","New Shortcut"}})
 	end
-	space_right_tabs = math.floor((w - #pages * 2 + 1) * 0.5)
+	space_right_tabs = floor((w - #pages * 2 + 1) * 0.5)
 	local line = 0
 	local _width = (" "):rep(w)
 	local s_r = (" "):rep(space_right)
@@ -102,7 +102,7 @@ local function draw()
 				end
 			end
 			back_color(32768, 256, my_background or settings.desktop_back or 2)
-			term.write((" "):rep(math.ceil((w - #pages * 2 + 1) * 0.5)))
+			term.write((" "):rep(ceil((w - #pages * 2 + 1) * 0.5)))
 		else
 			back_color(32768, 256, my_background or settings.desktop_back or 2)
 			local tmp = i % 6
@@ -192,11 +192,7 @@ local function draw()
 	end
 end
 local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
+	if _HOSTver and _HOSTver >= 1132 then -- GLFW
 		key_maps[257] = "enter"
 		key_maps[262] = "right"
 		key_maps[263] = "left"
@@ -306,7 +302,7 @@ while true do
 		elseif _key == "up" and selected > max_icons_per_row then
 			selected = selected - max_icons_per_row
 			draw()
-		elseif _key == "down" and math.ceil(selected / max_icons_per_row) < math.ceil(#pages[page] / max_icons_per_row) then
+		elseif _key == "down" and ceil(selected / max_icons_per_row) < ceil(#pages[page] / max_icons_per_row) then
 			selected = selected + max_icons_per_row
 			if selected > #pages[page] then
 				selected = #pages[page]

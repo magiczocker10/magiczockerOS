@@ -1175,7 +1175,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	end
 end
 local function create_system_windows(i)
-	local env
 	local message = ""
 	local temp = system_window_order[i]
 	local path = system_windows[temp].path
@@ -1188,7 +1187,7 @@ local function create_system_windows(i)
 	if temp == "osk" then
 		system_windows[temp].window.set_title("On-Screen Keyboard", true)
 	end
-	env = {
+	local env = {
 		math = math,
 		fs = system_windows[temp].filesystem or fs,
 		native_fs = fs,
@@ -1318,6 +1317,29 @@ local function create_system_windows(i)
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
 		unpack = _unpack,
+		floor = math.floor,
+		ceil = math.ceil,
+		coroutine = {
+			yield = coroutine.yield, -- all
+		},
+		tonumber = tonumber, -- osk, caldender
+		type = type, -- contextmenu, desktop, osk
+		os = {
+			time = os.time, -- taskbar
+			date = os.date, -- taskbar
+			reboot = os.reboot, -- startmenu
+			shutdown = os.shutdown, -- startmenu
+			queueEvent = os.queueEvent, -- calender
+		},
+		next = next, -- search
+		table = {
+			sort = table.sort, -- search
+			remove = table.remove, -- desktop
+		},
+		_HOSTver = _HOSTver, -- all
+		textutils = {
+			complete = textutils.complete -- all
+		},
 		magiczockerOS = get_os_commands(system_windows[temp]),
 	}
 	if system_windows[temp].filesystem then
@@ -1338,23 +1360,6 @@ local function create_system_windows(i)
 			end,
 		}
 		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
-	end
-	setmetatable(env, {__index = _G})
-	for k, v in next, _G.os do
-		if not env.os[k] and v then
-			env.os[k] = v
-		end
-	end
-	for _, v in next, {"print", "printError"} do
-		if _G[v] then
-			env[v] = (env.load or env.loadstring)(overrides[v] or string.dump(_G[v]), nil, nil, env)
-			if overrides[v] then
-				env[v] = env[v]()
-			end
-			if setfenv then
-				setfenv(env[v], env)
-			end
-		end
 	end
 	local file = fs.open(path, "r")
 	local program, err

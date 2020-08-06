@@ -16,12 +16,12 @@ local cur_raw
 local my_pos={0,0}
 local function back_color(a, b, c)
 	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function text_color(a, b, c)
 	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function process_data(x,y)
@@ -88,7 +88,7 @@ local function draw()
 				tmp=tmp:sub(1,my_size[1]-2)
 			end
 			tmp = (align==1 and "" or to_add)..tmp..(align==3 and "" or to_add)
-			local half = align==2 and math.floor((#tmp-my_size[1]+1)*0.5)+2
+			local half = align==2 and floor((#tmp-my_size[1]+1)*0.5)+2
 			local part_one = (align==2 and half or align==1 and 1 or (my_size[1]-2)*-1)
 			local part_two = (align==2 and half-3+my_size[1] or align==1 and my_size[1]-2 or nil)
 			tmp = tmp:sub(part_one,part_two)
@@ -108,11 +108,7 @@ local function draw()
 	end
 end
 local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
+	if _HOSTver and _HOSTver >= 1132 then -- GLFW
 		key_maps[257] = "enter"
 		key_maps[264] = "down"
 		key_maps[265] = "up"
@@ -157,30 +153,30 @@ local function handle_click(a)
 end
 load_keys()
 while true do
-	local e, d, x, y, p1 = coroutine.yield()
-	if e == "set_data" then
+	local a, b, c, d, e = coroutine.yield()
+	if a == "set_data" then
 		parents = {}
-		caller = p1
+		caller = e
 		items = {}
-		my_pos[1]=x
-		my_pos[2]=y
-		setup_data(d)
-	elseif e == "redraw_items" then
+		my_pos[1]=c
+		my_pos[2]=d
+		setup_data(b)
+	elseif a == "redraw_items" then
 		draw()
-	elseif e == "mouse_click" then
-		if scrollable and (y == 1 and scroll > 0 or y == my_size[2] and #items-scroll > my_size[2]) then
-			scroll = scroll + (y == 1 and scroll > 0 and -1 or 1)
+	elseif a == "mouse_click" then
+		if scrollable and (d == 1 and scroll > 0 or d == my_size[2] and #items-scroll > my_size[2]) then
+			scroll = scroll + (d == 1 and scroll > 0 and -1 or 1)
 			draw()
-		elseif items[y+scroll].event then
-			handle_click(y+scroll)
+		elseif items[d+scroll].event then
+			handle_click(d+scroll)
 		end
-	elseif e == "mouse_scroll" and scrollable then -- not tested (ToDo testing)
-		if d > 0 and #items-scroll > my_size[2] or d < 0 and scroll > 0 then
-			scroll = scroll + d > 0 and 1 or -1
+	elseif a == "mouse_scroll" and scrollable then -- not tested (ToDo testing)
+		if b > 0 and #items-scroll > my_size[2] or b < 0 and scroll > 0 then
+			scroll = scroll + b > 0 and 1 or -1
 			draw()
 		end
-	elseif e == "key" and (not term.isColor or not term.isColor()) then
-		local _key = key_maps[d]
+	elseif a == "key" and (not term.isColor or not term.isColor()) then
+		local _key = key_maps[b]
 		if _key == "up" and cursor > 0 or _key == "down" and cursor < #items - (scollable and 1 or 0) then
 			cursor = cursor + (_key == "up" and -1 or 1)
 			correct_scroll()
@@ -188,8 +184,8 @@ while true do
 		elseif _key == "enter" and items[cursor].event then
 			handle_click(cursor)
 		end
-	elseif e == "settings" then
-		settings = d
+	elseif a == "settings" then
+		settings = b
 		draw()
 	end
 end

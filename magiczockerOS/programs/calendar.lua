@@ -26,7 +26,7 @@ local month_names = {
 	"December",
 }
 local _month_width = (" "):rep(25)
-local _year_width = _year_width
+local _year_width = _month_width
 local cur_day = {1, 8, 2019} -- set the start-date
 local cur_view = 1
 local cur_view_cursor = 0
@@ -40,12 +40,12 @@ local function size(w,h)
 end
 local function background_color(a, b, c)
 	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function text_color(a, b, c)
 	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function get_month_days(m)
@@ -79,7 +79,7 @@ local function get_week_number(dat, total)
 	to_return = wd_one > 4 and to_return - 8 + wd_one or to_return + wd_one - 1
 	to_return = (total and (wd_two > 3 and to_return + 7 - wd_two or to_return - wd_two) or to_return) / 7
 	if not total then
-		to_return = to_return % 1 > 0 and math.floor(to_return) + 1 or to_return
+		to_return = to_return % 1 > 0 and floor(to_return) + 1 or to_return
 		if to_return > get_week_number({31, 12, dat[3]}, true) then
 			to_return = 1
 		elseif to_return == 0 then
@@ -97,7 +97,7 @@ local function draw_month()
 	wd = wd == 0 and 7 or wd
 	if set_size then
 		local height_ = height
-		height = math.ceil((td + wd - 1) / 7) + 5
+		height = ceil((td + wd - 1) / 7) + 5
 		if height ~= height_ then
 			height_ = height
 			size(25, height)
@@ -110,7 +110,7 @@ local function draw_month()
 	term.write((cur_day[3] > 1900 or cur_day[2] > 1) and "<" or " ")
 	local temp = month_names[cur_day[2]] .. " " .. cur_day[3]
 	local to_add = (17 - #temp) * .5
-	term.write((" "):rep(math.floor(to_add)) .. temp .. (" "):rep(math.ceil(to_add)))
+	term.write((" "):rep(floor(to_add)) .. temp .. (" "):rep(ceil(to_add)))
 	term.write((cur_day[3] < 9999 or cur_day[2] < 12) and ">" or " ")
 	term.write((not term.isColor or not term.isColor()) and cur_view_cursor == 0 and " - " or "   ")
 	term.setCursorPos(1, 3)
@@ -296,11 +296,7 @@ local function change_page(dir)
 	end
 end
 local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
+	if _HOSTver and _HOSTver >= 1132 then -- GLFW
 		key_maps[257] = "enter"
 		key_maps[262] = "right"
 		key_maps[263] = "left"
@@ -341,7 +337,7 @@ while true do
 				local x = (x - 1) * 0.25
 				if x % 1 > 0 then
 					cur_view = 1
-					cur_day[2] = 6 * (y == 4 and 0 or 1) + math.ceil(x)
+					cur_day[2] = 6 * (y == 4 and 0 or 1) + ceil(x)
 					draw()
 				end
 			end
@@ -354,7 +350,7 @@ while true do
 				local x = (x - 3) * .2
 				if x % 1 > 0 then
 					cur_view = 2
-					cur_day[3] = cur_day[3] - 1 + 4 * (y == 4 and 0 or 1) + math.ceil(x)
+					cur_day[3] = cur_day[3] - 1 + 4 * (y == 4 and 0 or 1) + ceil(x)
 					draw()
 				end
 			end

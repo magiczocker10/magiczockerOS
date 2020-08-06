@@ -4,41 +4,40 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
 -- numbers
-local A = 1 -- mode
+local mode = 1
 -- booleans
-local B = false -- use GLFW
-local D = true -- send key_up
+local send_key_up = true
 local shift_active = false
 local caps_active = false
 -- tables
-local E = settings or {} -- current_settings
+local current_settings = settings or {}
 local E_
-local F = {} -- map
-local G -- registered_keys (reihe,{anzeige normal,shift},{key normal,shift},{key-neu normal,shift},char event name)
+local map = {}
+local registered_keys -- (reihe,{anzeige normal,shift},{key normal,shift},{key-neu normal,shift},char event name)
 -- functions
 local function back_color(a, b, c)
 	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function text_color(a, b, c)
 	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
+		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
 end
 local function create_map()
 	local a = 0 -- max_width
 	local b -- cur_width
-	F = {{}, {}, {}, {}, {}}
-	for i = 1, #G do
+	map = {{}, {}, {}, {}, {}}
+	for i = 1, #registered_keys do
 		b = 0
-		for j = 1, #G[i] do
-			for _ = 1, #(G[i][j][1][A] or " ") do
-				F[i][#F[i] + 1] = j
+		for j = 1, #registered_keys[i] do
+			for _ = 1, #(registered_keys[i][j][1][mode] or " ") do
+				map[i][#map[i] + 1] = j
 			end
-			b = b + #(G[i][j][1][A] or " ")
-			if j < #G[i] then
-				F[i][#F[i] + 1] = 0
+			b = b + #(registered_keys[i][j][1][mode] or " ")
+			if j < #registered_keys[i] then
+				map[i][#map[i] + 1] = 0
 				b = b + 1
 			end
 		end
@@ -49,28 +48,28 @@ local function create_map()
 	if a == 0 then
 		a = 2
 	end
-	set_size(a, #G + 1)
+	set_size(a, #registered_keys + 1)
 end
 local function draw()
 	local a
-	local b = E["window_bar_active_back"] or 128
+	local b = current_settings["window_bar_active_back"] or 128
 	back_color(32768, 32768, b)
-	text_color(1, 1, b == 1 and 32768 or E["window_bar_active_text"] or 1)
-	for i = 1, #F do
+	text_color(1, 1, b == 1 and 32768 or current_settings["window_bar_active_text"] or 1)
+	for i = 1, #map do
 		term.setCursorPos(1, i)
 		a = 0
-		for j = 1, #F[i] do
-			if F[i][j] == 0 then
+		for j = 1, #map[i] do
+			if map[i][j] == 0 then
 				term.write" "
-			elseif a ~= F[i][j] then
-				a = F[i][j]
-				term.write(G[i][F[i][j]][1][A] or " ")
+			elseif a ~= map[i][j] then
+				a = map[i][j]
+				term.write(registered_keys[i][map[i][j]][1][mode] or " ")
 			end
 		end
 	end
 end
 local function send(a, b)
-	send_event(a and "key_up" or "key", b, not a and not type(textutils.complete) == "function" or nil)
+	send_event(a and "key_up" or "key", b, not a and not textutils.complete or nil)
 end
 local function send_key(a, b)
 	if type(b) == "function" then
@@ -84,18 +83,18 @@ local function send_key(a, b)
 	end
 end
 local function load_keyboard_layout()
-	if E_ and E_ == E.osk_key_mapping then
+	if E_ and E_ == current_settings.osk_key_mapping then
 		return
 	end
-	G = {}
-	local file = fs.open("/magiczockerOS/key_mappings/"..(E.osk_key_mapping or "qwerty")..".map","r")
+	registered_keys = {}
+	local file = fs.open("/magiczockerOS/key_mappings/"..(current_settings.osk_key_mapping or "qwerty")..".map","r")
 	if file then
 		local cur_line = 1
 		for line in file.readLine do
 			if line=="next_row" then
 				cur_line = cur_line + 1
 			elseif line:match("%s") then
-				G[cur_line] = G[cur_line] or {}
+				registered_keys[cur_line] = registered_keys[cur_line] or {}
 				local data = {nil,nil,nil,nil,nil}
 				local num=1
 				for k in line:gmatch("[^%s]+") do
@@ -115,7 +114,7 @@ local function load_keyboard_layout()
 				end
 				data[3]=tonumber(data[3] or "")
 				data[4]=tonumber(data[4]) or data[3]
-				local tmp = G[cur_line]
+				local tmp = registered_keys[cur_line]
 				tmp[#tmp+1] = {{data[1],data[2]},{data[3],data[4]},data[5]}
 			end
 		end
@@ -123,28 +122,20 @@ local function load_keyboard_layout()
 		create_map()
 	end
 end
-do -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-	if #(_HOST or "") > 1 then
-		local number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-		if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
-			B = true
-		end
-	end
-end
 -- start
 load_keyboard_layout()
 draw()
 -- events
 while true do
-	local e = {coroutine.yield()}
-	if e[1] == "mouse_click" and F[e[4]] and (F[e[4]][e[3]] or 0) > 0 then
-		local f = G[e[4]][F[e[4]][e[3]]] -- r_key
-		local e = A -- mode_old
-		if f[1][A] then
+	local a, b, c, d = coroutine.yield()
+	if a == "mouse_click" and map[d] and (map[d][c] or 0) > 0 then
+		local f = registered_keys[d][map[d][c]] -- r_key
+		local e = mode -- mode_old
+		if f[1][mode] then
 			-- Key
 			send_key(false, f[2][e])
 			-- Char
-			local _char = f[3] or f[1][A]
+			local _char = f[3] or f[1][mode]
 			if #_char == 1 then
 				if type(_char) == "function" then
 					_char()
@@ -153,31 +144,31 @@ while true do
 				end
 			end
 			-- Key up
-			if D then
+			if send_key_up then
 				send_key(true, f[2][e])
 			end
-			if f[1][A]:lower() == "shift" then
+			if f[1][mode]:lower() == "shift" then
 				shift_active = not shift_active
-			elseif f[1][A]:lower() == "caps" then
+			elseif f[1][mode]:lower() == "caps" then
 				caps_active = not caps_active
 			else
 				shift_active = false
 			end
-			A = (shift_active or caps_active) and shift_active ~= caps_active and 2 or 1
-			if A ~= e then
+			mode = (shift_active or caps_active) and shift_active ~= caps_active and 2 or 1
+			if mode ~= e then
 				create_map()
 				draw()
 			end
 		end
-	elseif e[1] == "char" and e[2] == "r" then
+	elseif a == "char" and b == "r" then
 		E_ = nil
 		load_keyboard_layout()
 		draw()
-	elseif e[1] == "refresh_settings" then
-		E = get_settings()
+	elseif a == "refresh_settings" then
+		current_settings = get_settings()
 		load_keyboard_layout()
 		draw()
-	elseif e[1] ~= "user" then
+	elseif a ~= "user" then
 		send_event(unpack(e))
 	end
 end
