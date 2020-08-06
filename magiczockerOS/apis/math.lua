@@ -1,3 +1,8 @@
+-- magiczockerOS - Copyright by Julian Kriete 2016-2020
+
+-- My ComputerCraft-Forum account:
+-- http://www.computercraft.info/forums2/index.php?showuser=57180
+
 function create()
 	local to_return = {}
 	function to_return.abs(a)

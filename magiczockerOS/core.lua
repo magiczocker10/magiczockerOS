@@ -1,4 +1,4 @@
--- magiczockerOS 3.0 - Copyright by Julian Kriete 2016-2020
+-- magiczockerOS - Copyright by Julian Kriete 2016-2020
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser = 57180
@@ -277,7 +277,7 @@ local function load_api(name)
 			end
 			local api_ = {}
 			for k, v in next, env do
-				if k ~= "_ENV" then
+				if v ~= env then
 					api_[k] = v
 				end
 			end
@@ -515,16 +515,11 @@ local function setup_user(username, session)
 	end
 	last_window = nil
 	if not session then
-		if name ~= "" and fs.exists("/magiczockerOS/users/" .. name .. "/files") and not fs.isDir("/magiczockerOS/users/" .. name .. "/files") then
-			fs.delete("/magiczockerOS/users/" .. name .. "/files")
-		end
-		if name ~= "" and not fs.exists("/magiczockerOS/users/" .. name .. "/files") then
-			fs.makeDir("/magiczockerOS/users/" .. name .. "/files")
-		end
-		if name ~= "" and not fs.exists("/magiczockerOS/users/" .. name .. "/files/desktop") then
-			fs.makeDir("/magiczockerOS/users/" .. name .. "/files/desktop")
-		end
-		apis.filesystem.add_listener("/magiczockerOS/users/" .. name .. "/files/desktop", {makeDir = true, open = true, delete = true})
+		local a = "/magiczockerOS/users/" .. name .. "/files"
+		if name ~= "" and fs.exists(a) and not fs.isDir(a) then fs.delete(a) end
+		if name ~= "" and not fs.exists(a) then fs.makeDir(a) end
+		if name ~= "" and not fs.exists(a .. "/desktop") then fs.makeDir(a .. "/desktop") end
+		apis.filesystem.add_listener(a .. "/desktop", {makeDir = true, open = true, delete = true})
 	end
 	load_settings(cur_user)
 	if #gUD(cur_user).windows > 0 then
@@ -971,9 +966,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			path = apis.filesystem.get_path(path)
 			local name = path
 			local tmp = apis.filesystem.find_in_string(name:reverse(), "/")
-			if tmp then
-				name = name:sub(-tmp + 1)
-			end
+			name = tmp and name:sub(-tmp + 1) or name
 			local env2 = {}
 			local file = env.fs.open(path, "r")
 			if file then
@@ -995,7 +988,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					end
 					local api_ = {}
 					for k, v in next, env2 do
-						if k ~= "_ENV" then
+						if v ~= env2 then
 							api_[k] = v
 						end
 					end
@@ -1028,7 +1021,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if ok then
 					env.io = {}
 					for k, v in next, tEnv do
-						if k ~= "_ENV" then
+						if v ~= tEnv then
 							env.io[k] = v
 						end
 					end
@@ -1060,9 +1053,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end
 		end
-		if not path then
-			env.shell = nil
-		end
+		env.shell = path and env.shell or nil
 	end
 	path = path or "/rom/programs/shell"
 	path = fs.exists(path .. ".lua") and path .. ".lua" or path
@@ -1103,11 +1094,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				setfenv(program, env)
 			end
 		else
-			if err and err ~= "" then
-				message = err or "D:"
-			else
-				message = "Unknown error"
-			end
+			message = (err or "") ~= "" and err or "Unknown error"
 		end
 	end
 	local function wait_error()
@@ -1157,11 +1144,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			else
 				local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
 				if not ok then
-					if err and err ~= "" then
-						message = err
-					else
-						message = "unknown error"
-					end
+					message = (err or "") ~= "" and err or "Unknown error"
 					wait_error()
 				end
 				kill_window()
@@ -1313,7 +1296,6 @@ local function create_system_windows(i)
 			draw_windows()
 		end,
 		term = system_windows[temp].window,
-		resume_system = resume_system,
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
 		unpack = _unpack,
@@ -1372,11 +1354,7 @@ local function create_system_windows(i)
 				setfenv(program, env)
 			end
 		else
-			if err and err ~= "" then
-				message = err
-			else
-				message = "unknown error"
-			end
+			message = (err or "") ~= "" and err or "unknown error"
 		end
 	else
 		message = "File not exists"
@@ -1384,16 +1362,12 @@ local function create_system_windows(i)
 	system_windows[temp].coroutine = coroutine.create(
 		function()
 			if #message > 0 then
-				error_org(message or "D:")
+				error_org(message)
 			else
 				local ok, err = run_program(function() return program() end, function(err) return err end)
 				if not ok then
-					if err and err ~= "" then
-						message = err
-					else
-						message = "unknown error"
-					end
-					error_org(message or "D:")
+					message = (err or "") ~= "" and err or "unknown error"
+					error_org(message)
 				end
 			end
 		end

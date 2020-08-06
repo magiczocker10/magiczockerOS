@@ -1,6 +1,6 @@
 -- ToDo: sorting, opening files
 
--- magiczockerOS 3.0 - Copyright by Julian Kriete 2016-2020
+-- magiczockerOS - Copyright by Julian Kriete 2016-2020
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
