@@ -10,7 +10,7 @@ function create()
 	end
 	function to_return.ceil(a)
 		local b = a % 1
-		return a + (b > 0 and 1 or 0) - b
+		return ("%.0f"):format(a + (b > 0 and 1 or 0) - b)
 	end
 	function to_return.deg(a)
 		return a / (math.pi / 180)
