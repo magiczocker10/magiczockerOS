@@ -51,18 +51,13 @@ local function size()
 	width = width + 2
 	set_size(width, #menu[mode])
 end
-local function load_keys()
-	if _HOSTver and _HOSTver >= 1132 then -- GLFW
-		key_maps[257] = "enter"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-	else -- LWJGL
-		key_maps[28] = "enter"
-		key_maps[200] = "up"
-		key_maps[208] = "down"
-	end
-end
 -- start
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+end
 create(true, false, "CraftOS", function() close_os() end)
 if fs.exists("/magiczockerOS/programs/settings.lua") then
 	create(true, false, "Settings", function() set_visible("startmenu", false) create_window("/magiczockerOS/programs/settings.lua",true) end)
@@ -83,7 +78,6 @@ if os.reboot then
 	create(true, true, "Reboot", function() os.reboot() end)
 end
 create(true, true, "Shutdown", function() os.shutdown() end)
-load_keys()
 size()
 draw()
 -- events

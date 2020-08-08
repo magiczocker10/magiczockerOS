@@ -191,21 +191,6 @@ local function draw()
 		end
 	end
 end
-local function load_keys()
-	if _HOSTver and _HOSTver >= 1132 then -- GLFW
-		key_maps[257] = "enter"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-	else
-		key_maps[28] = "enter"
-		key_maps[200] = "up"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[208] = "down"
-	end
-end
 local function check_windows()
 	for i=#windows,1,-1 do
 		if windows[i].done then
@@ -220,7 +205,14 @@ if textbox_available then
 	available["New Shortcut"]={"textbox_dialog", "Create"}
 end
 -- start
-load_keys()
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+end
 position_icons()
 draw()
 -- events

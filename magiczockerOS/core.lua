@@ -305,9 +305,7 @@ local function draw_windows()
 	apis.window.set_global_visible(false)
 	for i = 1, #system_window_order do
 		local temp_window = system_windows[system_window_order[i]].window
-		if temp_window and temp_window.get_visible() then
-			screen = temp_window.redraw(system_window_order[i] == "osk", screen, i * -1)
-		end
+		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
 		if system_window_order[i] == "startmenu" and gUD(cur_user).windows then
 			local user_win = gUD(cur_user).windows
 			for j = 1, #user_win do
@@ -325,8 +323,7 @@ local function draw_windows()
 	end
 	apis.window.set_global_visible(a)
 	apis.window.redraw_global_cache(true)
-	local tmp = system_windows.search.window
-	local tmp1 = gUD(cur_user)
+	local tmp, tmp1 = system_windows.search.window, gUD(cur_user)
 	if tmp and tmp.get_visible() then
 		tmp.restore_cursor()
 	elseif tmp1.windows and #tmp1.windows > 0 and tmp1.windows[1].window.get_visible() then
@@ -622,6 +619,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		env = {
 			math = math,
 			debug = debug,
+			_HOSTver = is_system_program and _HOSTver or nil,
 			fs = {},
 			multishell = {
 				getCount = function() return #user_data.windows end,
@@ -1063,12 +1061,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	do
 		local name = path
 		local tmp = apis.filesystem.find_in_string(name:reverse(), "/")
-		if tmp then
-			name = name:sub(-tmp + 1)
-		end
-		if name:sub(-4) == ".lua" then
-			name = name:sub(1, -5)
-		end
+		name = tmp and name:sub(-tmp + 1) or name
+		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
 		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
 		resume_system("25taskbar", system_windows.taskbar.coroutine, "window_change")
 		my_windows.window.settings(user_data.settings, true)
@@ -1416,12 +1410,9 @@ local function load_bios()
 	end
 	add_to_log("Loaded bios!")
 end
-local function load_keys()
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	local a = number_to_check and type(number_to_check) == "number" and number_to_check >= 1132
-	-- LWJGL or GLFW
+-- start
+do
+	local a = (_HOSTver or 0) >= 1132 -- GLFW or LWJGL
 	key_maps[a and 46 or 67] = "c"
 	key_maps[a and 50 or 77] = "m"
 	key_maps[a and 49 or 78] = "n"
@@ -1436,11 +1427,9 @@ local function load_keys()
 	key_maps[a and 157 or 345] = "right_ctrl"
 	key_maps[a and 56 or 348] = "context_menu"
 end
--- start
-load_keys()
 load_system_settings()
 load_api("math")
-math = apis.math.create() or math
+math = apis.math and apis.math.create() or math
 load_api("filesystem")
 load_api("peripheral")
 load_api("window")

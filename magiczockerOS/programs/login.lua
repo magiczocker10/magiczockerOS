@@ -128,31 +128,17 @@ local function login()
 		reset()
 	end
 end
-local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
-		key_maps[32] = "space"
-		key_maps[257] = "enter"
-		key_maps[258] = "tab"
-		key_maps[259] = "backspace"
-		key_maps[261] = "delete"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-	else -- LWJGL
-		key_maps[14] = "backspace"
-		key_maps[15] = "tab"
-		key_maps[28] = "enter"
-		key_maps[57] = "space"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[211] = "delete"
-	end
-end
 -- start
-load_keys()
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 32 or 57] = "space"
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 258 or 15] = "tab"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+end
 draw()
 -- events
 while true do
@@ -191,7 +177,7 @@ while true do
 			field = d==3 and 1 or 2
 			fields[field][1] = c - 1 + fields[field][3]
 			draw_field(field)
-		elseif c > w - 9 and c < w and d == 8 then
+		elseif c > w - 8 and c < w and d == 8 then
 			login()
 		else
 			field = 0

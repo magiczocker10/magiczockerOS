@@ -211,26 +211,16 @@ local function draw()
 	term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
 	term.setCursorBlink(true)
 end
-local function load_keys()
-	if _HOSTver and _HOSTver >= 1132 then -- GLFW
-		key_maps[257] = "enter"
-		key_maps[259] = "backspace"
-		key_maps[261] = "delete"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-	else -- LWJGL
-		key_maps[14] = "backspace"
-		key_maps[28] = "enter"
-		key_maps[200] = "up"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[208] = "down"
-		key_maps[211] = "delete"
-	end
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
 end
-load_keys()
 prepare_list()
 draw()
 while true do
@@ -247,19 +237,19 @@ while true do
 		key_maps[d] == "delete"
 	) then
 		local _key = key_maps[d]
-		if _key == "backspace" and user_input_cursor > 1 then -- backspace
+		if _key == "backspace" and user_input_cursor > 1 then
 			user_input_cursor = user_input_cursor - 1
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
 			set_cursor()
 			prepare_list()
 			draw()
-		elseif _key == "left" and user_input_cursor > 1 then -- left
+		elseif _key == "left" and user_input_cursor > 1 then
 			user_input_cursor = user_input_cursor - 1
 			set_cursor()
-		elseif _key == "right" and user_input_cursor <= #user_input then -- right
+		elseif _key == "right" and user_input_cursor <= #user_input then
 			user_input_cursor = user_input_cursor + 1
 			set_cursor()
-		elseif _key == "delete" and user_input_cursor <= #user_input then -- delete
+		elseif _key == "delete" and user_input_cursor <= #user_input then
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
 			prepare_list()
 			set_cursor()
@@ -279,7 +269,7 @@ while true do
 			entry_selected = entry_selected - 1
 			scroll_to_result("up")
 			draw()
-		elseif _key == "down" then -- down
+		elseif _key == "down" then
 			for i = 1, #results do
 				if results[i].last and results[i].entry_no and results[i].entry_no - 1 == entry_selected then
 					entry_selected = entry_selected + 1

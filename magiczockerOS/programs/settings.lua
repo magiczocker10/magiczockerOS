@@ -1037,36 +1037,6 @@ function reset_user_settings()
 		settings=get_settings(user)
 	end
 end
-local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if number_to_check and type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
-		key_maps[61] = "plus"
-		key_maps[257] = "enter"
-		key_maps[258] = "tab"
-		key_maps[259] = "backspace"
-		key_maps[261] = "delete"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-		key_maps[334] = "add"
-	else -- LWJGL
-		key_maps[12] = "minus"
-		key_maps[13] = "add"
-		key_maps[14] = "backspace"
-		key_maps[15] = "tab"
-		key_maps[28] = "enter"
-		key_maps[78] = "add"
-		key_maps[200] = "up"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[208] = "down"
-		key_maps[211] = "delete"
-	end
-end
 local function load_sidemenu()
 	menu = {[0] = {func = function() view = -1 end}}
 	if view == 1 then
@@ -1099,7 +1069,20 @@ if not filter_calendar then
 	tmp[#tmp+1] = {title = "Calendar Text", type = "color", value = "calendar_text", default = 1}
 	tmp[#tmp+1] = {title = "Calendar Text Highlight", type = "color", value = "calendar_text_highlight", default = 128}
 end
-load_keys()
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 45 or 12] = "minus"
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 258 or 15] = "tab"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+	key_maps[a and 334 or 13] = "add"
+	key_maps[a and -1 or 78] = "add"
+end
 load_settings()
 load_system_settings()
 generate_list()

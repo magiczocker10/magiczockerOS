@@ -87,26 +87,14 @@ local function draw()
 	term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
 	term.setCursorBlink(true)
 end
-local function load_keys()
-	local number_to_check
-	if #(_HOST or "") > 1 then -- Filter from https://forums.coronalabs.com/topic/71863-how-to-find-the-last-word-in-string/
-		number_to_check = tonumber(({_HOST:match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
-	end
-	if type(number_to_check) == "number" and number_to_check >= 1132 then -- GLFW
-		key_maps[257] = "enter"
-		key_maps[259] = "backspace"
-		key_maps[261] = "delete"
-		key_maps[262] = "right"
-		key_maps[263] = "left"
-	else -- LWJGL
-		key_maps[14] = "backspace"
-		key_maps[28] = "enter"
-		key_maps[203] = "left"
-		key_maps[205] = "right"
-		key_maps[211] = "delete"
-	end
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
 end
-load_keys()
 draw()
 while running do
 	local e, d, x, y = coroutine.yield()

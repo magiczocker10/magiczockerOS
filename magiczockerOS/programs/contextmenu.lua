@@ -107,17 +107,6 @@ local function draw()
 		term.write(tmp or to_add)
 	end
 end
-local function load_keys()
-	if _HOSTver and _HOSTver >= 1132 then -- GLFW
-		key_maps[257] = "enter"
-		key_maps[264] = "down"
-		key_maps[265] = "up"
-	else
-		key_maps[28] = "enter"
-		key_maps[200] = "up"
-		key_maps[208] = "down"
-	end
-end
 local function setup_data(data)
 	my_size[1]=0
 	my_size[2]=0
@@ -151,7 +140,12 @@ local function handle_click(a)
 		set_visible("contextmenu", false)
 	end
 end
-load_keys()
+do
+	local a = (_HOSTver or 0) >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+end
 while true do
 	local a, b, c, d, e = coroutine.yield()
 	if a == "set_data" then
