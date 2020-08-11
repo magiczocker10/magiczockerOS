@@ -10,13 +10,13 @@ function create()
 	end
 	function to_return.ceil(a)
 		local b = a % 1
-		return ("%.0f"):format(a + (b > 0 and 1 or 0) - b)
+		return ("%.0f"):format(a + (b > 0 and 1 or 0) - b) + 0
 	end
 	function to_return.deg(a)
 		return a / (math.pi / 180)
 	end
 	function to_return.floor(a)
-		return a - a % 1
+		return ("%.0f"):format(a - a % 1) + 0
 	end
 	function to_return.max(...)
 		local args = {...}
