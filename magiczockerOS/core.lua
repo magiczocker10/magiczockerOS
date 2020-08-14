@@ -1728,7 +1728,7 @@ repeat
 				resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "start_change" or _key == "t" and "calender_change" or "search_change")
 				draw_windows()
 			end
-		elseif _key == "c" and temp_window and temp_window.get_visible() then -- close window
+		elseif _key == "c" and temp_window and temp_window.get_visible() and temp_window.get_button("close") then -- close window
 			for i = 1, #user_data.labels do
 				if user_data.labels[i].id == user_data.windows[1].id then
 					resize_mode = false
@@ -1740,7 +1740,7 @@ repeat
 			draw_windows()
 		elseif _key == "n" and cur_user > 0 then -- new window
 			create_user_window(cur_user)
-		elseif _key == "m" and temp_window and temp_window.get_visible() then -- minimize window
+		elseif _key == "m" and temp_window and temp_window.get_visible() and temp_window.get_button("minimize") then -- minimize window
 			temp_window.set_visible(false)
 			local a = user_data.windows[1]
 			table.remove(user_data.windows, 1)

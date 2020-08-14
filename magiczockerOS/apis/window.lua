@@ -567,6 +567,14 @@ function create(x,y,width,height,visible,bar)
 	function window.get_buttons()
 		return my_buttons
 	end
+	function window.get_button(a)
+		for i = 1, #my_buttons do
+			if my_buttons[i][1] == a then
+				return my_buttons[i]
+			end
+		end
+		return nil
+	end
 	function window.set_buttons(a)
 		my_buttons = a
 	end
