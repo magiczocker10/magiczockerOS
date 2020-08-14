@@ -485,6 +485,8 @@ function create(x,y,width,height,visible,bar)
 	local window={}
 	local redraw_line
 	local my_blink=true
+	local my_buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
+
 	-- functions
 	local function set_size(y)
 		local _=screen[y]
@@ -562,23 +564,24 @@ function create(x,y,width,height,visible,bar)
 			set_cursor()
 		end
 	end
+	function window.get_buttons()
+		return my_buttons
+	end
+	function window.set_buttons(a)
+		my_buttons = a
+	end
 	local function create_header(foreground)
 		local _={"","","","","","","","",""}
 		local conf=settings
 		if term.isColor and term.isColor() then
-			_[1]=_[1]..(foreground and hex[conf.window_close_button_active_back or 128] or hex[conf.window_close_button_inactive_back or 128])
-			_[2]="o"
-			_[3]=_[3]..(foreground and hex[conf.window_close_button_active_text or 2048] or hex[conf.window_close_button_inactive_text or 256])
-			if id>0 then
-				_[1]=_[1]..(foreground and hex[conf.window_maximize_button_active_back or 128] or hex[conf.window_maximize_button_inactive_back or 128])
-				_[2]=_[2].."o"
-				_[3]=_[3]..(foreground and hex[conf.window_maximize_button_active_text or 512] or hex[conf.window_maximize_button_inactive_text or 256])
-				_[1]=_[1]..(foreground and hex[conf.window_minimize_button_active_back or 128] or hex[conf.window_minimize_button_inactive_back or 128])
-				_[2]=_[2].."o"
-				_[3]=_[3]..(foreground and hex[conf.window_minimize_button_active_text or 8] or hex[conf.window_minimize_button_inactive_text or 256])
+			for i = 1, id > 0 and #my_buttons or 1 do
+				local a = my_buttons[i]
+				_[1] = _[1] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_back"] or a[2]] or hex[conf["window_" .. a[1] .. "_button_inactive_back"] or a[3]])
+				_[2] = _[2] .. "o"
+				_[3] = _[3] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_text"] or a[4]] or hex[conf["window_" .. a[1] .. "_button_inactive_text"] or a[5]])
 			end
 		end
-		_[4]=(((term.isColor and term.isColor() and " ") or "=")..title..((term.isColor and term.isColor() and " ") or "="):rep(data[state].width)):sub(1,(term.isColor and term.isColor() and data[state].width-(id>0 and 4 or 1)) or data[state].width)
+		_[4]=(((term.isColor and term.isColor() and " ") or "=") .. title .. ((term.isColor and term.isColor() and " ") or "="):rep(data[state].width)):sub(1,(term.isColor and term.isColor() and data[state].width-(id>0 and #my_buttons or 0) - 1) or data[state].width)
 		local __=foreground
 		if term.isColor and term.isColor() then
 			if __ then

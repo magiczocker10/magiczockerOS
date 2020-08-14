@@ -1470,6 +1470,10 @@ do
 	if setup_user(tmp_user) then -- "1\\"
 		if tmp then
 			create_user_window(cur_user, true, nil, "/magiczockerOS/programs/login.lua")
+			local a = gUD(cur_user).windows[1].window
+			local b = a.get_buttons()
+			table.remove(b, 1)
+			a.set_buttons(b)
 		end
 	end
 end
@@ -1814,39 +1818,47 @@ repeat
 				last_click.x = e[3]
 				last_click.y = e[4]
 				last_click.time = os.clock()
-				if e[3] == win_x then -- close window
-					if id == 1 then
-						local tmp = user_data.labels
-						for i = 1, #tmp do
-							if tmp[i].id == cur_window.id then
-								resize_mode = false
-								table.remove(tmp, i)
-								break
-							end
-						end
-						table.remove(user_data.windows, 1)
-						resume_system("13taskbar", system_windows.taskbar.coroutine, "window_change")
-					elseif id < 0 then
-						temp_window.set_visible(false)
-						need_redraw = true
-					end
-					need_redraw = true
-				elseif id > 0 and e[3] == win_x + 1 then -- minimize window
-					temp_window.set_visible(false)
-					local a = user_data.windows[id]
-					table.remove(user_data.windows, id)
-					user_data.windows[#user_data.windows+1] = a
-					resume_system("12taskbar", system_windows.taskbar.coroutine, "window_change")
-					need_redraw = true
-				elseif id > 0 and e[3] == win_x + 2 then -- maximize window
-					temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
-					resume_user(user_data.windows[1].coroutine, "term_resize")
-					need_redraw = true
-				elseif id > 0 and e[3] == win_x + win_w - 1 and temp_window.get_state() == "normal" then -- resize
+				if id > 0 and e[3] == win_x + win_w - 1 and temp_window.get_state() == "normal" then -- resize
 					resize_mode = not resize_mode
 					temp_window.toggle_border(resize_mode)
 				else
-					last_window = cur_window
+					local a, b = cur_window.window.has_header() and cur_window.window.get_buttons() or nil, false
+					local c = a and a[e[3] - win_x + 1]
+					if c and c[1] == "close" then
+						b = true
+						if id == 1 then
+							local tmp = user_data.labels
+							for i = 1, #tmp do
+								if tmp[i].id == cur_window.id then
+									resize_mode = false
+									table.remove(tmp, i)
+									break
+								end
+							end
+							table.remove(user_data.windows, 1)
+							resume_system("13taskbar", system_windows.taskbar.coroutine, "window_change")
+						elseif id < 0 then
+							temp_window.set_visible(false)
+							need_redraw = true
+						end
+						need_redraw = true
+					elseif c and id > 0 then
+						local d = c[1]
+						b = true
+						if d == "minimize" then
+							temp_window.set_visible(false)
+							local a = user_data.windows[id]
+							table.remove(user_data.windows, id)
+							user_data.windows[#user_data.windows + 1] = a
+							resume_system("12taskbar", system_windows.taskbar.coroutine, "window_change")
+							need_redraw = true
+						elseif d == "maximize" then
+							temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
+							resume_user(user_data.windows[1].coroutine, "term_resize")
+							need_redraw = true
+						end
+					end
+					last_window = b and last_window or cur_window
 				end
 			elseif e[1] == "mouse_click" and id == 1 and resize_mode and (e[3] == win_x or e[3] == win_x - 1 + win_w or e[4] == win_y - 1 + win_h) then
 				last_window = cur_window
