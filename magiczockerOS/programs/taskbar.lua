@@ -58,6 +58,8 @@ local function create_search()
 	if not (not search_proc[user] or search_proc[user].is_dead) then
 		return nil
 	end
+	local d = apis.window.get_global_visible()
+	apis.window.set_global_visible(false)
 	create_window("/magiczockerOS/programs/search.lua", true)
 	search_proc[user] = get_top_window()
 	local a = search_proc[user].window.get_buttons()
@@ -66,6 +68,7 @@ local function create_search()
 	search_proc[user].window.set_buttons(a, true)
 	c[3] = 20
 	c[1], c[2], c[4] = b[1] - c[3] + 1, 2, _min(15, b[2] - 2)
+	apis.window.set_global_visible(d)
 	search_proc[user].env.set_pos(c[1], c[2], c[3], c[4])
 end
 local function draw_start()

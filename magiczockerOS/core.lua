@@ -224,8 +224,9 @@ end
 local function run_program(prog, errorhandling) -- xpcall -- copied from https://github.com/JasonTheKitten/Mimic/blob/gh-pages/lua/pre-bios.lua (2019-05-05)
 	local coro = coro_create(prog)
 	local ok = {coro_resume(coro)}
+	local args
 	while coro_status(coro) ~= "dead" do
-		local args = {coro_yield()}
+		args = {coro_yield()}
 		ok = {coro_resume(coro, _unpack(args))}
 	end
 	if ok[1] then
@@ -302,13 +303,14 @@ local function draw_windows()
 	screen = {}
 	local a = apis.window.get_global_visible()
 	apis.window.set_global_visible(false)
+	local temp_window, user_win
 	for i = 1, #system_window_order do
-		local temp_window = system_windows[system_window_order[i]].window
+		temp_window = system_windows[system_window_order[i]].window
 		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
 		if system_window_order[i] == "startmenu" and gUD(cur_user).windows then
-			local user_win = gUD(cur_user).windows
+			user_win = gUD(cur_user).windows
 			for j = 1, #user_win do
-				local temp_window = user_win[j].window
+				temp_window = user_win[j].window
 				if temp_window.get_visible() then
 					screen = temp_window.redraw(j == 1, screen, j)
 					if temp_window.get_state() == "maximized" then
@@ -379,14 +381,15 @@ local function save_user_settings(user, data)
 	end
 end
 local function move_windows_to_screen()
-	local total_screen_size = {apis.window.get_size()}
+	local total_screen_size, vv = {apis.window.get_size()}, nil
+	local temp_window, win_x, win_y, win_w, win_h, new_win_x, new_win_y
 	for _, v in next, users do
-		local vv = v.windows
+		vv = v.windows
 		for j = 1, #vv do
-			local temp_window = vv[j]
-			local win_x, win_y, win_w, win_h = temp_window.window.get_data("normal")
-			local new_win_x = win_x > total_screen_size[1] and total_screen_size[1] or win_x
-			local new_win_y = win_y > total_screen_size[2] and total_screen_size[2] or win_y
+			temp_window = vv[j]
+			win_x, win_y, win_w, win_h = temp_window.window.get_data("normal")
+			new_win_x = win_x > total_screen_size[1] and total_screen_size[1] or win_x
+			new_win_y = win_y > total_screen_size[2] and total_screen_size[2] or win_y
 			if win_x ~= new_win_x or win_y ~= new_win_y then
 				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h, "normal")
 			end
@@ -406,9 +409,9 @@ local function resume_system(name, coro, ...)
 	end
 end
 local function resize_system_windows()
-	local size = {apis.window.get_size()}
+	local size, win = {apis.window.get_size()}, nil
 	for i = 1, #system_window_order do
-		local win = system_window_order[i]
+		win = system_window_order[i]
 		if system_windows[win].need_resize and system_windows[win].window then
 			local x, y, w, h = system_windows[win].window.get_data()
 			if win == "desktop" then
@@ -430,8 +433,9 @@ local function setup_monitors(...)
 	if #monitor_order == 0 then
 		return nil
 	end
+	local name
 	for i = 1, #monitor_order do
-		local name = monitor_order[i].name
+		name = monitor_order[i].name
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
@@ -457,9 +461,10 @@ local function update_windows(user)
 	local vis_old = apis.window.get_global_visible()
 	apis.window.set_global_visible(false)
 	apis.window.reload_color_palette(data.settings)
+	local tmp, tmp2
 	for i = 1, #system_window_order do
-		local tmp = system_windows[system_window_order[i]]
-		local tmp2 = tmp.filesystem
+		tmp = system_windows[system_window_order[i]]
+		tmp2 = tmp.filesystem
 		if tmp2 then
 			tmp2.set_root_path(data.server and "/" or "/magiczockerOS/users/" .. data.name .. "/files")
 			tmp2.set_server(data.server)
@@ -474,7 +479,7 @@ local function update_windows(user)
 		end
 	end
 	for i = 1, #data.windows do
-		local tmp = data.windows[i]
+		tmp = data.windows[i]
 		tmp.window.settings(data.settings, i == 1)
 		if tmp.is_system then
 			resume_user(tmp.coroutine, "refresh_settings")
@@ -936,17 +941,17 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					env.fs[k] = tmp[k]
 				end
 			end
-		end
-		-- copy bios functions to env
-		for i = 1, #bios_to_reload do
-			local tmp = bios_to_reload[i]
-			if _G[tmp] then
-				env[tmp] = (env.load or env.loadstring)(overrides[tmp] or string.dump(_G[tmp]), nil, nil, env)
-				if overrides[tmp] then
-					env[tmp] = env[tmp]()
-				end
-				if setfenv then
-					setfenv(env[tmp], env)
+			-- copy bios functions to env
+			for i = 1, #bios_to_reload do
+				tmp = bios_to_reload[i]
+				if _G[tmp] then
+					env[tmp] = (env.load or env.loadstring)(overrides[tmp] or string.dump(_G[tmp]), nil, nil, env)
+					if overrides[tmp] then
+						env[tmp] = env[tmp]()
+					end
+					if setfenv then
+						setfenv(env[tmp], env)
+					end
 				end
 			end
 		end
@@ -1247,9 +1252,9 @@ local function create_system_windows(i)
 				local prog = system_windows.startmenu.window.get_visible() and "startmenu" or "calendar"
 				resume_system("21" .. prog, system_windows[prog].coroutine, e, ...)
 			else
-				local uData = gUD(cur_user)
+				local uData, temp_window = gUD(cur_user), nil
 				for j = 1, #uData.windows do
-					local temp_window = uData.windows[j]
+					temp_window = uData.windows[j]
 					if temp_window.window.get_visible() then
 						resume_user(temp_window.coroutine, e, ...)
 						if events_to_break[e] then
@@ -1260,11 +1265,11 @@ local function create_system_windows(i)
 			end
 		end,
 		switch_visible = function(id, state)
-			local uData = gUD(cur_user)
+			local uData, visible = gUD(cur_user), false
 			uData.desktop = {}
 			for i = 1, #uData.windows do
 				if uData.windows[i].id == id then
-					local visible = uData.windows[i].window.get_visible()
+					visible = uData.windows[i].window.get_visible()
 					if type(state) == "boolean" then
 						visible = not state
 					end
@@ -1295,7 +1300,6 @@ local function create_system_windows(i)
 		},
 		tonumber = tonumber, -- osk, caldender
 		type = type, -- contextmenu, desktop, osk
-		error = error,
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
@@ -1310,6 +1314,7 @@ local function create_system_windows(i)
 		textutils = {
 			complete = textutils.complete -- all
 		},
+		apis = apis, -- taskbar
 		magiczockerOS = get_os_commands(system_windows[temp]),
 	}
 	if system_windows[temp].filesystem then
@@ -1382,10 +1387,10 @@ local function load_bios()
 	-- https://github.com/SquidDev-CC/CC-Tweaked/commit/93310850d27286919c162d2387d6540430e2cbe6
 	check_expect_path("/rom/modules/main/cc/expect.lua")
 	if _G["~expect"] then
-		local file = fs.open("/magiczockerOS/CCTweaked/bios.lua", "r")
+		local file, tmp = fs.open("/magiczockerOS/CCTweaked/bios.lua", "r"), nil
 		if file then
 			for line in file.readLine do
-				local tmp = line:sub(1, 9) == "function " and line:find("%(") and line:sub(10, ({line:find("%(")})[1] - 1)
+				tmp = line:sub(1, 9) == "function " and line:find("%(") and line:sub(10, ({line:find("%(")})[1] - 1)
 				if tmp and function_list[tmp] then
 					start = tmp
 					overrides[start] = "local function dummy" .. line:sub(({line:find("%(")})[2])
@@ -1875,9 +1880,9 @@ repeat
 				end
 			end
 			if e[1] == "mouse_click" and id ~= (system_windows.osk.id or 0) and id ~= system_windows.taskbar.id then
-				local _taskbar = {startmenu = "start", calendar = "calendar"}
+				local _taskbar, tmp = {startmenu = "start", calendar = "calendar"}, nil
 				for i = 1, #system_window_order do
-					local tmp = system_windows[system_window_order[i]]
+					tmp = system_windows[system_window_order[i]]
 					if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
 						tmp.window.set_visible(false)
 						if _taskbar[system_window_order[i]] then
@@ -1961,9 +1966,10 @@ repeat
 				end
 			elseif tmp and tmp[1] == 0 and data.mode == "get_settings-answer" then
 				window_messages[data.my_id] = nil
+				local tmp
 				for k, v in next, users do
 					if v.name == data.username and v.server == data.return_id then
-						local tmp = gUD(k).settings
+						tmp = gUD(k).settings
 						for k, v in next, data.data do
 							tmp[k] = v
 						end
@@ -2029,8 +2035,9 @@ repeat
 			resume_system("2desktop", system_windows.desktop.coroutine, "term_resize")
 		end
 	elseif e[1] and not resize_mode then
+		local temp_window
 		for i = 1, #system_window_order do
-			local temp_window = system_windows[system_window_order[i]]
+			temp_window = system_windows[system_window_order[i]]
 			if temp_window.window.get_visible() then
 				local _status = coroutine.status(temp_window.coroutine)
 				local continue = (system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible()) or 
@@ -2044,7 +2051,7 @@ repeat
 			end
 			if system_window_order[i] == "startmenu" and #user_data.windows > 0 then
 				for j = 1, #user_data.windows do
-					local temp_window = user_data.windows[j]
+					temp_window = user_data.windows[j]
 					if temp_window.window.get_visible() then
 						resume_user(temp_window.coroutine, _unpack(e))
 						if events_to_break[e[1]] then

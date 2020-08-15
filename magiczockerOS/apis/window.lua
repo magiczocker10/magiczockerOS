@@ -302,20 +302,22 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 	local endxorg=endx
 	local to_repeat={}
 	local goto_limit = return_data and 1 or #monitor_order
+	local s, startx, endx, limit_set, continue, to_draw, cur_data, _line, _line_old
 	for screen=1,goto_limit do
-		local s=monitor_order[screen]
-		local startx=math.max(startxorg or s.startx,s.startx)
-		local endx=math.min(endxorg or s.endx,s.endx)
-		local limit_set = return_data or startxorg and endxorg
-		local continue = endx>=startx and startx<=s.endx and s.startx<=endx
-		local to_draw={-1,{},-1,-1} -- x, text, bcol, tcol
-		local cur_data={0,-1,-1} -- x, backc, textc
-		local _line=global_cache[line]
-		local _line_old=global_cache_old[line] or {}
+		s=monitor_order[screen]
+		startx=math.max(startxorg or s.startx,s.startx)
+		endx=math.min(endxorg or s.endx,s.endx)
+		limit_set = return_data or startxorg and endxorg
+		continue = endx>=startx and startx<=s.endx and s.startx<=endx
+		to_draw={-1,{},-1,-1} -- x, text, bcol, tcol
+		cur_data={0,-1,-1} -- x, backc, textc
+		_line=global_cache[line]
+		_line_old=global_cache_old[line] or {}
 		global_cache_old[line]=global_cache_old[line] or {}
 		startx,endx=not continue and 1 or startx,not continue and 0 or endx
+		local a, b, tmp
 		for i=startx,endx do
-			local a,b=_line and _line[i],_line_old and _line_old[i]
+			a,b=_line and _line[i],_line_old and _line_old[i]
 			if a and (not check_changes or not b or ((a.b~=b.b or a.t~=b.t or a.s~=b.s) and not (a.b==b.b and a.s==" " and b.s==" "))) then
 				if not can_added(to_draw,a,i) then
 					draw_text(screen,cur_data,to_draw,line,return_data and to_repeat)
@@ -323,7 +325,7 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 					to_draw[4]=-1
 					can_added(to_draw,a,i)
 				end
-				local tmp=global_cache_old[line]
+				tmp=global_cache_old[line]
 				tmp[i]=tmp[i] or {}
 				tmp[i].b=to_draw[3]
 				tmp[i].t=(to_draw[4]<1 and a.t or to_draw[4])
@@ -348,10 +350,10 @@ function redraw_global_cache(check_changes)
 	for i=1,h do
 		rd[#rd+1]=redraw_global_cache_line(check_changes,i,nil,nil,monitor_mode=="duplicate")
 	end
-	local monitor_mode_, monitor_mode = monitor_mode, "extend"
+	local monitor_mode_, monitor_mode, tmp = monitor_mode, "extend", nil
 	for i=2,monitor_mode_=="duplicate" and #monitor_order or 1 do
 		for j=1,#rd do
-			local tmp=rd[j]
+			tmp=rd[j]
 			for k=1,#tmp do
 				draw_text(i,copy_table(tmp[k][1]),copy_table(tmp[k][2]),tmp[k][3])
 			end
@@ -360,13 +362,12 @@ function redraw_global_cache(check_changes)
 	monitor_mode=monitor_mode_
 end
 function get_global_cache(a, b, c) -- Returns the screen / the specified window in the nft-format.
-	local d = {}
-	local e = {(" "):rep(total_size[1])}
-	local f = {b = 32768}
+	local d, e, f = {}, {(" "):rep(total_size[1])}, {b = 32768}
+	local old_col, g, h
 	for i = c and 2 or 1, c or total_size[2] do
-		local old_col = {nil, nil} -- back, text
+		old_col = {nil, nil} -- back, text
 		d[#d + 1] = {}
-		local g, h = global_cache_old[i] or f, d[#d]
+		g, h = global_cache_old[i] or f, d[#d]
 		d[#d] = g and d[#d] or e
 		for j = 1, b or total_size[1] do
 			if g[j] then
@@ -564,20 +565,6 @@ function create(x,y,width,height,visible,bar)
 			set_cursor()
 		end
 	end
-	function window.get_buttons()
-		return my_buttons
-	end
-	function window.get_button(a)
-		for i = 1, #my_buttons do
-			if my_buttons[i][1] == a then
-				return my_buttons[i]
-			end
-		end
-		return nil
-	end
-	function window.set_buttons(a)
-		my_buttons = a
-	end
 	local function create_header(foreground)
 		local _={"","","","","","","","",""}
 		local conf=settings
@@ -618,6 +605,24 @@ function create(x,y,width,height,visible,bar)
 			char = table.concat(header_tmp, "", 4, 6),
 			text = table.concat(header_tmp, "", 7, 9)
 		}
+	end
+	function window.get_buttons()
+		return my_buttons
+	end
+	function window.get_button(a)
+		for i = 1, #my_buttons do
+			if my_buttons[i][1] == a then
+				return my_buttons[i]
+			end
+		end
+		return nil
+	end
+	function window.set_buttons(a, b)
+		my_buttons = a
+		create_header(b)
+		redraw_line(1)
+		redraw_global_cache_line(false,data[state].y)
+		set_cursor()
 	end
 	function redraw_line(line,pos_start,pos_end)
 		local cur_data=data[state]
