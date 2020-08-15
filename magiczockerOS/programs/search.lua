@@ -84,7 +84,7 @@ local function prepare_list()
 		local _found = tmp_results[i]:find("|")
 		local _file = tmp_results[i]:sub(1, _found - 1)
 		local _folder = tmp_results[i]:sub(_found + 1)
-		local _on_click = function() set_visible("search", false) create_window(_folder .. "/" .. _file) end
+		local _on_click = multishell.launch and function() multishell.launch({}, _folder .. "/" .. _file) end
 		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "empty_line", first = true}
 		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _file}
 		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _folder}
@@ -303,12 +303,6 @@ while true do
 		draw()
 	elseif e == "refresh_settings" then
 		settings = get_settings()
-		draw()
-	elseif e == "user" then
-		user = d
-		user_input = ""
-		user_input_cursor = 1
-		prepare_list()
 		draw()
 	end
 end

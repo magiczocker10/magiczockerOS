@@ -139,7 +139,7 @@ function create(is_system)
 				to_return[#to_return+1]=func(list[i],tmp) and list[i] or nil
 			end
 		end
-		return _unpack(to_return)
+		return unpack(to_return)
 	end
 	peri.getNames=function()
 		return get_devices(true,false,not is_system and "monitor" or nil)

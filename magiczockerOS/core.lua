@@ -759,15 +759,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				window_messages[send_id] = {id, user_}
 				send_id = send_id + 1
 			end or nil,
-			set_size = is_system_program and function(width, height)
-				for i = 1, #user_data.windows do
-					if user_data.windows[i].id == id then
-						local _x, _y = user_data.windows[i].window.get_data()
-						user_data.windows[i].window.reposition(_x, _y, width, height)
-						apis.window.clear_cache()
-						draw_windows()
-						break
-					end
+			set_pos = is_system_program and function(x, y, width, height, not_redraw)
+				local _a, _b, _c, _d = my_windows.window.get_data()
+				my_windows.window.reposition(x or _a, y or _b, width or _c, height or _d)
+				apis.window.clear_cache()
+				os.queueEvent(id.."", user_, "term_resize")
+				if not not_redraw then
+					draw_windows()
 				end
 			end or nil,
 			switch_user = is_system_program and function(logoff, username, session)
@@ -848,6 +846,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				env[k] = v
 			end
 		end
+		my_windows.env = env
 		env.os.run = function(_tEnv, path, ...)
 			if type(_tEnv) ~= "table" then
 				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2) 
@@ -1121,7 +1120,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 		user_data.desktop = {}
 		os.queueEvent(system_windows.taskbar.id .. "", "window_change")
-		resume_system("24taskbar", system_windows.taskbar.coroutine, "window_change")
 		draw_windows()
 	end
 	my_windows.coroutine = coroutine.create(
@@ -1655,7 +1653,7 @@ repeat
 				draw_windows()
 			end
 		end
-	elseif e[1] == "key" and (key_maps[e[2]] or "") == "right_ctrl" and (not term or not term.isColor or not term.isColor()) then
+	elseif e[1] == "key" and (key_maps[e[2]] or "") == "right_ctrl" then
 		key_timer = start_timer(key_timer, 0.2)
 		if system_windows.startmenu.window.get_visible() then
 			system_windows.startmenu.window.set_visible(false)
@@ -1732,6 +1730,7 @@ repeat
 				end
 			end
 			table.remove(user_data.windows, 1)
+			resume_system("16taskbar", system_windows.taskbar.coroutine, "window_change")
 			draw_windows()
 		elseif _key == "n" and cur_user > 0 then -- new window
 			create_user_window(cur_user)
@@ -1822,17 +1821,8 @@ repeat
 					if c and c[1] == "close" then
 						b = true
 						if id == 1 then
-							cur_window.is_dead = true
-							local tmp = user_data.labels
-							for i = 1, #tmp do
-								if tmp[i].id == cur_window.id then
-									resize_mode = false
-									table.remove(tmp, i)
-									break
-								end
-							end
-							table.remove(user_data.windows, 1)
-							resume_system("13taskbar", system_windows.taskbar.coroutine, "window_change")
+							os.queueEvent("key", key_maps.right_ctrl)
+							os.queueEvent("key", key_maps.c)
 						elseif id < 0 then
 							temp_window.set_visible(false)
 							need_redraw = true
@@ -1842,12 +1832,8 @@ repeat
 						local d = c[1]
 						b = true
 						if d == "minimize" then
-							temp_window.set_visible(false)
-							local a = user_data.windows[id]
-							table.remove(user_data.windows, id)
-							user_data.windows[#user_data.windows + 1] = a
-							resume_system("12taskbar", system_windows.taskbar.coroutine, "window_change")
-							need_redraw = true
+							os.queueEvent("key", key_maps.right_ctrl)
+							os.queueEvent("key", key_maps.m)
 						elseif d == "maximize" then
 							temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
 							resume_user(user_data.windows[1].coroutine, "term_resize")

@@ -11,6 +11,7 @@ local offset = 0
 local line = ""
 local time = ""
 local user = user or ""
+local _min = math.min
 -- tables
 local front = {}
 local list = {}
@@ -61,7 +62,11 @@ local function create_search()
 	search_proc[user] = get_top_window()
 	local a = search_proc[user].window.get_buttons()
 	table.remove(a, 2)
+	local b, c = {get_total_size()}, {search_proc[user].window.get_data()}
 	search_proc[user].window.set_buttons(a, true)
+	c[3] = 20
+	c[1], c[2], c[4] = b[1] - c[3] + 1, 2, _min(15, b[2] - 2)
+	search_proc[user].env.set_pos(c[1], c[2], c[3], c[4])
 end
 local function draw_start()
 	term.setCursorPos(1,1)
@@ -205,10 +210,6 @@ local function set_vis(ign)
 	if get_visible("calendar") and ign ~= "ca" then
 		set_visible("calendar",false)
 		draw_clock()
-	end
-	if get_search_vis() and ign ~= "se" then
-		switch_visible(search_proc[user].id, false)
-		draw_search()
 	end
 end
 -- start
