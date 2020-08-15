@@ -384,18 +384,16 @@ local function draw_text_line(blink)
 		term.setCursorBlink(true)
 	end
 end
-local function set_cursor(blink)
-	if cur_textfield.cursor - 1 > #cur_textfield.value then
-		cur_textfield.cursor = #cur_textfield.value + 1
+local function set_cursor(blink, data, block_pos)
+	term.setCursorBlink(false)
+	local a = cur_textfield
+	a.cursor = a.cursor - 1 > #a.value and #a.value + 1 or a.cursor
+	if a.cursor <= a.offset then
+		a.offset = a.cursor - 1
+	elseif a.cursor > a.width + a.offset then
+		a.offset = a.cursor - a.width
 	end
-	if cur_textfield.cursor <= cur_textfield.offset then
-		cur_textfield.offset = cur_textfield.cursor - 1
-	elseif cur_textfield.cursor > cur_textfield.width + cur_textfield.offset then
-		cur_textfield.offset = cur_textfield.cursor - cur_textfield.width
-	end
-	if cur_textfield.offset < 0 then
-		cur_textfield.offset = 0
-	end
+	a.offset = a.offset < 0 and 0 or a.offset
 	draw_text_line(blink)
 end
 function generate_list()
@@ -884,12 +882,8 @@ local function scroll_to_cursor(go_up)
 		   total_entries[cursor[1]].data[cursor[2]] and 
 		   (total_entries[cursor[1]].data[cursor[2]][1] or 0) == (list[i].entry or 0) and 
 		   (cursor[3] or 0) == (list[i].entry_no or 0)) then
-			if i - list_scroll < 1 then
-				list_scroll = i - 1
-			end
-			if i - list_scroll > h - 4 then
-				list_scroll = i + 4 - h
-			end
+			list_scroll = i - list_scroll < 1 and i - 1 or list_scroll
+			list_scroll = i - list_scroll > h - 4 and i + 4 - h or list_scroll
 			success = true
 		elseif success then
 			break
@@ -901,12 +895,8 @@ local function scroll_to_cursor(go_up)
 end
 local function correct_scroll()
 	local tmp = #list
-	if list_scroll > 0 and tmp - list_scroll < h - 5 then
-		list_scroll = tmp - h + 5
-	end
-	if list_scroll < 0 then
-		list_scroll = 0
-	end
+	list_scroll = list_scroll > 0 and tmp - list_scroll < h - 5 and tmp - h + 5 or list_scroll
+	list_scroll = list_scroll < 0 and 0 or list_scroll
 end
 function load_settings()
 	settings = get_settings() or {}
@@ -1016,10 +1006,7 @@ local function load_system_settings()
 		end
 	end
 	if not sys_set or type(sys_set) ~= "table" then
-		sys_set = {
-			monitor_mode = 1,
-			devices = {},
-		}
+		sys_set = {monitor_mode = 1,devices = {}}
 	end
 	if #sys_set.devices == 0 then
 		sys_set.devices = {"computer"}

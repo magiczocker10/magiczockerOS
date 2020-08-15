@@ -5,37 +5,24 @@
 
 local windows = {}
 local key_maps = {}
-local selected = {1, 1, 2000}
+local selected = {15, 8, 2020}
 local height = 8
 local week_days = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}
 local user = user or ""
 local settings = settings or {}
 local last_views = {}
-local month_names = {
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December",
-}
+local month_names = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 local _month_width = (" "):rep(25)
 local _year_width = _month_width
-local cur_day = {1, 8, 2019} -- set the start-date
+local cur_day = {15, 8, 2020} -- set the start-date
 local cur_view = 1
 local cur_view_cursor = 0
 local function size(w,h)
 	if size then
 		set_size(w,h)
 		magiczockerOS.contextmenu.clear_map()
-		local tmp=magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Goto date","goto_date"}})
-		magiczockerOS.contextmenu.on_menu_key(tmp,1,1)
+		local tmp=magiczockerOS.contextmenu.add_map(1, 1, w, h, {{"Goto date", "goto_date"}})
+		magiczockerOS.contextmenu.on_menu_key(tmp, 1, 1)
 	end
 end
 local function background_color(a, b, c)
@@ -140,7 +127,7 @@ local function draw_month()
 			term.write((" "):rep((8 - wd) * 3) .. " ")
 		elseif wd == 8 then
 			term.write" "
-			wn, wd, row = wn >= wnt and 1 or wn, 1, row + 1
+			wn, wd, row = wn >= wnt and 1 or wn + 1, 1, row + 1
 			term.setCursorPos(1, row)
 			local _wn = " " .. wn
 			_wn = _wn:sub(#_wn - 1)
