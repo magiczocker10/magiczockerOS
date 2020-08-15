@@ -25,15 +25,14 @@ local fields = { -- cursor, height, offset, text, symbol
 }
 local key_maps = {}
 -- functions
-local function back_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function set_blink()
 	if field > 0 then

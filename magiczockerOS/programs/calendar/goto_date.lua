@@ -13,15 +13,14 @@ local fields = {
 }
 local is_bw = not term or not term.isColor or not term.isColor()
 local click_x = {0, 1, 1, 0, 2, 2, 0, 3, 3, 3, 3, 0, 4, 4}
-local function back_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)

@@ -14,15 +14,14 @@ local caller
 local parents
 local cur_raw
 local my_pos={0,0}
-local function back_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function process_data(x,y)
 	local maxw,maxh=get_total_size()

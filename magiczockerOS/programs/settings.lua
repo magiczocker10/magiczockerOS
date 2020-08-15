@@ -245,15 +245,14 @@ local settings = {}
 local total_entries = {}
 local theme = {top = {128, 2, 2048, 512}, bottom = {256, 16, 8, 8}}
 -- functions
-local function background_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
@@ -376,7 +375,7 @@ local function draw_text_line(blink)
 		return
 	end
 	term.setCursorPos(offset + cur_textfield.org_x, cur_textfield.org_y - cur_textfield.scroll)
-	background_color(32768, 1, 1)
+	back_color(32768, 1, 1)
 	text_color(1, 32768, 32768)
 	term.write(((cur_textfield.value or "") .. ((not term.isColor or not term.isColor()) and "_" or " "):rep(cur_textfield.width)):sub(1 + cur_textfield.offset, cur_textfield.width + cur_textfield.offset))
 	if blink then
@@ -475,7 +474,7 @@ function draw_bottom(line)
 	end
 	local _width = (" "):rep(w)
 	for i = line or 4, line or h do
-		background_color(32768, 256, theme.bottom[color_selection])
+		back_color(32768, 256, theme.bottom[color_selection])
 		if not line then
 			term.setCursorPos(1 + offset, i)
 		end
@@ -485,7 +484,7 @@ function draw_bottom(line)
 			if list[line].type == "category_title" then
 				draw_cursor(line)
 				text_color(32768, 128, 128)
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				term.write((" " .. (categories[list[line].category].expanded and "^" or "v") .. " " .. categories[list[line].category].title .. _width):sub(1, w - 3))
 			elseif list[line].type == "category_bottom" then
 				if list[line].entry then
@@ -497,14 +496,14 @@ function draw_bottom(line)
 				else
 					draw_cursor(line)
 				end
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				text_color(32768, 128, 128)
 				term.write(("_"):rep(w - 3))
 			elseif list[line].type == "entry_title" then
 				local category = categories[list[line].category].entries[list[line].entry]
 				local _value = category.system_setting and sys_set or settings
 				draw_cursor(line,category.type == "drop-down")
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				text_color(32768, 256, 256)
 				if category.type == "text" then
 					term.write((" " .. category.title .. _width):sub(1, w - 5) .. "> ")
@@ -537,7 +536,7 @@ function draw_bottom(line)
 				end
 			elseif list[line].type == "entry_bottom" then
 				draw_cursor(line,(categories[list[line].category].entries[list[line].entry].type or "") == "drop-down")
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				text_color(32768, 256, 256)
 				term.write(("_"):rep(w - 3))
 			elseif list[line].type == "empty" then
@@ -546,7 +545,7 @@ function draw_bottom(line)
 				else
 					draw_cursor(line)
 				end
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				term.write(_width:sub(1,-4))
 			elseif list[line].type == "entry_drop-down" then
 				local category = categories[list[line].category].entries[list[line].entry]
@@ -555,7 +554,7 @@ function draw_bottom(line)
 					__ = category.default
 				end
 				draw_cursor(line)
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				text_color(32768, 256, 256)
 				term.write((" " .. (__ == list[line].entry_no and "X " or "O ") .. category.entries[list[line].entry_no] .. _width):sub(1, w - 3))
 			elseif list[line].type == "color_palette" then
@@ -565,65 +564,65 @@ function draw_bottom(line)
 					__ = category.default
 				end
 				draw_cursor(line)
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				term.write" "
 				for j = 1, #color_palette do
 					term.setBackgroundColor(color_palette[j])
 					term.setTextColor(color_palette[j] == 1 and 32768 or 1)
 					term.write(__ == color_palette[j] and "X" or __ == (color_palette[j+1] or 0) and ">" or __ == (color_palette[j-1] or 0) and "<" or " ")
 				end
-				background_color(1, 1, 1)
+				back_color(1, 1, 1)
 				term.write(_width:sub(1,-5-#color_palette))
 			elseif list[line].type == "shadow" then
 				local tmp1 = ("-"):rep(w - 4) .. " "
 				local tmp2 = _width:sub(1,-4)
 				term.write"  "
-				background_color(1, 128, 128)
+				back_color(1, 128, 128)
 				write_text(tmp1, tmp1 .. " ", tmp2, tmp2)
-				background_color(32768, 256, theme.bottom[color_selection])
+				back_color(32768, 256, theme.bottom[color_selection])
 				term.write" "
 			end
 			if list[line].type ~= "shadow" then
 				if list[line].no_shadow then
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					term.write" "
 				else
-					background_color(32768, 128, 128)
+					back_color(32768, 128, 128)
 					text_color(1, 256, 256)
 					write_text("|", "|", " ", " ")
 				end
-				background_color(32768, 256, theme.bottom[color_selection])
+				back_color(32768, 256, theme.bottom[color_selection])
 				term.write" "
 			end
 		elseif view == 1 then
-			background_color(32768, 256, theme.bottom[color_selection])
+			back_color(32768, 256, theme.bottom[color_selection])
 			if i - 3 + cur_textfield.scroll <= 5 * #textfield_variables["values"] then
 				local tmp = (i - 3 + cur_textfield.scroll) % 5
 				if tmp == 0 then -- shadow
 					term.write"  "
-					background_color(1, 128, 128)
+					back_color(1, 128, 128)
 					term.write(_width:sub(1,-4))
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					term.write" "
 				elseif tmp == 1 then -- empty line
 					term.write(_width)
 				elseif tmp == 2 or tmp == 4 then -- first line (empty)
 					term.write" "
-					background_color(1, 1, 1)
+					back_color(1, 1, 1)
 					term.write(_width:sub(1,-4))
 					if tmp == 2 then
-						background_color(32768, 256, theme.bottom[color_selection])
+						back_color(32768, 256, theme.bottom[color_selection])
 					else
-						background_color(32768, 128, 128)
+						back_color(32768, 128, 128)
 					end
 					term.write" "
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					term.write" "
 				elseif tmp == 3 then -- second line (text)   --set_cursor((i-1+cur_textfield.scroll)*0.2,i)
 					local __ = (i - 1 + cur_textfield.scroll) * 0.2
 					text_color(1, 128, theme.bottom[color_selection])
 					term.write(textfield_variables["selected"] == __ and ">" or " ")
-					background_color(1, 1, 1)
+					back_color(1, 1, 1)
 					term.write" "
 					text_color(1, 32768, 32768)
 					if __ > 0 and textfield_variables["values"][__] then
@@ -632,9 +631,9 @@ function draw_bottom(line)
 						term.write(((not term.isColor or not term.isColor()) and "_" or " "):rep(w - 5))
 					end
 					term.write" "
-					background_color(32768, 128, 128)
+					back_color(32768, 128, 128)
 					term.write" "
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					text_color(1, 128, theme.bottom[color_selection])
 					term.write(textfield_variables["selected"] == __ and "<" or " ")
 				end
@@ -642,25 +641,25 @@ function draw_bottom(line)
 				local tmp = (i - 4 + cur_textfield.scroll - 5 * #textfield_variables["values"]) % 3
 				if tmp == 0 or tmp == 1 then
 					term.write((" "):rep(w - #textfield_variables["button_text"] - 3))
-					background_color(1, 128, theme.top[color_selection])
+					back_color(1, 128, theme.top[color_selection])
 					text_color(32768, 1, 1)
 					term.write((" "):rep(#textfield_variables["button_text"]) .. "  ")
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					term.write" "
 				elseif tmp == 2 then
 					term.write((" "):rep(w - #textfield_variables["button_text"] - 3))
-					background_color(1, 128, theme.top[color_selection])
+					back_color(1, 128, theme.top[color_selection])
 					text_color(1, 1, 1)
 					term.write(textfield_variables["selected"] == #textfield_variables["values"] + 1 and ">" or " ")
 					text_color(32768, 1, 1)
 					term.write(textfield_variables["button_text"])
 					text_color(1, 1, 1)
 					term.write(textfield_variables["selected"] == #textfield_variables["values"] + 1 and "<" or " ")
-					background_color(32768, 256, theme.bottom[color_selection])
+					back_color(32768, 256, theme.bottom[color_selection])
 					term.write" "
 				end
 			else
-				background_color(32768, 256, theme.bottom[color_selection])
+				back_color(32768, 256, theme.bottom[color_selection])
 				term.write(_width)
 			end
 		elseif view == 2 and sys_set.monitor_mode > 1 then
@@ -672,7 +671,7 @@ function draw_bottom(line)
 					tmp = tmp + 10
 					local __ = j == mon_settings.mon_selected
 					local _col = __ and theme.top[color_selection] or theme.bottom[color_selection]
-					background_color(__ and 32768 or 1, __ and  128 or 256, __ and theme.top[color_selection] or theme.bottom[color_selection])
+					back_color(__ and 32768 or 1, __ and  128 or 256, __ and theme.top[color_selection] or theme.bottom[color_selection])
 					if i == 4 or i == 10 or i == 12 then -- empty space
 						write_t("          ")
 					elseif i == 5 or i == 9 then -- top/bottom monitor border
@@ -722,12 +721,12 @@ function draw_bottom(line)
 						term.setTextColor(__ and tb or tt)
 						term.write(" Add ")
 					else
-						background_color(32768, 32768, mon_settings.mon_selected > #mon_settings.mon_order and tt or tb)
+						back_color(32768, 32768, mon_settings.mon_selected > #mon_settings.mon_order and tt or tb)
 						write_t("     ")
 					end
 				end
 				if _x + 5 < w then
-					background_color(1, 1, tb)
+					back_color(1, 1, tb)
 					write_t((" "):rep(w - tmp - 5))
 				end
 			else
@@ -753,7 +752,7 @@ local function draw_changelog(line)
 		_cursor=function() end
 	end
 	local _width = (" "):rep(w)
-	background_color(32768, 256, theme.bottom[color_selection])
+	back_color(32768, 256, theme.bottom[color_selection])
 	text_color(1, 1, 1)
 	_cursor(1 + offset, 4)
 	if (line or 4)==4 then
@@ -786,7 +785,7 @@ local function draw_menu(a)
 			else
 				d = (" "):rep(offset)
 			end
-			background_color(1, 128, 128)
+			back_color(1, 128, 128)
 			term.write(d:sub(-offset))
 		end
 	end
@@ -797,7 +796,7 @@ function draw_top(line)
 		_cursor=function() end
 	end
 	local _width = (" "):rep(w)
-	background_color(1, 128, theme.top[color_selection])
+	back_color(1, 128, theme.top[color_selection])
 	text_color(32768, 1, 1)
 	_cursor(1 + offset, 1)
 	if (line or 1)==1 then

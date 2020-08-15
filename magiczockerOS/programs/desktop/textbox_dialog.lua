@@ -23,15 +23,14 @@ local data=user_data()
 if not data.server then
 	fs.set_root_path("/magiczockerOS/users/"..data.name.."/files/")
 end
-local function background_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and type(textutils.complete) == "function" and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
@@ -62,24 +61,24 @@ end
 
 local function draw()
 	term.setCursorBlink(false)
-	background_color(32768, 256, settings.dialog_background or 16)
+	back_color(32768, 256, settings.dialog_background or 16)
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
 	term.write" "
-	background_color(1, 1, settings.dialog_bar_background or 1)
+	back_color(1, 1, settings.dialog_bar_background or 1)
 	text_color(32768, 32768, settings.dialog_bar_text or 32768)
 	set_cursor(true)
-	background_color(32768, 256, settings.dialog_background or 16)
+	back_color(32768, 256, settings.dialog_background or 16)
 	term.write" "
 	term.setCursorPos(1, 3)
 	term.write(empty)
 	term.setCursorPos(1, 4)
 	term.write(empty:sub(1,-#button_text-4))
-	background_color(1, 128, settings.dialog_button_background or 32)
+	back_color(1, 128, settings.dialog_button_background or 32)
 	text_color(32768, 1, settings.dialog_button_text or 1)
 	write_text(btmp1, btmp2, btmp2, btmp2)
-	background_color(32768, 256, settings.dialog_background or 16)
+	back_color(32768, 256, settings.dialog_background or 16)
 	term.write" "
 	term.setCursorPos(1, 5)
 	term.write(empty)

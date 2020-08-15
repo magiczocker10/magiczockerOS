@@ -24,15 +24,14 @@ local settings = settings or {}
 local function return_text(a, b, c, d)
 	return not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b
 end
-local function background_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b)
@@ -97,7 +96,7 @@ local function draw_text_line(blink)
 	if not blink then
 		term.setCursorPos(2, 2)
 	end
-	background_color(1, 1, 1)
+	back_color(1, 1, 1)
 	text_color(32768, 32768, 32768)
 	term.write((user_input .. (not term.isColor and "_" or " "):rep(textline_width)):sub(1 + textline_offset, textline_width + textline_offset))
 	if not blink then
@@ -152,21 +151,21 @@ local function draw()
 	local empty_line = empty:sub(4)
 	local shadow
 	local shadow_border
-	background_color(32768, 256, settings.search_background or 16)
+	back_color(32768, 256, settings.search_background or 16)
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
 	term.write" "
-	background_color(1, 1, settings.search_bar_background or 1)
+	back_color(1, 1, settings.search_bar_background or 1)
 	text_color(32768, 32768, settings.search_bar_text or 32768)
 	set_cursor(true)
-	background_color(32768, 256, settings.search_background or 16)
+	back_color(32768, 256, settings.search_background or 16)
 	term.write" "
 	term.setCursorPos(1, 3)
 	term.write(empty)
 	for i = 4, h do
 		term.setCursorPos(1, i)
-		background_color(32768, 256, settings.search_background or 16)
+		back_color(32768, 256, settings.search_background or 16)
 		if results[i - 3 + results_scroll] then
 			local temp = results[i - 3 + results_scroll]
 			if entry_selected == temp.entry_no then
@@ -176,7 +175,7 @@ local function draw()
 				term.write(empty)
 			elseif temp.type == "empty_line" then
 				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
-				background_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
+				back_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
 				term.write(empty_line)
 			elseif temp.type == "shadow" then
 				if not shadow then
@@ -186,16 +185,16 @@ local function draw()
 				end
 				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
 				term.write" "
-				background_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
+				back_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
 				term.write(shadow)
 			else
 				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
-				background_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
+				back_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
 				text_color(32768, entry_selected == temp.entry_no and 1 or 32768, settings.search_entry_text or 32768)
 				term.write((" " .. temp.text .. empty_line):sub(1, w - 3))
 			end
 			if not results[i - 4 + results_scroll] or results[i - 4 + results_scroll].type == "empty" then -- no shadow
-				background_color(32768, 256, settings.search_background or 16)
+				back_color(32768, 256, settings.search_background or 16)
 				term.write(" ")
 				write_text(entry_selected == temp.entry_no and "<" or " ", entry_selected == temp.entry_no and "<" or " ", " ", " ")
 			else -- shadow
@@ -203,9 +202,9 @@ local function draw()
 					shadow_border = return_text("|", "|", " ", " ")
 				end
 				text_color(1, 1, 1)
-				background_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
+				back_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
 				term.write(temp.type == "shadow" and " " or shadow_border)
-				background_color(32768, 256, settings.search_background or 16)
+				back_color(32768, 256, settings.search_background or 16)
 				write_text(entry_selected == temp.entry_no and "<" or " ", entry_selected == temp.entry_no and "<" or " ", " ", " ")
 			end
 		else

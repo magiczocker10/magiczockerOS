@@ -15,15 +15,14 @@ local E_
 local map = {}
 local registered_keys -- (reihe,{anzeige normal,shift},{key normal,shift},{key-neu normal,shift},char event name)
 -- functions
-local function back_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function create_map()
 	local a = 0 -- max_width

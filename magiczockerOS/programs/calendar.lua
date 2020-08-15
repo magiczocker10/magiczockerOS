@@ -25,15 +25,14 @@ local function size(w,h)
 		magiczockerOS.contextmenu.on_menu_key(tmp, 1, 1)
 	end
 end
-local function background_color(a, b, c)
-	if term and term.isColor then
-		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local function back_color(...)
+	local b = ({...})[a]
+	if b then term.setBackgroundColor(b) end
 end
-local function text_color(a, b, c)
-	if term and term.isColor then
-		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
-	end
+local function text_color(...)
+	local b = ({...})[a]
+	if b then term.setTextColor(b) end
 end
 local function get_month_days(m)
 	return m == 2 and 28 or (m % 2 == (m < 8 and 0 or 1) and 30 or 31) -- the 29th will be added seperatly
@@ -238,7 +237,7 @@ local function draw_years()
 	term.write(_year_width)
 end
 local function draw()
-	background_color(32768, 256, settings.calendar_back or 256)
+	back_color(32768, 256, settings.calendar_back or 256)
 	text_color(1, 1, settings.calendar_text or 1)
 	if set_size and (cur_view == 2 or cur_view == 3) and height ~= 8 then
 		height = 8

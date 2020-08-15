@@ -86,11 +86,15 @@ local color_palette={
 		{0,0,0} -- black
 	}
 }
-local function copy_table(a,b)
+local function copy_table(a, b)
 	local b, c = b or {}, {}
 	b[a] = true
 	for k, v in next, a do
-		c[k], b = type(v) == "table" and not b[a] and copy_table(v, b) or v, b
+		if type(v) == "table" and not b[a] then
+			c[k], b = copy_table(v, b)
+		else
+			c[k], b = v, b
+		end
 	end
 	return c, b
 end
