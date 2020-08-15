@@ -16,6 +16,7 @@ local front = {}
 local list = {}
 local settings = settings or {}
 local window_pos = {}
+local search_proc = {}
 -- functions
 local function back_color(a,b,c)
 	if term.isColor then
@@ -49,6 +50,19 @@ local function get_time()
 		return ""
 	end
 end
+local function get_search_vis()
+	return search_proc[user] and not search_proc[user].is_dead and search_proc[user].window.get_visible() or false
+end
+local function create_search()
+	if not (not search_proc[user] or search_proc[user].is_dead) then
+		return nil
+	end
+	create_window("/magiczockerOS/programs/search.lua", true)
+	search_proc[user] = get_top_window()
+	local a = search_proc[user].window.get_buttons()
+	table.remove(a, 2)
+	search_proc[user].window.set_buttons(a, true)
+end
 local function draw_start()
 	term.setCursorPos(1,1)
 	if get_visible("startmenu") then
@@ -63,14 +77,14 @@ end
 local function draw_search()
 	if user~="" and search then
 		term.setCursorPos(w-2,1)
-		if get_visible("search") then
+		if get_search_vis() then
 			back_color(32768,256,settings.search_button_active_back or 256)
 			text_color(1,1,settings.search_button_active_text or 1)
 		else
 			back_color(1,128,settings.search_button_inactive_back or 128)
 			text_color(32768,1,settings.search_button_inactive_text or 1)
 		end
-		term.write((not term.isColor and (get_visible("search") and "-S-" or "_S_")) or " S ")
+		term.write((not term.isColor and (get_search_vis() and "-S-" or "_S_")) or " S ")
 	end
 end
 local function draw_items()
@@ -133,24 +147,26 @@ local function set_items()
 		local _width=w-#time-3-((not search or user == "") and 0 or 3)
 		local b=0 -- cursor
 		for i=1,#list do
-			if not term.isColor then
-				line=line.."_"..list[i].name.."_"
-			else
-				line=line.." "..list[i].name.." "
-			end
-			if list[i].id == a.id and a.window.get_visible() then
-				front.offset=b
-				front.pos=i
-				if offset>b then
-					offset=b
-				elseif #line-offset>_width then
-					offset = #line-_width
+			if not search_proc[user] or list[i].id ~= search_proc[user].id then
+				if not term.isColor then
+					line=line.."_"..list[i].name.."_"
+				else
+					line=line.." "..list[i].name.." "
 				end
+				if list[i].id == a.id and a.window.get_visible() then
+					front.offset=b
+					front.pos=i
+					if offset>b then
+						offset=b
+					elseif #line-offset>_width then
+						offset = #line-_width
+					end
+				end
+				for j=1,#list[i].name+2 do
+					window_pos[#window_pos+1]=list[i].id
+				end
+				b=b+#list[i].name+2
 			end
-			for j=1,#list[i].name+2 do
-				window_pos[#window_pos+1]=list[i].id
-			end
-			b=b+#list[i].name+2
 		end
 		if offset>0 and #line-offset<_width then
 			offset=#line-_width
@@ -176,19 +192,22 @@ local function draw_clock()
 	end
 end
 local function set_vis(ign)
-	if get_visible("contextmenu") and ign~="cm" then
+	if ign == "se" then
+		create_search()
+	end
+	if get_visible("contextmenu") and ign ~= "cm" then
 		set_visible("contextmenu",false)
 	end
-	if get_visible("startmenu") and ign~="sm" then
+	if get_visible("startmenu") and ign ~= "sm" then
 		set_visible("startmenu",false)
 		draw_start()
 	end
-	if get_visible("calendar") and ign~="ca" then
+	if get_visible("calendar") and ign ~= "ca" then
 		set_visible("calendar",false)
 		draw_clock()
 	end
-	if get_visible("search") and ign~="se" then
-		set_visible("search",false)
+	if get_search_vis() and ign ~= "se" then
+		switch_visible(search_proc[user].id, false)
 		draw_search()
 	end
 end
@@ -217,13 +236,16 @@ while true do
 			set_vis("sm")
 			set_visible("startmenu",not get_visible("startmenu"))
 			draw_start()
-		elseif user~="" and c>=(w-(user == "" and (-1) or 2)-#time)+(search and 0 or 3) and c<(w-(user == "" and (-1) or 2))+(search and 0 or 3) then -- open/close calendar
+		elseif user ~= "" and c >= (w - (user == "" and -1 or 2) - #time) + (search and 0 or 3) and c < (w - (user == "" and -1 or 2)) + (search and 0 or 3) then -- open/close calendar
 			set_vis("ca")
 			set_visible("calendar",not get_visible("calendar"))
 			draw_clock()
-		elseif search and user~="" and c>w-3 then -- open/close search
+		elseif search and user ~= "" and c > w - 3 then -- open/close search
+			local a = not search_proc[user] or search_proc[user].is_dead
 			set_vis("se")
-			set_visible("search",not get_visible("search"))
+			if not a then
+				switch_visible(search_proc[user].id, not search_proc[user].window.get_visible())
+			end
 			draw_search()
 		elseif b == 1 or b == 3 then -- taskbar entries
 			if b == 1 then -- left
@@ -235,18 +257,16 @@ while true do
 			set_vis()
 		end
 	elseif a == "mouse_scroll" then
-		if c>3 and c<=w-#time-(search and 3 or 0) then
-			if b == -1 and offset>0 then
-				offset=offset-1
-			elseif b == 1 and #line>w-#time-3+offset then
-				offset=offset+1
+		if c > 3 and c <= w - #time - (search and 3 or 0) then
+			if b == -1 and offset > 0 then
+				offset = offset - 1
+			elseif b == 1 and #line > w - #time - 3 + offset then
+				offset = offset + 1
 			end
 			draw_items()
 		end
 	elseif a == "start_change" then
 		draw_start()
-	elseif a == "search_change" then
-		draw_search()
 	elseif a == "calendar_change" then
 		draw_clock()
 	elseif a == "window_change" then

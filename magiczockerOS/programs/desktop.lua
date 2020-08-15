@@ -19,10 +19,11 @@ local my_background
 local key_maps = {}
 local settings = settings or {}
 local pages
-local windows={}
-local available={}
-local textbox_available=native_fs.exists("/magiczockerOS/programs/desktop/textbox_dialog.lua")
+local windows = {}
+local available = {}
+local textbox_available = native_fs.exists("/magiczockerOS/programs/desktop/textbox_dialog.lua")
 -- functions
+_max = math.max
 local function back_color(a, b, c)
 	if term and term.isColor then
 		term.setBackgroundColor(term.isColor() and c or textutils and textutils.complete and b or a)
@@ -32,19 +33,6 @@ local function text_color(a, b, c)
 	if term and term.isColor then
 		term.setTextColor(term.isColor() and c or textutils and textutils.complete and b or a)
 	end
-end
-local function _max(...)
-	local args = {...}
-	local a = #args > 0 and tonumber(args[1]) or 0
-	if type(a) ~= "number" then
-		a = 0
-	end
-	for i = 2, #args do
-		if type(args[i]) == "number" and args[i] > a then
-			a = args[i]
-		end
-	end
-	return a
 end
 local function position_icons()
 	pages = {{}}
@@ -206,7 +194,7 @@ if textbox_available then
 end
 -- start
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 262 or 205] = "right"
 	key_maps[a and 263 or 203] = "left"
@@ -220,7 +208,7 @@ while true do
 	local e = {coroutine.yield()}
 	if e[1] == "new_background" then
 		check_windows()
-		my_background = 2^math.random(0,15)
+		my_background = 2 ^ math.random(0,15)
 		draw()
 	elseif e[1] == "refresh" then
 		position_icons()

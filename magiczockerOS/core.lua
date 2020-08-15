@@ -61,7 +61,7 @@ local os_timer = 0
 local cursorblink_timer
 local printError = printError or nil
 local user
-local _HOSTver = tonumber(({(_HOST or ""):match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "")
+local _HOSTver = tonumber(({(_HOST or ""):match("%s*(%S+)$"):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
 -- tables
 local drag_old = {0, 0}
 local bios_to_reload = {"loadfile", "write", "print", "printError", "read"}
@@ -86,10 +86,9 @@ local system_windows = {
 	desktop = {need_resize = true, fs = true, x = 1, y = 2, w = w, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
 	startmenu = {x = 1, y = 2, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/startmenu.lua", click_outside = true},
 	taskbar = {need_resize = true, x = 1, y = 1, w = w, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
-	search = {need_resize = true, fs = true, x = w - 15, y = 2, w = 20, h = h - 1, visible = false, path = "/magiczockerOS/programs/search.lua", click_outside = true},
 	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false},
 }
-local system_window_order = {"osk", "contextmenu", "taskbar", "calendar", "search", "startmenu", "desktop"} -- osk needs to be the first entry
+local system_window_order = {"osk", "contextmenu", "taskbar", "calendar", "startmenu", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
 local term = term or nil
 local textutils = textutils or nil
@@ -323,22 +322,18 @@ local function draw_windows()
 	end
 	apis.window.set_global_visible(a)
 	apis.window.redraw_global_cache(true)
-	local tmp, tmp1 = system_windows.search.window, gUD(cur_user)
-	if tmp and tmp.get_visible() then
-		tmp.restore_cursor()
-	elseif tmp1.windows and #tmp1.windows > 0 and tmp1.windows[1].window.get_visible() then
-		tmp1.windows[1].window.restore_cursor()
+	local tmp = gUD(cur_user)
+	if tmp.windows and #tmp.windows > 0 and tmp.windows[1].window.get_visible() then
+		tmp.windows[1].window.restore_cursor()
 	elseif term and term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
 end
 local function get_user_id(name, server)
-	local tmp = true
-	local to_return = 0
+	local tmp, to_return = true, 0
 	for i = 1, #users do
 		if users[i].name == name and users[i].server == server then
-			tmp = false
-			to_return = i
+			tmp, to_return = false, i
 			break
 		end
 	end
@@ -420,8 +415,6 @@ local function resize_system_windows()
 				w, h = size[1], size[2] - 1
 			elseif win == "taskbar" then
 				w = size[1]
-			elseif win == "search" then
-				x, h = size[1] - 19, size[2] - 1
 			elseif win == "calendar" then
 				x = size[1] - 24
 			end
@@ -662,7 +655,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 								for j = 1, #user_data.windows do
 									if user_data.windows[j].id == n then
 										user_data.windows[j].window.set_title(title, j == 1)
-										resume_system("29taskbar", system_windows.taskbar.coroutine, "window_change")
+										os.queueEvent(system_windows.taskbar.id .. "", "window_change")
 										break
 									end
 								end
@@ -779,9 +772,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end or nil,
 			switch_user = is_system_program and function(logoff, username, session)
 				system_windows.startmenu.window.set_visible(false)
-				if system_windows.search.window then
-					system_windows.search.window.set_visible(false)
-				end
 				if system_windows.calendar.window then
 					system_windows.calendar.window.set_visible(false)
 				end
@@ -1064,12 +1054,12 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		name = tmp and name:sub(-tmp + 1) or name
 		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
 		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
-		resume_system("25taskbar", system_windows.taskbar.coroutine, "window_change")
+		os.queueEvent(system_windows.taskbar.id .. "", "window_change")
 		my_windows.window.settings(user_data.settings, true)
 		my_windows.window.set_title(name, true)
 	end
 	my_windows.filesystem.set_remote(get_remote(id, user_, env))
-	local file = os_root and fs.open(path, "r") or path and env.fs.open(path, "r")
+	local file = is_system_program and fs.open(path, "r") or path and env.fs.open(path, "r")
 	local program, err, content
 	if file then
 		content = file.readAll()
@@ -1093,6 +1083,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 	end
 	local function wait_error()
+		my_windows.is_dead = true
 		if env.term.setBackgroundColor then
 			env.term.setBackgroundColor(32768)
 		end
@@ -1113,6 +1104,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		return false
 	end
 	local function kill_window()
+		my_windows.is_dead = true
 		for i = #user_data.windows, 1, -1 do
 			if my_windows.id == user_data.windows[i].id then
 				if i == 1 then
@@ -1128,6 +1120,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		user_data.desktop = {}
+		os.queueEvent(system_windows.taskbar.id .. "", "window_change")
 		resume_system("24taskbar", system_windows.taskbar.coroutine, "window_change")
 		draw_windows()
 	end
@@ -1252,8 +1245,8 @@ local function create_system_windows(i)
 			os.queueEvent("timer", os_timer)
 		end,
 		send_event = function(e, ...)
-			if system_windows.search.window and system_windows.search.window.get_visible() or system_windows.startmenu.window.get_visible() or system_windows.calendar.window and system_windows.calendar.window.get_visible() then
-				local prog = system_windows.search.window and system_windows.search.window.get_visible() and "search" or system_windows.startmenu.window.get_visible() and "startmenu" or "calendar"
+			if system_windows.startmenu.window.get_visible() or system_windows.calendar.window and system_windows.calendar.window.get_visible() then
+				local prog = system_windows.startmenu.window.get_visible() and "startmenu" or "calendar"
 				resume_system("21" .. prog, system_windows[prog].coroutine, e, ...)
 			else
 				local uData = gUD(cur_user)
@@ -1268,12 +1261,15 @@ local function create_system_windows(i)
 				end
 			end
 		end,
-		switch_visible = function(id)
+		switch_visible = function(id, state)
 			local uData = gUD(cur_user)
 			uData.desktop = {}
 			for i = 1, #uData.windows do
 				if uData.windows[i].id == id then
 					local visible = uData.windows[i].window.get_visible()
+					if type(state) == "boolean" then
+						visible = not state
+					end
 					if i == 1 and visible then
 						local temp_window = uData.windows[1]
 						uData.windows[i].window.set_visible(not visible)
@@ -1301,6 +1297,7 @@ local function create_system_windows(i)
 		},
 		tonumber = tonumber, -- osk, caldender
 		type = type, -- contextmenu, desktop, osk
+		error = error,
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
@@ -1308,9 +1305,7 @@ local function create_system_windows(i)
 			shutdown = os.shutdown, -- startmenu
 			queueEvent = os.queueEvent, -- calender
 		},
-		next = next, -- search
 		table = {
-			sort = table.sort, -- search
 			remove = table.remove, -- desktop
 		},
 		_HOSTver = _HOSTver, -- all
@@ -1412,7 +1407,7 @@ local function load_bios()
 end
 -- start
 do
-	local a = (_HOSTver or 0) >= 1132 -- GLFW or LWJGL
+	local a, b = _HOSTver >= 1132, {} -- GLFW or LWJGL
 	key_maps[a and 46 or 67] = "c"
 	key_maps[a and 50 or 77] = "m"
 	key_maps[a and 49 or 78] = "n"
@@ -1426,6 +1421,8 @@ do
 	key_maps[a and 200 or 265] = "up"
 	key_maps[a and 157 or 345] = "right_ctrl"
 	key_maps[a and 56 or 348] = "context_menu"
+	for k, v in next, key_maps do b[v] = k end
+	for k, v in next, b do key_maps[k] = v end
 end
 load_system_settings()
 load_api("math")
@@ -1473,7 +1470,7 @@ do
 			local a = gUD(cur_user).windows[1].window
 			local b = a.get_buttons()
 			table.remove(b, 1)
-			a.set_buttons(b)
+			a.set_buttons(b, true)
 		end
 	end
 end
@@ -1711,24 +1708,22 @@ repeat
 			resume_user(user_data.windows[1].coroutine, "term_resize")
 			apis.window.set_global_visible(true)
 			draw_windows()
-		elseif _key == "x" or _key == "t" and system_windows.calendar.window or _key == "s" and system_windows.search.window then -- open/close startmenu, calender/clock, search
+		elseif _key == "x" or _key == "t" and system_windows.calendar.window or _key == "s" then -- open/close startmenu, calender/clock
 			if not ((_key == "t" or _key == "s") and cur_user == 0) then
 				if resize_mode then
 					resize_mode = false
 					user_data.windows[1].window.toggle_border(false)
 				end
 				local sys_window = system_windows
-				if sys_window.search.window then
-					sys_window.search.window.set_visible(_key == "s")
-				end
 				if sys_window.calendar.window then
 					sys_window.calendar.window.set_visible(_key == "t")
 				end
 				sys_window.startmenu.window.set_visible(_key == "x")
-				resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "start_change" or _key == "t" and "calender_change" or "search_change")
+				resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "start_change" or _key == "t" and "calender_change")
 				draw_windows()
 			end
 		elseif _key == "c" and temp_window and temp_window.get_visible() and temp_window.get_button("close") then -- close window
+			user_data.windows[1].is_dead = true
 			for i = 1, #user_data.labels do
 				if user_data.labels[i].id == user_data.windows[1].id then
 					resize_mode = false
@@ -1827,6 +1822,7 @@ repeat
 					if c and c[1] == "close" then
 						b = true
 						if id == 1 then
+							cur_window.is_dead = true
 							local tmp = user_data.labels
 							for i = 1, #tmp do
 								if tmp[i].id == cur_window.id then
@@ -1893,7 +1889,7 @@ repeat
 				end
 			end
 			if e[1] == "mouse_click" and id ~= (system_windows.osk.id or 0) and id ~= system_windows.taskbar.id then
-				local _taskbar = {search = "search", startmenu = "start", calendar = "calendar"}
+				local _taskbar = {startmenu = "start", calendar = "calendar"}
 				for i = 1, #system_window_order do
 					local tmp = system_windows[system_window_order[i]]
 					if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
@@ -1926,20 +1922,14 @@ repeat
 			resume_system("7taskbar", system_windows.taskbar.coroutine, "window_change")
 		end
 		resume_system("6taskbar", system_windows.taskbar.coroutine, "os_time")
-		local tmp = system_windows.search.window
-		if tmp and tmp.get_visible() then
-			tmp.restore_cursor()
-		elseif #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
+		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
 			user_data.windows[1].window.restore_cursor()
 		elseif term.setCursorBlink then
 			term.setCursorBlink(false)
 		end
 		os_timer = start_timer(os_timer, 0.5)
 	elseif e[1] == "timer" and e[2] == cursorblink_timer then
-		local tmp = system_windows.search.window
-		if tmp and tmp.get_visible() then
-			tmp.toggle_cursor_blink()
-		elseif user_data.windows[1] then
+		if user_data.windows[1] then
 			user_data.windows[1].window.toggle_cursor_blink()
 		end
 		cursorblink_timer = start_timer(cursorblink_timer, 0.5)

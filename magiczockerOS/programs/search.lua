@@ -5,6 +5,11 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
+local data=user_data()
+if not data.server then
+	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
+end
+
 local w, h = term.getSize()
 local user = user or ""
 local results = {}
@@ -211,8 +216,11 @@ local function draw()
 	term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
 	term.setCursorBlink(true)
 end
+local function update_title()
+	multishell.setTitle(multishell.getCurrent(), #user_input == 0 and "Search" or "Search - \"" .. user_input .. "\"")
+end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 259 or 14] = "backspace"
 	key_maps[a and 261 or 211] = "delete"
@@ -222,12 +230,14 @@ do
 	key_maps[a and 265 or 200] = "up"
 end
 prepare_list()
+update_title()
 draw()
 while true do
 	local e, d, x, y = coroutine.yield()
 	if e == "char" then
 		user_input = user_input:sub(1, user_input_cursor - 1) .. d .. user_input:sub(user_input_cursor)
 		user_input_cursor = user_input_cursor + 1
+		update_title()
 		prepare_list()
 		draw()
 	elseif e == "key" and #user_input > 0 and (
@@ -240,7 +250,7 @@ while true do
 		if _key == "backspace" and user_input_cursor > 1 then
 			user_input_cursor = user_input_cursor - 1
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
-			set_cursor()
+			update_title()
 			prepare_list()
 			draw()
 		elseif _key == "left" and user_input_cursor > 1 then
@@ -251,6 +261,7 @@ while true do
 			set_cursor()
 		elseif _key == "delete" and user_input_cursor <= #user_input then
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
+			update_title()
 			prepare_list()
 			set_cursor()
 		end

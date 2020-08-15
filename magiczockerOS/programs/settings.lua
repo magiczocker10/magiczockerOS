@@ -199,9 +199,9 @@ local categories = {
 			{title = "Close Button Background", value = "window_close_button_active_back", default = 128, type = "color"},
 			{title = "Close Button Text", value = "window_close_button_active_text", default = 2048, type = "color"},
 			{title = "Maximize Button Background", value = "window_maximize_button_active_back", default = 128, type = "color"},
-			{title = "Maximize Button Text", value = "window_maximize_button_active_text", default = 512, type = "color"},
+			{title = "Maximize Button Text", value = "window_maximize_button_active_text", default = 8, type = "color"},
 			{title = "Minimize Button Background", value = "window_minimize_button_active_back", default = 128, type = "color"},
-			{title = "Minimize Button Text", value = "window_minimize_button_active_text", default = 8, type = "color"},
+			{title = "Minimize Button Text", value = "window_minimize_button_active_text", default = 512, type = "color"},
 			{title = "Resize Border Background", value = "window_resize_border_back", default = 128, type = "color"},
 			{title = "Resize Border Text", value = "window_resize_border_text", default = 128, type = "color"},
 			{title = "Resize Button Background", value = "window_resize_button_back", default = 128, type = "color"},
@@ -1070,7 +1070,7 @@ if not filter_calendar then
 	tmp[#tmp+1] = {title = "Calendar Text Highlight", type = "color", value = "calendar_text_highlight", default = 128}
 end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 45 or 12] = "minus"
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 258 or 15] = "tab"

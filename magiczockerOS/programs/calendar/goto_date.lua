@@ -66,7 +66,7 @@ local function date_is_valid()
 	return year >= 1900 and year <= 9999 and month > 0 and month < 13 and day > 0 and get_month_days(month) + (month == 2 and is_leap_year(year) and 1 or 0) >= day or false
 end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 258 or 15] = "tab"
 	key_maps[a and 259 or 14] = "backspace"

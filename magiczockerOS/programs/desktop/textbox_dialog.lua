@@ -88,7 +88,7 @@ local function draw()
 	term.setCursorBlink(true)
 end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 259 or 14] = "backspace"
 	key_maps[a and 261 or 211] = "delete"

@@ -296,7 +296,7 @@ local function change_page(dir)
 	end
 end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 262 or 205] = "right"
 	key_maps[a and 263 or 203] = "left"
@@ -463,7 +463,7 @@ while true do
 		cur_view, height, selected[1], selected[2], selected[3] = 1, 0, cur_day[1], cur_day[2], cur_day[3]
 		draw()
 	elseif e == "goto_date" then
-		windows[#windows + 1] = {done = false,day = 1, month = 1, year = 1, queue = os.queueEvent, num = #windows + 1}
+		windows[#windows + 1] = {done = false, day = 1, month = 1, year = 1, queue = os.queueEvent, num = #windows + 1}
 		create_window("/magiczockerOS/programs/calendar/goto_date.lua", true, windows[#windows])
 	end
 end

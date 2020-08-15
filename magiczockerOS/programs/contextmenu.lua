@@ -141,7 +141,7 @@ local function handle_click(a)
 	end
 end
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"

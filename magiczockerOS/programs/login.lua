@@ -130,7 +130,7 @@ local function login()
 end
 -- start
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 32 or 57] = "space"
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 258 or 15] = "tab"
@@ -152,7 +152,7 @@ while true do
 			set_blink()
 		end
 	elseif a == "key" then
-		_key = key_maps[b]
+		local _key = key_maps[b] or ""
 		if _key == "backspace" and e and e[1] > 1 and field > 0 then
 			e[4] = e[4]:sub(1, e[1] - 2) .. e[4]:sub(e[1])
 			e[1] = e[1] - 1

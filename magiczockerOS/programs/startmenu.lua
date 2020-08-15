@@ -53,14 +53,14 @@ local function size()
 end
 -- start
 do
-	local a = (_HOSTver or 0) >= 1132
+	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"
 end
 create(true, false, "CraftOS", function() close_os() end)
 if fs.exists("/magiczockerOS/programs/settings.lua") then
-	create(true, false, "Settings", function() set_visible("startmenu", false) create_window("/magiczockerOS/programs/settings.lua",true) end)
+	create(true, false, "Settings", function() set_visible("startmenu", false) create_window("/magiczockerOS/programs/settings.lua", true) end)
 end
 create(true, false, "Shell", function() set_visible("startmenu", false) create_window() end)
 create(true, false, "Show Desktop", function() show_desktop() end)
