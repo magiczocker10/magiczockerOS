@@ -595,20 +595,20 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local is_remote = user_data.server
 	user_data.windows = user_data.windows or {}
 	table.insert(user_data.windows, 1, {id = id})
-	local my_windows = user_data.windows[1]
+	local my_window = user_data.windows[1]
 	local path = path and "/" .. apis.filesystem.get_path(path) or nil
 	local is_system_program = os_root
 	if is_remote and is_system_program then
 		is_remote = nil
 	end
-	my_windows.user = user_
-	my_windows.window = apis.window.create(2, 3, 25, 10, true, true)
-	my_windows.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
+	my_window.user = user_
+	my_window.window = apis.window.create(2, 3, 25, 10, true, true)
+	my_window.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
 	user_data.desktop = {}
 	local uenv = uenv or {}
 	local env
-	my_windows.contextmenu_data = nil
-	my_windows.is_system = is_system_program
+	my_window.contextmenu_data = nil
+	my_window.is_system = is_system_program
 	apis.window.set_global_visible(false)
 	local active_term = {}
 	local native_term = {}
@@ -660,7 +660,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 								for j = 1, #user_data.windows do
 									if user_data.windows[j].id == n then
 										user_data.windows[j].window.set_title(title, j == 1)
-										os.queueEvent(system_windows.taskbar.id .. "", "window_change")
+										os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
 										break
 									end
 								end
@@ -765,8 +765,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				send_id = send_id + 1
 			end or nil,
 			set_pos = is_system_program and function(x, y, width, height, not_redraw)
-				local _a, _b, _c, _d = my_windows.window.get_data()
-				my_windows.window.reposition(x or _a, y or _b, width or _c, height or _d)
+				local _a, _b, _c, _d = my_window.window.get_data()
+				my_window.window.reposition(x or _a, y or _b, width or _c, height or _d)
 				apis.window.clear_cache()
 				os.queueEvent(id.."", user_, "term_resize")
 				if not not_redraw then
@@ -792,11 +792,11 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			user = is_system_program and user_ or nil,
 			user_data = is_system_program and function() return user_data end or nil,
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
-			magiczockerOS = get_os_commands(my_windows),
+			magiczockerOS = get_os_commands(my_window),
 		}
 		env.magiczockerOS.get_screen_image = function(a) return a and user_data.windows[a] and user_data.windows[a].window.get_screen() or user_ == cur_user and not a and apis.window.get_global_cache() or nil end
 		env.os.reboot = env.os.shutdown
-		for k, v in next, my_windows.window do
+		for k, v in next, my_window.window do
 			if term[k] or k == "setCursorBlink" then
 				native_term[k] = v
 				active_term[k] = v
@@ -851,7 +851,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				env[k] = v
 			end
 		end
-		my_windows.env = env
+		my_window.env = env
 		env.os.run = function(_tEnv, path, ...)
 			if type(_tEnv) ~= "table" then
 				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2) 
@@ -935,7 +935,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		do
-			local tmp = my_windows.filesystem
+			local tmp = my_window.filesystem
 			for k in next, is_system_program and tmp or _G.fs do
 				if tmp[k] then
 					env.fs[k] = tmp[k]
@@ -1058,11 +1058,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		name = tmp and name:sub(-tmp + 1) or name
 		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
 		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
-		os.queueEvent(system_windows.taskbar.id .. "", "window_change")
-		my_windows.window.settings(user_data.settings, true)
-		my_windows.window.set_title(name, true)
+		my_window.window.settings(user_data.settings, true)
+		my_window.window.set_title(name, true)
 	end
-	my_windows.filesystem.set_remote(get_remote(id, user_, env))
+	my_window.filesystem.set_remote(get_remote(id, user_, env))
 	local file = is_system_program and fs.open(path, "r") or path and env.fs.open(path, "r")
 	local program, err, content
 	if file then
@@ -1087,7 +1086,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 	end
 	local function wait_error()
-		my_windows.is_dead = true
+		my_window.is_dead = true
 		if env.term.setBackgroundColor then
 			env.term.setBackgroundColor(32768)
 		end
@@ -1108,9 +1107,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		return false
 	end
 	local function kill_window()
-		my_windows.is_dead = true
+		my_window.is_dead = true
 		for i = #user_data.windows, 1, -1 do
-			if my_windows.id == user_data.windows[i].id then
+			if my_window.id == user_data.windows[i].id then
 				if i == 1 then
 					resize_mode = false
 				end
@@ -1124,10 +1123,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		user_data.desktop = {}
-		os.queueEvent(system_windows.taskbar.id .. "", "window_change")
+		os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
 		draw_windows()
 	end
-	my_windows.coroutine = coroutine.create(
+	my_window.coroutine = coroutine.create(
 		function()
 			if #message > 0 then
 				wait_error()
@@ -1142,11 +1141,12 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 	)
-	resume_user(my_windows.coroutine, "term_resize")
+	resume_user(my_window.coroutine, "term_resize")
 	if vis_old then
 		apis.window.set_global_visible(true)
 		draw_windows()
 	end
+	os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
 end
 local function create_system_windows(i)
 	local message = ""
