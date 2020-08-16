@@ -1329,6 +1329,7 @@ local function create_system_windows(i)
 		},
 		apis = apis, -- taskbar
 		magiczockerOS = get_os_commands(system_windows[temp]),
+		error = error,
 	}
 	if system_windows[temp].filesystem then
 		env.os = {

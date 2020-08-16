@@ -16,9 +16,17 @@ local user_input_cursor = 1
 local textline_width = w - 2
 local textline_offset = 0
 
-multishell.setTitle(multishell.getCurrent(), title)
-set_size(w, 6)
-
+multishell.setTitle(multishell.getCurrent(), mode:sub(1, 1):upper() .. mode:sub(2) .. (#file > 0 and " " .. file or ""))
+do
+	local a, b = user_data().windows, multishell.getCurrent()
+	for i = 1, #a do
+		if a[i].id == b then
+			local c, d = a[i].window.get_data()
+			set_pos(c, d, w, 6)
+			break
+		end
+	end
+end
 local data=user_data()
 if not data.server then
 	fs.set_root_path("/magiczockerOS/users/"..data.name.."/files/")
@@ -35,16 +43,20 @@ end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and type(textutils.complete) == "function" and c or b)
 end
-local function draw_text_line(blink)
-	if not blink then
+local function draw_text_line(a)
+	if not a then
+		term.setCursorBlink(false)
 		term.setCursorPos(2, 2)
+		back_color(1, 1, settings.dialog_bar_background or 1)
+		text_color(32768, 32768, settings.dialog_bar_text or 32768)
 	end
 	term.write((user_input .. (not term.isColor and "_" or " "):rep(textline_width)):sub(1 + textline_offset, textline_width + textline_offset))
-	if not blink then
+	if not a then
 		term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
+		term.setCursorBlink(true)
 	end
 end
-local function set_cursor(blink)
+local function set_cursor(a)
 	if user_input_cursor - 1 > #user_input then
 		user_input_cursor = #user_input + 1
 	end
@@ -56,9 +68,8 @@ local function set_cursor(blink)
 	if textline_offset < 0 then
 		textline_offset = 0
 	end
-	draw_text_line(blink)
+	draw_text_line(a)
 end
-
 local function draw()
 	term.setCursorBlink(false)
 	back_color(32768, 256, settings.dialog_background or 16)
@@ -100,7 +111,7 @@ while running do
 	if e == "char" then
 		user_input = user_input:sub(1, user_input_cursor - 1) .. d .. user_input:sub(user_input_cursor)
 		user_input_cursor = user_input_cursor + 1
-		draw()
+		set_cursor()
 	elseif e == "key" and #user_input > 0 and (
 		key_maps[d] == "backspace" or
 		key_maps[d] == "left" or
@@ -113,7 +124,6 @@ while running do
 			user_input_cursor = user_input_cursor - 1
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
 			set_cursor()
-			draw()
 		elseif _key == "left" and user_input_cursor > 1 then -- left
 			user_input_cursor = user_input_cursor - 1
 			set_cursor()
@@ -131,7 +141,7 @@ while running do
 			os.queueEvent("textbox_done")
 		end
 	elseif e == "textbox_done" and not fs.exists("/desktop/" .. user_input) then
-		if mode == "Rename" then
+		if mode == "rename" then
 			fs.move("/desktop/" .. file, "/desktop/" .. user_input)
 		else
 			local file=fs.open("/desktop/" .. user_input, "w")

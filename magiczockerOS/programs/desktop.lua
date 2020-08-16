@@ -65,7 +65,7 @@ end
 local function draw()
 	if magiczockerOS.contextmenu then
 		magiczockerOS.contextmenu.clear_map()
-		magiczockerOS.contextmenu.add_map(1,1,w,h,{{"Refresh","refresh"},{"New background","new_background"},{"New Shortcut","New Shortcut"}})
+		magiczockerOS.contextmenu.add_map(1, 1, w, h, {{"Refresh", "refresh"}, {"New background", "new_background"}, {"New File", "new file"}})
 	end
 	space_right_tabs = floor((w - #pages * 2 + 1) * 0.5)
 	local line = 0
@@ -109,7 +109,7 @@ local function draw()
 				for j = max_icons_per_row * (line - 1) + 1, __ do
 					if pages[page][j] then
 						if magiczockerOS.contextmenu then
-							magiczockerOS.contextmenu.add_map(pages[page][j].x, pages[page][j].y, 6, 5, {{"Open"}, {"Delete"}, {"Rename", "Rename_" .. pages[page][j].name}})
+							magiczockerOS.contextmenu.add_map(pages[page][j].x, pages[page][j].y, 6, 5, {{"Open", "open", pages[page][j].name}, {"Delete","delete", pages[page][j].name}, {"Edit", "edit", pages[page][j].name}, {"Rename", "rename", pages[page][j].name}})
 						end
 						term.setBackgroundColor(1)
 						text_color(1, 128, 16)
@@ -188,8 +188,8 @@ local function check_windows()
 	end
 end
 if textbox_available then
-	available["Rename"]={"textbox_dialog", "Rename"}
-	available["New Shortcut"]={"textbox_dialog", "Create"}
+	available["rename"]={"textbox_dialog", "Rename"}
+	available["new file"]={"textbox_dialog", "Create"}
 end
 -- start
 do
@@ -303,13 +303,9 @@ while true do
 		user = e[2]
 		position_icons()
 		draw()
-	elseif e[1] then
-		local a = e[1]:find("_") and e[1]:sub(1, e[1]:find("_") - 1) or e[1]
-		if available[a] then
-			windows[#windows+1]={data=false, title = a, mode = a, other = available[a], file = e[1]:sub(#a+2)}
-			create_window("/magiczockerOS/programs/desktop/"..available[a][1]..".lua",true,windows[#windows])
-		end
-	elseif not e[1] then
-		error"D:"
+	elseif e[1] and available[e[1]:lower()] then
+		local a = e[1]:lower()
+		windows[#windows + 1] = {data = false, mode = e[1], other = available[a], file = e[2] or ""}
+		create_window("/magiczockerOS/programs/desktop/" .. available[a][1] .. ".lua", true, windows[#windows])
 	end
 end

@@ -280,7 +280,7 @@ function draw_text(screen,data,new,line,rdata)
 		return nil
 	end
 	if rdata then
-		rdata[#rdata+1]={copy_table(data),copy_table(new),line}
+		rdata[#rdata + 1] = {copy_table(data),copy_table(new),line}
 	end
 	if data[1]<1 or data[1]~=new[1] then
 		set_term(screen,"setCursorPos",new[1]-monitor_order[screen].startx+1,line)
@@ -318,35 +318,35 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 		_line=global_cache[line]
 		_line_old=global_cache_old[line] or {}
 		global_cache_old[line]=global_cache_old[line] or {}
-		startx,endx=not continue and 1 or startx,not continue and 0 or endx
+		startx, endx = not continue and 1 or startx, not continue and 0 or endx
 		local a, b, tmp
-		for i=startx,endx do
-			a,b=_line and _line[i],_line_old and _line_old[i]
-			if a and (not check_changes or not b or ((a.b~=b.b or a.t~=b.t or a.s~=b.s) and not (a.b==b.b and a.s==" " and b.s==" "))) then
-				if not can_added(to_draw,a,i) then
-					draw_text(screen,cur_data,to_draw,line,return_data and to_repeat)
-					to_draw[2]={}
-					to_draw[4]=-1
-					can_added(to_draw,a,i)
+		for i = startx, endx do
+			a, b = _line and _line[i], _line_old and _line_old[i]
+			if a and (not check_changes or not b or ((a.b ~= b.b or a.t ~= b.t or a.s ~= b.s) and not (a.b == b.b and a.s == " " and b.s == " "))) then
+				if not can_added(to_draw, a, i) then
+					draw_text(screen, cur_data, to_draw, line, return_data and to_repeat)
+					to_draw[2] = {}
+					to_draw[4] = -1
+					can_added(to_draw, a, i)
 				end
-				tmp=global_cache_old[line]
-				tmp[i]=tmp[i] or {}
-				tmp[i].b=to_draw[3]
-				tmp[i].t=(to_draw[4]<1 and a.t or to_draw[4])
-				tmp[i].s=a.s
-				_line[i]=not (limit_set and screen==goto_limit) and _line[i] or nil
+				tmp = global_cache_old[line]
+				tmp[i] = tmp[i] or {}
+				tmp[i].b = to_draw[3]
+				tmp[i].t = to_draw[4] < 1 and a.t or to_draw[4]
+				tmp[i].s = a.s
+				_line[i]=not (limit_set and screen == goto_limit) and _line[i] or nil
 			end
 		end
-		draw_text(screen,cur_data,to_draw,line,return_data and to_repeat)
+		draw_text(screen,cur_data, to_draw, line, return_data and to_repeat)
 	end
 	local empty=true
 	if limit_set then
-		for k in next,global_cache[line] do
-			empty=false
+		for _ in next, global_cache[line] do
+			empty = false
 			break
 		end
 	end
-	global_cache[line], monitor_mode=not (empty or not limit_set and screen==goto_limit) and global_cache[line] or nil, monitor_mode_
+	global_cache[line], monitor_mode = not (empty or not limit_set and screen == goto_limit) and global_cache[line] or nil, monitor_mode_
 	return to_repeat
 end
 function redraw_global_cache(check_changes)
