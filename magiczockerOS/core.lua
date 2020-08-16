@@ -555,6 +555,7 @@ local function get_remote(id, suser, environment)
 	end
 end
 local function get_os_commands(win)
+	local user_ = cur_user
 	return {
 		contextmenu = system_windows.contextmenu.window and {
 			clear_map = function() win.contextmenu_data = nil end,
@@ -582,6 +583,19 @@ local function get_os_commands(win)
 				end
 			end,
 		},
+		get_screen_image = function(a, b)
+			if (a or 0) > 0 then
+				local c = gUD(win.id < 0 and (b or cur_user) or user_)
+				for i = 1, #c.windows do
+					if c.windows[i].id == a then
+						return c.windows[i].window.get_screen()
+					end
+				end
+			elseif not a and (win.id < 0 or user_ == cur_user) then
+				return apis.window.get_global_cache()
+			end
+			return nil
+		end,
 	}
 end
 local function create_user_window(sUser, os_root, uenv, path, ...)
@@ -794,7 +808,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
 			magiczockerOS = get_os_commands(my_window),
 		}
-		env.magiczockerOS.get_screen_image = function(a) return a and user_data.windows[a] and user_data.windows[a].window.get_screen() or user_ == cur_user and not a and apis.window.get_global_cache() or nil end
 		env.os.reboot = env.os.shutdown
 		for k, v in next, my_window.window do
 			if term[k] or k == "setCursorBlink" then
@@ -1985,16 +1998,12 @@ repeat
 			local tmp = gUD(_user).windows
 			for i = 1, #tmp do
 				if tmp[i].id == _id then
-					table.remove(e, 1)
-					table.remove(e, 1)
-					resume_user(tmp[i].coroutine, _unpack(e))
+					resume_user(tmp[i].coroutine, _unpack(e, 3))
 					break
 				end
 			end
 		elseif _id < 0 then
-			table.remove(e, 1)
-			table.remove(e, 1)
-			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e))
+			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e, 3))
 		end
 	elseif e[1] == "term_resize" then
 		if term and term.getSize then
