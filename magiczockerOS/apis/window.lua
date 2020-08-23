@@ -35,6 +35,7 @@ local peri_call=nil
 local peri_meth=nil
 local peri_type=nil
 local peri_names=nil
+local _tconcat = table.concat
 local header_tmp = {"", "", "", "", "", "", "", "", ""}
 -- both variables for get_nearest_scale
 local _size={0,0}
@@ -636,14 +637,14 @@ function create(x,y,width,height,visible,bar)
 			line=line or cursor[2]+(bar and 1 or 0)
 			if line>0 and line<=cur_data.height then
 				local _ypos=cur_data.y+line-1
-				screen2[_ypos]=screen2[_ypos] or {}
-				local _=screen2[_ypos]
-				screen[line]=screen[line] or {back="",char="",text=""}
-				if #screen[line].char<cur_data.width then
-					set_size(line)
-				end
-				local border_h
-				local border_w
+				screen2[_ypos] = screen2[_ypos] or {}
+				local _ = screen2[_ypos]
+				screen[line] = screen[line] or {back = "", char = "", text = ""}
+				if #screen[line].char < cur_data.width then set_size(line) end
+				local _line, _text, _back, _char, border_w, border_h = screen[line], {}, {}, {}, nil, nil
+				_line.text:gsub(".", function(a) _text[#_text + 1] = a end)
+				_line.back:gsub(".", function(a) _back[#_back + 1] = a end)
+				_line.char:gsub(".", function(a) _char[#_char + 1] = a end)
 				for i=pos_start or 1,pos_end or cur_data.width do
 					local _pos=cur_data.x+i-1
 					_[_pos]=_[_pos] or id
@@ -654,8 +655,7 @@ function create(x,y,width,height,visible,bar)
 							border_w, border_h=a and math.ceil(cur_data.width*.5) or border_w, a and math.ceil(cur_data.height*.5) or border_h
 							global_cache[_ypos][_pos]={t=settings.window_resize_border_text or 1,b=settings.window_resize_border_back or 128,s=(line==border_h and "|") or (i==border_w and "-") or " "}
 						else
-							local _line=screen[line]
-							global_cache[_ypos][_pos]={t=(get_color[_line.text:sub(i,i)] or text_color),b=(get_color[_line.back:sub(i,i)] or back_color),s=(_line.char:sub(i,i) or " ")}
+							global_cache[_ypos][_pos]={t=(get_color[_text[i]] or text_color),b=(get_color[_back[i]] or back_color),s=(_char[i] or " ")}
 						end
 					end
 				end
@@ -750,31 +750,34 @@ function create(x,y,width,height,visible,bar)
 		redraw_global_cache(true)
 	end
 	-- term functions
-	local function _blit(sText,sTextColor,sBackgroundColor)
-		if type(sText)~="string" then error("bad argument #1 (expected string, got "..type(sText)..")",2) end
-		if type(sTextColor)~="string" then error("bad argument #2 (expected string, got "..type(sTextColor)..")",2) end
-		if type(sBackgroundColor)~="string" then error("bad argument #3 (expected string, got "..type(sBackgroundColor)..")",2) end
-		local text_len=#sText
-		if #sTextColor~=text_len or #sBackgroundColor~=text_len then
+	local _blit_data = {"", "", "", "", "", "", "", "", ""}
+	local function _blit(sText, sTextColor, sBackgroundColor)
+		if type(sText) ~= "string" then error("bad argument #1 (expected string, got " .. type(sText) .. ")", 2) end
+		if type(sTextColor) ~= "string" then error("bad argument #2 (expected string, got " .. type(sTextColor) .. ")", 2) end
+		if type(sBackgroundColor) ~= "string" then error("bad argument #3 (expected string, got " .. type(sBackgroundColor) .. ")", 2) end
+		local text_len = #sText
+		if #sTextColor ~= text_len or #sBackgroundColor ~= text_len then
 			error("Arguments must be the same length",2)
 		end
-		if cursor[2]<1 then
-			return
-		end
-		local cur=cursor[1]-1
-		local y=cursor[2]+(bar and 1 or 0)
-		screen[y]=screen[y] or {} -- hallo
-		screen[y].back=((screen[y].back or "")..("f"):rep(cur)):sub(1,cur)..sBackgroundColor..(screen[y].back or ""):sub(cursor[1]+text_len)
-		screen[y].text=((screen[y].text or "")..("0"):rep(cur)):sub(1,cur)..sTextColor..(screen[y].text or ""):sub(cursor[1]+text_len)
-		screen[y].char=((screen[y].char or "")..(" "):rep(cur)):sub(1,cur)..sText..(screen[y].char or ""):sub(cursor[1]+text_len)
-		redraw_line(y,cursor[1],cur+text_len)
-		redraw_global_cache_line(true,data[state].y+y-1,data[state].x+cur,data[state].x+cur+text_len)
-		cursor[1]=cursor[1]+text_len
+		if cursor[2] < 1 then return end
+		local cur = cursor[1] - 1
+		local y = cursor[2] + (bar and 1 or 0)
+		screen[y] = screen[y] or {}
+		local a = _blit_data
+		a[1], a[2], a[3] = ((screen[y].back or "") .. ("f"):rep(cur)):sub(1, cur), sBackgroundColor, (screen[y].back or ""):sub(cursor[1] + text_len)
+		a[4], a[5], a[6] = ((screen[y].text or "") .. ("0"):rep(cur)):sub(1, cur), sTextColor, (screen[y].text or ""):sub(cursor[1] + text_len)
+		a[7], a[8], a[9] = ((screen[y].char or "") .. (" "):rep(cur)):sub(1, cur), sText, (screen[y].char or ""):sub(cursor[1] + text_len)
+		screen[y].back = _tconcat(a, "", 1, 3)
+		screen[y].text = _tconcat(a, "", 4, 6)
+		screen[y].char = _tconcat(a, "", 7, 9)
+		redraw_line(y, cursor[1], cur + text_len)
+		redraw_global_cache_line(true, data[state].y + y - 1, data[state].x + cur, data[state].x + cur + text_len)
+		cursor[1] = cursor[1] + text_len
 		set_cursor()
 	end
 	if term.isColor and term.isColor() then
-		function window.blit(sText,sTextColor,sBackgroundColor)
-			_blit(sText,sTextColor,sBackgroundColor)
+		function window.blit(sText, sTextColor, sBackgroundColor)
+			_blit(sText, sTextColor, sBackgroundColor)
 		end
 	end
 	function window.clear()

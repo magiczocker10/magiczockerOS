@@ -41,6 +41,7 @@ local cur_user = 0
 
 local has_errored
 local error_org = error
+local ggv, sgv
 
 -- variables
 local coro_create = coroutine.create
@@ -129,6 +130,7 @@ local function _unpack(a, b)
 		return a[b], _unpack(a, b + 1)
 	end
 end
+_unpack = table.unpack or _unpack
 local function add_timer(duration)
 	last_timer = last_timer + 1
 	timers[last_timer] = os.clock() + duration
@@ -301,8 +303,8 @@ local function draw_windows()
 		term.setCursorBlink(false)
 	end
 	screen = {}
-	local a = apis.window.get_global_visible()
-	apis.window.set_global_visible(false)
+	local a = ggv()
+	sgv(false)
 	local temp_window, user_win
 	for i = 1, #system_window_order do
 		temp_window = system_windows[system_window_order[i]].window
@@ -322,7 +324,7 @@ local function draw_windows()
 			end
 		end
 	end
-	apis.window.set_global_visible(a)
+	sgv(a)
 	apis.window.redraw_global_cache(true)
 	local tmp = gUD(cur_user)
 	if tmp.windows and #tmp.windows > 0 and tmp.windows[1].window.get_visible() then
@@ -439,10 +441,10 @@ local function setup_monitors(...)
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
-	apis.window.set_global_visible(false)
+	sgv(false)
 	resize_system_windows()
 	move_windows_to_screen()
-	apis.window.set_global_visible(true)
+	sgv(true)
 end
 local function load_system_settings()
 	local file = fs.open("/magiczockerOS/settings.json", "r")
@@ -458,8 +460,8 @@ end
 local function update_windows(user)
 	local user = user or cur_user
 	local data = gUD(user)
-	local vis_old = apis.window.get_global_visible()
-	apis.window.set_global_visible(false)
+	local vis_old = ggv()
+	sgv(false)
 	apis.window.reload_color_palette(data.settings)
 	local tmp, tmp2
 	for i = 1, #system_window_order do
@@ -488,7 +490,7 @@ local function update_windows(user)
 	if system_windows.osk.window then
 		system_windows.osk.window.settings(data.settings, true)
 	end
-	apis.window.set_global_visible(vis_old)
+	sgv(vis_old)
 	apis.window.clear_cache()
 	draw_windows()
 end
@@ -601,7 +603,7 @@ end
 local function create_user_window(sUser, os_root, uenv, path, ...)
 	local args = {...}
 	local message = ""
-	local vis_old = apis.window.get_global_visible()
+	local vis_old = ggv()
 	last_number = last_number + 1
 	local id = last_number
 	local user_ = sUser or cur_user
@@ -623,7 +625,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local env
 	my_window.contextmenu_data = nil
 	my_window.is_system = is_system_program
-	apis.window.set_global_visible(false)
+	sgv(false)
 	local active_term = {}
 	local native_term = {}
 	local function set_env()
@@ -1156,7 +1158,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	)
 	resume_user(my_window.coroutine, "term_resize")
 	if vis_old then
-		apis.window.set_global_visible(true)
+		sgv(true)
 		draw_windows()
 	end
 	os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
@@ -1443,17 +1445,24 @@ do
 end
 load_system_settings()
 load_api("math")
-math = apis.math and apis.math.create() or math
 load_api("filesystem")
 load_api("peripheral")
 load_api("window")
+do
+	local a = apis and apis.math.create() or math
+	for k, v in next, a do
+		math[k] = math[k] or v
+	end
+end
+ggv = apis.window.get_global_visible
+sgv = apis.window.set_global_visible
 apis.window.set_peripheral(apis.peripheral.create(true))
 if not term then
 	term = {isColor = function() return true end}
 --	term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "monitor")[1])
 end
 setup_monitors(_unpack(system_settings.devices or {}))
-apis.window.set_global_visible(false)
+sgv(false)
 load_bios()
 do
 	local contextm = 0
@@ -1504,7 +1513,7 @@ if not textutils or not textutils.serialize or not textutils.unserialize then
 	textutils.unserialise = textutils.unserialize
 end
 add_to_log("DRAW WINDOWS!")
-apis.window.set_global_visible(true)
+sgv(true)
 draw_windows()
 -- events
 local _yield = computer and computer.pullSignal or coroutine.yield
@@ -1566,7 +1575,7 @@ repeat
 		local tmp_window = last_window
 		local t_id = tmp_window.id
 		if tmp_window then
-			apis.window.set_global_visible(false)
+			sgv(false)
 			local win_x, win_y, win_w, win_h = tmp_window.window.get_data()
 			local w_old, h_old = win_w, win_h
 			if tmp_window.window.has_header() and win_y == click.y then
@@ -1646,7 +1655,7 @@ repeat
 					resume_user(tmp_window.coroutine, "mouse_drag", e[2], e[3] - win_x + 1, e[4] - win_y)
 				end
 			end
-			apis.window.set_global_visible(true)
+			sgv(true)
 		end
 		if has_changed then
 			draw_windows()
@@ -1666,9 +1675,9 @@ repeat
 			local win_x, win_y, win_w = temp_window.get_data()
 			if e[3] >= win_x and e[3] < win_x + win_w and e[4] == win_y then
 				temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
-				apis.window.set_global_visible(false)
+				sgv(false)
 				resume_user(user_data.windows[1].coroutine, "term_resize")
-				apis.window.set_global_visible(true)
+				sgv(true)
 				draw_windows()
 			end
 		end
@@ -1683,7 +1692,7 @@ repeat
 		local my_window
 		local co_window
 		local need_redraw
-		apis.window.set_global_visible(false)
+		sgv(false)
 		for i = 1, #system_window_order do
 			if system_windows[system_window_order[i]].window.get_visible() then
 				my_window = system_windows[system_window_order[i]]
@@ -1708,7 +1717,7 @@ repeat
 			system_windows.contextmenu.window.set_visible(true)
 			need_redraw = true
 		end
-		apis.window.set_global_visible(true)
+		sgv(true)
 		if need_redraw then
 			draw_windows()
 		end
@@ -1721,9 +1730,9 @@ repeat
 				user_data.windows[1].window.toggle_border(false)
 			end
 			temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
-			apis.window.set_global_visible(false)
+			sgv(false)
 			resume_user(user_data.windows[1].coroutine, "term_resize")
-			apis.window.set_global_visible(true)
+			sgv(true)
 			draw_windows()
 		elseif _key == "x" or _key == "t" and system_windows.calendar.window or _key == "s" then -- open/close startmenu, calender/clock
 			if not ((_key == "t" or _key == "s") and cur_user == 0) then
@@ -1785,9 +1794,9 @@ repeat
 					temp_window.reposition(pos_x, pos_y, win_w, win_h)
 				end
 				if has_changed then
-					apis.window.set_global_visible(false)
+					sgv(false)
 					resume_user(user_data.windows[1].coroutine, "term_resize")
-					apis.window.set_global_visible(true)
+					sgv(true)
 				end
 				draw_windows()
 			end
@@ -2016,9 +2025,9 @@ repeat
 			w, h = 51, 19
 		end
 		setup_monitors(_unpack(system_settings.devices or {}))
-		apis.window.set_global_visible(false)
+		sgv(false)
 		resize_system_windows()
-		apis.window.set_global_visible(true)
+		sgv(true)
 		draw_windows()
 	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
 		if monitor_resized and monitor_resized[e[2]] then
