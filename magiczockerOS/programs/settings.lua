@@ -245,7 +245,7 @@ local settings = {}
 local total_entries = {}
 local theme = {top = {128, 2, 2048, 512}, bottom = {256, 16, 8, 8}}
 -- functions
-local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local a = term and term.isColor and term.isColor() and 3 or textutils and textutils.complete and 2 or 1
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end

@@ -101,25 +101,27 @@ end
 -- functions
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
-	local seen = {}
 	local to_return = ""
+	local seen = {}
 	if type(data) == "string" then
-		return ("%q"):format( data )
+		return ("%q"):format(data)
 	elseif type(data) == "number" or type(data) == "boolean" then
 		return data
 	elseif type(data) ~= "table" then
 		error("Can't serialize type \"" .. type(data) .. "\"!")
+	elseif processed[data] then
+		error("Recursive entry found!")
 	end
+	processed[data] = true
 	for k, v in next, data do
-		if not seen[k] and not processed[v] then
-			processed[v] = processed[v] or type(v) == "table"
-			seen[k] = true
+		if not seen[v] then
+			seen[v] = true
 			local _k = k
 			local serialised = fallback_serialise(v, processed)
 			if type(_k) == "string" then
-				_k = ("%q"):format( _k )
+				_k = ("%q"):format(_k)
 			end
-			to_return = to_return .. (#to_return == 0 and "" or ", ") .. "[" .. _k .. "]=" .. tostring(serialised)
+			to_return = to_return .. (#to_return == 0 and "" or ",") .. "[" .. _k .. "]=" .. tostring(serialised)
 		end
 	end
 	return "{" .. to_return .. "}"
