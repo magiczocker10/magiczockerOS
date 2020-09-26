@@ -111,7 +111,7 @@ local function login()
 	if fields[1][4]:find("\\") then
 		local tmp = fields[1][4]
 		local found = tmp:find("\\")
-		signin_user(tonumber(tmp:sub(1,found-1)),tmp:sub(found+1))
+		signin_user(tonumber(tmp:sub(1,found-1)), tmp:sub(found+1), fields[2][4])
 	elseif fields[1][4]:match("[a-zA-Z0-9]") and fs.exists("/magiczockerOS/users/" .. fields[1][4]) and fs.isDir("/magiczockerOS/users/" .. fields[1][4]) then
 		local a = ""
 		local file = fs.exists("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt") and fs.open("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt", "r")
@@ -185,7 +185,7 @@ while true do
 	elseif a == "modem_message" then
 		if c then
 			reset()
-			switch_user(false, fields[1][4],c)
+			switch_user(false, fields[1][4], c)
 		else
 			error"Invalid user"
 		end

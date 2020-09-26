@@ -16,7 +16,7 @@ end
 if not _G.require and _ENV and _ENV.require then -- Fix for CC-Tweaked 1.85
 	_G.require = _ENV.require
 end
-local content, err = (loadstring or load)(file.readAll(), "@/magiczockerOS/core.lua", "t")
+local content, err = (loadstring or load)(file.readAll(), "@/magiczockerOS/core.lua", "t", _G)
 file.close()
 if not content then
 	if err and err ~= "" then

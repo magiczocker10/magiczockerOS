@@ -24,7 +24,6 @@
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 	THE SOFTWARE.
 ]]
-
 local boot_logger_enabled = false
 local use_old
 local my_protocol = "magiczockerOS-client"
@@ -38,6 +37,9 @@ local last_timer_exec = 0
 
 local users = {}
 local cur_user = 0
+
+local queued_events = {}
+local qe = {}
 
 local has_errored
 local error_org = error
@@ -126,6 +128,10 @@ local function fallback_serialise(data, processed)
 	end
 	return "{" .. to_return .. "}"
 end
+local function _queue(...)
+	queued_events[#queued_events + 1] = {...}
+	qe[os.startTimer(0.00000001)] = #queued_events
+end
 local function _unpack(a, b)
 	local b = b or 1
 	if a[b] then
@@ -208,8 +214,12 @@ local function start_timer(old, duration)
 end
 local function error_message(program, message)
 	if term then
-		term.setBackgroundColor(32768)
-		term.setTextColor(1)
+		if term.setBackgroundColor then
+			term.setBackgroundColor(32768)
+		end
+		if term.setTextColor then
+			term.setTextColor(1)
+		end
 		term.clear()
 		term.setCursorPos(1, 1)
 		term.write(program .. "\n")
@@ -240,7 +250,7 @@ local function run_program(prog, errorhandling) -- xpcall -- copied from https:/
 	end
 end
 local function unserialise(str)
-	local ok, err = (load or loadstring)("return " .. str, "core: unserialize", "t", {})
+	local ok, err = (loadstring or load)("return " .. str, "core: unserialize", "t", {})
 	if ok then
 		local ok, result = run_program(function() return ok() end, function(err) return err end)
 		if ok then
@@ -255,7 +265,7 @@ local function add_to_log(a)
 	end
 	local file = fs.open("/magiczockerOS/log.txt", "a")
 	if file then
-		file.write(os.time() .. " - " .. a .. "\n")
+		file.write((os.time and os.time() or "unknown") .. " - " .. a .. "\n")
 		file.close()
 	end
 end
@@ -268,7 +278,7 @@ local function load_api(name)
 		env.math, env.unpack = math, _unpack
 		local content = file.readAll()
 		file.close()
-		local api, err = (load or loadstring)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
+		local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
 		if api then
 			if setfenv then
 				setfenv(api, env)
@@ -678,7 +688,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 								for j = 1, #user_data.windows do
 									if user_data.windows[j].id == n then
 										user_data.windows[j].window.set_title(title, j == 1)
-										os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
+										_queue(system_windows.taskbar.id .. "", "", "window_change")
 										break
 									end
 								end
@@ -721,7 +731,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end,
 				version = function() return "magiczockerOS 4.0 Preview 4" end,
 				queueEvent = function(...)
-					os.queueEvent(id .. "", user_, ...)
+					_queue(id .. "", user_, ...)
 				end,
 				startTimer = function(nTime)
 					local var = 0
@@ -777,8 +787,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					return false
 				end
 			end or nil,
-			signin_user = is_system_program and function(server_id, user)
-				send_message(modem_side, server_id, {return_id = my_computer_id, protocol = my_protocol, username = user, my_id = send_id, mode = "login"})
+			signin_user = is_system_program and function(server_id, user, pass)
+				send_message(modem_side, server_id, {return_id = my_computer_id, protocol = my_protocol, username = user, password = pass, my_id = send_id, mode = "login"})
 				window_messages[send_id] = {id, user_}
 				send_id = send_id + 1
 			end or nil,
@@ -786,7 +796,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				local _a, _b, _c, _d = my_window.window.get_data()
 				my_window.window.reposition(x or _a, y or _b, width or _c, height or _d)
 				apis.window.clear_cache()
-				os.queueEvent(id.."", user_, "term_resize")
+				_queue(id .. "", user_, "term_resize")
 				if not not_redraw then
 					draw_windows()
 				end
@@ -848,7 +858,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if file then
 					local content = file.readAll()
 					file.close()
-					local program, err = (env.load or env.loadstring)(content, path, "t", env._G)
+					local program, err = (env.loadstring or env.load)(content, path, "t", env._G)
 					if env.setfenv then
 						env.setfenv(program, env._G)
 					end
@@ -908,7 +918,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				setmetatable(tEnv, {__index = env._G})
 				local content = file.readAll()
 				file.close()
-				local program, err = (env.load or env.loadstring)(content, "@" .. path, "t", tEnv)
+				local program, err = (env.loadstring or env.load)(content, "@" .. path, "t", tEnv)
 				if program then
 					local args = {...}
 					tEnv._ENV = tEnv
@@ -962,7 +972,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			for i = 1, #bios_to_reload do
 				tmp = bios_to_reload[i]
 				if _G[tmp] then
-					env[tmp] = (env.load or env.loadstring)(overrides[tmp] or string.dump(_G[tmp]), nil, nil, env)
+					env[tmp] = (env.loadstring or env.load)(overrides[tmp] or string.dump(_G[tmp]), nil, nil, env)
 					if overrides[tmp] then
 						env[tmp] = env[tmp]()
 					end
@@ -983,7 +993,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				setmetatable(env2, {__index = env._G})
 				local content = file.readAll()
 				file.close()
-				local api, err = (env.load or env.loadstring)(content, "@" .. path, "t", env2)
+				local api, err = (env.loadstring or env.load)(content, "@" .. path, "t", env2)
 				if api then
 					env2._ENV = env2
 					if setfenv then
@@ -1022,7 +1032,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			local file = fs.open("/magiczockerOS/CC/io.lua", "r")
 			local content = file.readAll()
 			file.close()
-			local program = (env.load or env.loadstring)(content, "@" .. path, "t", tEnv)
+			local program = (env.loadstring or env.load)(content, "@" .. path, "t", tEnv)
 			if program then
 				if env.setfenv then
 					env.setfenv(program, tEnv)
@@ -1041,7 +1051,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			env.io = {}
 			for k, v in next, io do
 				if type(v) == "function" then
-					env.io[k] = (env.load or env.loadstring)(string.dump(v), nil, nil, env)
+					env.io[k] = (env.loadstring or env.load)(string.dump(v), nil, nil, env)
 					if setfenv then
 						setfenv(env.io[k], env)
 					end
@@ -1049,7 +1059,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		if type(os.unloadAPI) == "function" then
-			env.os.unloadAPI = (env.load or env.loadstring)(string.dump(os.unloadAPI), nil, nil, env)
+			env.os.unloadAPI = (env.loadstring or env.load)(string.dump(os.unloadAPI), nil, nil, env)
 			if setfenv then
 				setfenv(env.os.unloadAPI, env)
 			end
@@ -1085,13 +1095,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		content = file.readAll()
 		file.close()
 	elseif not is_system_program or is_remote and path then
-		content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(load or loadstring)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\nelse\nerror(\"File not exists\")\nend"
+		content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\nelse\nerror(\"File not exists\")\nend"
 	else
 		message = "File not exists"
 	end
 	do
 		if content then
-			program, err = (env.load or env.loadstring)(content, "@" .. path, "t", env)
+			program, err = (env.loadstring or env.load)(content, "@" .. path, "t", env)
 		end
 		if program then
 			env._ENV = env
@@ -1140,7 +1150,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		user_data.desktop = {}
-		os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
+		_queue(system_windows.taskbar.id .. "", "", "window_change")
 		draw_windows()
 	end
 	my_window.coroutine = coroutine.create(
@@ -1163,7 +1173,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		sgv(true)
 		draw_windows()
 	end
-	os.queueEvent(system_windows.taskbar.id .. "", "", "window_change")
+	_queue(system_windows.taskbar.id .. "", "", "window_change")
 end
 local function create_system_windows(i)
 	local message = ""
@@ -1262,7 +1272,7 @@ local function create_system_windows(i)
 		switch_user = function(logoff, username, session)
 			system_windows[window_number].window.set_visible(false)
 			change_user = {logoff = logoff, user = username, active = true, session = session}
-			os.queueEvent("timer", os_timer)
+			_queue("timer", os_timer)
 		end,
 		send_event = function(e, ...)
 			if system_windows.startmenu.window.get_visible() or system_windows.calendar.window and system_windows.calendar.window.get_visible() then
@@ -1322,7 +1332,7 @@ local function create_system_windows(i)
 			date = os.date, -- taskbar
 			reboot = os.reboot, -- startmenu
 			shutdown = os.shutdown, -- startmenu
-			queueEvent = os.queueEvent, -- calender
+			queueEvent = _queue, -- calender
 		},
 		table = {
 			remove = table.remove, -- desktop
@@ -1349,7 +1359,7 @@ local function create_system_windows(i)
 				return var
 			end,
 			queueEvent = function(...)
-				os.queueEvent(system_windows[temp].id .. "", "", ...)
+				_queue(system_windows[temp].id .. "", "", ...)
 			end,
 		}
 		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
@@ -1359,7 +1369,7 @@ local function create_system_windows(i)
 	if file then
 		local content = file.readAll()
 		file.close()
-		program, err = (load or loadstring)(content, path, nil, env)
+		program, err = (loadstring or load)(content, path, nil, env)
 		if program then
 			if setfenv then
 				setfenv(program, env)
@@ -1397,7 +1407,7 @@ local function load_bios()
 			if file then
 				local content = file.readAll() or ""
 				file.close()
-				_G["~expect"] = (load or loadstring)(content, "@expect.lua")().expect -- Fixed 2020-01-03
+				_G["~expect"] = (loadstring or load)(content, "@expect.lua")().expect -- Fixed 2020-01-03
 			end
 		end
 	end
@@ -1444,6 +1454,13 @@ do
 	key_maps[a and 56 or 348] = "context_menu"
 	for k, v in next, key_maps do b[v] = k end
 	for k, v in next, b do key_maps[k] = v end
+end
+if not textutils or not textutils.serialize or not textutils.unserialize then
+	textutils = textutils or {}
+	textutils.serialize = textutils.serialize or fallback_serialise
+	textutils.serialise = textutils.serialize
+	textutils.unserialize = textutils.unserialize or unserialise
+	textutils.unserialise = textutils.unserialize
 end
 load_system_settings()
 load_api("math")
@@ -1507,13 +1524,6 @@ os_timer = start_timer(os_timer, 0)
 if not term.setCursorBlink then
 	cursorblink_timer = start_timer(cursorblink_timer, 0.5)
 end
-if not textutils or not textutils.serialize or not textutils.unserialize then
-	textutils = textutils or {}
-	textutils.serialize = textutils.serialize or fallback_serialise
-	textutils.serialise = textutils.serialize
-	textutils.unserialize = textutils.unserialize or unserialise
-	textutils.unserialise = textutils.unserialize
-end
 add_to_log("DRAW WINDOWS!")
 sgv(true)
 draw_windows()
@@ -1523,8 +1533,8 @@ local ton = tonumber
 if component then
 	computer.pushSignal("timer_health")
 end
-repeat
-	local e = {_yield()}
+local function events(...)
+	local e = {...}
 	local timer
 	if e[1] == "timer_health" then
 		timer = get_timer()
@@ -1571,7 +1581,11 @@ repeat
 			total_size[1], total_size[2] = apis.window.get_size()
 		end
 	end
-	if (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
+	if e[1] == "timer" and qe[e[2]] then
+		events(_unpack(queued_events[qe[e[2]]]))
+		queued_events[qe[e[2]]] = nil
+		qe[e[2]] = nil
+	elseif (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
@@ -1665,10 +1679,10 @@ repeat
 	elseif e[1] == "peripheral_detach" and e[2] == modem_side then
 		search_modem()
 	elseif e[1] == "rednet_message" and use_old then
-		os.queueEvent("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
+		_queue("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
 	elseif e[1] == "monitor_touch" then
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
-			os.queueEvent(os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", user_data.settings and user_data.settings.mouse_left_handed and 2 or 1, e[3] + monitor_order[monitor_devices[e[2]]].offset, e[4])
+			_queue(os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", user_data.settings and user_data.settings.mouse_left_handed and 2 or 1, e[3] + monitor_order[monitor_devices[e[2]]].offset, e[4])
 			monitor_last_clicked = os.clock()
 		end
 	elseif e[1] == "double_click" then
@@ -1836,12 +1850,12 @@ repeat
 				resume_system("14taskbar", system_windows.taskbar.coroutine, "window_change")
 			end
 			if e[1] == "mouse_click" and e[4] == win_y and cur_window.window.has_header() then
-				if last_click.x == e[3] and last_click.y == e[4] and os.clock() - last_click.time < (user_data.settings.mouse_double_click_speed or 0.2) then
-					os.queueEvent("double_click", e[2], e[3], e[4])
+				if os.clock and last_click.x == e[3] and last_click.y == e[4] and os.clock() - last_click.time < (user_data.settings.mouse_double_click_speed or 0.2) then
+					_queue("double_click", e[2], e[3], e[4])
 				end
 				last_click.x = e[3]
 				last_click.y = e[4]
-				last_click.time = os.clock()
+				last_click.time = os.clock and os.clock() or 0
 				if id > 0 and e[3] == win_x + win_w - 1 and temp_window.get_state() == "normal" then -- resize
 					resize_mode = not resize_mode
 					temp_window.toggle_border(resize_mode)
@@ -1851,8 +1865,8 @@ repeat
 					if c and c[1] == "close" then
 						b = true
 						if id == 1 then
-							os.queueEvent("key", key_maps.right_ctrl)
-							os.queueEvent("key", key_maps.c)
+							_queue("key", key_maps.right_ctrl)
+							_queue("key", key_maps.c)
 						elseif id < 0 then
 							temp_window.set_visible(false)
 							need_redraw = true
@@ -1862,8 +1876,8 @@ repeat
 						local d = c[1]
 						b = true
 						if d == "minimize" then
-							os.queueEvent("key", key_maps.right_ctrl)
-							os.queueEvent("key", key_maps.m)
+							_queue("key", key_maps.right_ctrl)
+							_queue("key", key_maps.m)
 						elseif d == "maximize" then
 							temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
 							resume_user(user_data.windows[1].coroutine, "term_resize")
@@ -2091,7 +2105,10 @@ repeat
 			computer.pushSignal("timer_health")
 		end
 	end
-until not running
+end
+while running do
+	events(_yield())
+end
 if not has_errored then
 	if term.setBackgroundColor then
 		term.setBackgroundColor(32768)
