@@ -1436,6 +1436,23 @@ local function load_bios()
 	end
 	add_to_log("Loaded bios!")
 end
+local function check_click_outside(id)
+	local a = false
+	if id ~= (system_windows.osk.id or 0) and id ~= system_windows.taskbar.id then
+		local _taskbar, tmp = {startmenu = "start", calendar = "calendar"}, nil
+		for i = 1, #system_window_order do
+			tmp = system_windows[system_window_order[i]]
+			if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
+				tmp.window.set_visible(false)
+				if _taskbar[system_window_order[i]] then
+					resume_system("8taskbar", system_windows.taskbar.coroutine, _taskbar[system_window_order[i]] .. "_change")
+				end
+				a = true
+			end
+		end
+	end
+	return a
+end
 -- start
 do
 	local a, b = _HOSTver >= 1132, {} -- GLFW or LWJGL
@@ -1893,6 +1910,8 @@ local function events(...)
 				temp_window.toggle_border(false)
 			elseif e[1] == "mouse_scroll" and (id < 0 or id == 1 or user_data.settings.mouse_inactive_window_scroll ~= false) then
 				resume_user(cur_window.coroutine, e[1], e[2], e[3] - win_x + 1, e[4] - win_y + (cur_window.window.has_header() and 0 or 1))
+			elseif e[1] == "mouse_click" and check_click_outside(id) then
+				need_redraw = true
 			elseif (id == 1 or id < 0) and not resize_mode then
 				last_window = cur_window
 				local tmp = false
@@ -1918,18 +1937,9 @@ local function events(...)
 					end
 				end
 			end
-			if e[1] == "mouse_click" and id ~= (system_windows.osk.id or 0) and id ~= system_windows.taskbar.id then
-				local _taskbar, tmp = {startmenu = "start", calendar = "calendar"}, nil
-				for i = 1, #system_window_order do
-					tmp = system_windows[system_window_order[i]]
-					if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
-						tmp.window.set_visible(false)
-						if _taskbar[system_window_order[i]] then
-							resume_system("8taskbar", system_windows.taskbar.coroutine, _taskbar[system_window_order[i]] .. "_change")
-						end
-						need_redraw = true
-					end
-				end
+			if e[1] == "mouse_click" then
+				local a = check_click_outside(id)
+				need_redraw = need_redraw or a
 			end
 			if need_redraw then
 				draw_windows()
