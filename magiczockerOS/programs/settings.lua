@@ -804,9 +804,9 @@ function draw_top(line)
 	end
 	_cursor(1 + offset, 2)
 	if (line or 2)==2 then
-		if view == -1 or view == 2 then
+		if view == -1 or view == 1 or view == 2 then
 			term.write(" < " .. name .. _width)
-		elseif view == 0 or view == 1 then
+		elseif view == 0 then
 			term.write(" = " .. name .. _width)
 		end
 	end
@@ -1265,13 +1265,13 @@ while true do
 		e[3] = e[3] - offset
 		if e[2] == 1 then -- left click
 			if e[3] == 2 and e[4] == 2 and not menu_open then -- open menu
-				if view == -1 or view == 2 then
+				if view == -1 or view == 1 or view == 2 then
 					if view == 2 then
 						save_system_settings()
 					end
 					view = 0
 					redraw()
-				elseif view == 0 or view == 1 then
+				elseif view == 0 then
 					menu_open = true
 					load_sidemenu()
 					timer = os.startTimer(0)
