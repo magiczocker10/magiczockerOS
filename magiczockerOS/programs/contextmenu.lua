@@ -46,7 +46,6 @@ local function process_data(x,y)
 	if y < 3 then
 		y = 3
 	end
-	set_pos(x,y,true)
 	my_pos[1]=x
 	my_pos[2]=y
 	my_size[1],my_size[2] = curw,curh
@@ -62,7 +61,7 @@ local function process_data(x,y)
 	if not term.isColor or not term.isColor() then
 		cursor = 1+(scrollable and 1 or 0)
 	end
-	set_size(curw, curh)
+	set_pos(x, y, curw, curh)
 end
 local function correct_scroll()
 	if cursor-scroll > my_size[2] then

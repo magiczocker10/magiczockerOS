@@ -227,14 +227,28 @@ local function set_vis(ign)
 	if get_visible("contextmenu") and ign ~= "cm" then
 		set_visible("contextmenu",false)
 	end
-	if get_visible("startmenu") and ign ~= "sm" then
-		set_visible("startmenu",false)
-		draw_start()
+	if get_startmenu_vis() and ign ~= "sm" then
+		os.queueEvent("mouse_click", 1, 1, 1)
 	end
 	if get_visible("calendar") and ign ~= "ca" then
 		set_visible("calendar",false)
 		draw_clock()
 	end
+end
+local function switch_visible(id, state)
+	local uData = user_data()
+	uData.desktop = {}
+	for i = 1, #uData.windows do
+		if uData.windows[i].id == id then
+			local temp_window = uData.windows[i]
+			local visible = not temp_window.window.get_visible()
+			table.remove(uData.windows, i)
+			table.insert(uData.windows, visible and 1 or #uData.windows + 1, temp_window)
+			temp_window.window.set_visible(visible)
+			break
+		end
+	end
+	set_pos()
 end
 -- start
 draw_start()
@@ -280,7 +294,29 @@ while true do
 			if b == 1 then -- left
 				switch_visible(window_pos[c-3+offset])
 			else -- middle
-				close_window(window_pos[c-3+offset])
+				local id = window_pos[c-3+offset]
+				local uData = user_data()
+				uData.desktop = {}
+				local has_close = false
+				for i = 1, #uData.windows do
+					if uData.windows[i].id == id then
+						has_close = uData.windows[i].window.get_button("close") and true or false
+						if has_close then
+							table.remove(uData.windows, i)
+						end
+						break
+					end
+				end
+				local tmp = uData.labels
+				for i = 1, #tmp do
+					if tmp[i].id == id then
+						if has_close then
+							table.remove(tmp, i)
+						end
+						break
+					end
+				end
+				set_pos() -- force's the core to redraw the windows
 			end
 			set_items()
 			set_vis()

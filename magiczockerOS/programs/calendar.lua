@@ -19,7 +19,7 @@ local cur_view = 1
 local cur_view_cursor = 0
 local function size(w,h)
 	if size then
-		set_size(w,h)
+		set_pos(nil, nil, w, h)
 		magiczockerOS.contextmenu.clear_map()
 		local tmp=magiczockerOS.contextmenu.add_map(1, 1, w, h, {{"Goto date", "goto_date"}})
 		magiczockerOS.contextmenu.on_menu_key(tmp, 1, 1)
@@ -81,7 +81,7 @@ local function draw_month()
 	local wn = get_week_number({1, cur_day[2], cur_day[3]})
 	local wnt = get_week_number({1, cur_day[2], cur_day[3]}, true)
 	wd = wd == 0 and 7 or wd
-	if set_size then
+	if set_pos then
 		local height_ = height
 		height = ceil((td + wd - 1) / 7) + 5
 		if height ~= height_ then
@@ -239,7 +239,7 @@ end
 local function draw()
 	back_color(32768, 256, settings.calendar_back or 256)
 	text_color(1, 1, settings.calendar_text or 1)
-	if set_size and (cur_view == 2 or cur_view == 3) and height ~= 8 then
+	if set_pos and (cur_view == 2 or cur_view == 3) and height ~= 8 then
 		height = 8
 		size(25, 8)
 	end

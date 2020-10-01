@@ -31,7 +31,7 @@ local function loadKeys()
 			end
 		end
 	end
-	set_size(width2 - 1, #layout + 1)
+	set_pos(nil, nil, width2 - 1, #layout + 1)
 	file.close()
 end
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0

@@ -1,7 +1,7 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2020
 
 -- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser = 57180
+-- http://www.computercraft.info/forums2/index.php?showuser=57180
 
 --[[
 	run_program: Copyright (c) 2016 Jason Chu (1lann) and Bennett Anderson (GravityScore).
@@ -797,7 +797,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				env.switch_user(true, username)
 				return true
 			end or nil,
-			get_visible = function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
+			get_visible = is_system_program and function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
 			set_visible = is_system_program and function(name, state)
 				if system_windows[name] and system_windows[name].window then
 					system_windows[name].window.set_visible(state)
@@ -805,6 +805,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					draw_windows()
 				end
 			end or nil,
+			close_os = is_system_program and function() running = false end or nil,
 			term = {},
 			user = is_system_program and user_ or nil,
 			user_data = is_system_program and function() return user_data end or nil,
@@ -1111,9 +1112,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 		env.term.clear()
 		env.term.setCursorPos(1, 1)
-		local file=fs.open("abcdefg","w")
-		file.write(message)
-		file.close()
 		env.print(message)
 		env.print("Press any key to continue")
 		local _running = true
@@ -1184,43 +1182,13 @@ local function create_system_windows(i)
 		math = math,
 		fs = system_windows[temp].filesystem or fs,
 		native_fs = fs,
-		close_os = function() running = false end,
-		close_window = function(id)
-			local uData = gUD(cur_user)
-			uData.desktop = {}
-			for i = 1, #uData.windows do
-				if uData.windows[i].id == id then
-					table.remove(uData.windows, i)
-					break
-				end
-			end
-			local tmp = uData.labels
-			for i = 1, #tmp do
-				if tmp[i].id == id then
-					table.remove(tmp, i)
-					break
-				end
-			end
-			if temp ~= "taskbar" then
-				resume_system("23taskbar", system_windows.taskbar.coroutine, "window_change")
-			end
-			draw_windows()
-		end,
 		create_window = function(path, root, env, ...)
 			create_user_window(cur_user, root, env, path, ...)
 		end,
 		get_visible = function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
-		set_size = function(width, height, not_redraw)
-			local _x, _y = system_windows[window_number].window.get_data()
-			system_windows[window_number].window.reposition(_x, _y, width, height)
-			apis.window.clear_cache()
-			if not not_redraw then
-				draw_windows()
-			end
-		end,
-		set_pos = function(posx, posy, not_redraw)
-			local _, _, _w, _h = system_windows[window_number].window.get_data()
-			system_windows[window_number].window.reposition(posx, posy, _w, _h)
+		set_pos = function(posx, posy, posw, posh, not_redraw)
+			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
+			system_windows[window_number].window.reposition(posx or _x, posy or _y, posw or _w, posh or _h)
 			apis.window.clear_cache()
 			if not not_redraw then
 				draw_windows()
@@ -1234,26 +1202,6 @@ local function create_system_windows(i)
 				draw_windows()
 			end
 		end,
-		switch_user = function(logoff, username, session)
-			system_windows[window_number].window.set_visible(false)
-			change_user = {logoff = logoff, user = username, active = true, session = session}
-			_queue("timer", os_timer)
-		end,
-		switch_visible = function(id, state)
-			local uData = gUD(cur_user)
-			uData.desktop = {}
-			for i = 1, #uData.windows do
-				if uData.windows[i].id == id then
-					local temp_window = uData.windows[i]
-					local visible = not temp_window.window.get_visible()
-					table.remove(uData.windows, i)
-					table.insert(uData.windows, visible and 1 or #uData.windows + 1, temp_window)
-					temp_window.window.set_visible(visible)
-					break
-				end
-			end
-			draw_windows()
-		end,
 		term = system_windows[temp].window,
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
@@ -1263,16 +1211,15 @@ local function create_system_windows(i)
 		coroutine = {
 			yield = coroutine.yield, -- all
 		},
-		tonumber = tonumber, -- osk, caldender
+		tonumber = tonumber, -- osk, calendar
 		type = type, -- contextmenu, desktop, osk
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
-			reboot = os.reboot, -- startmenu
-			shutdown = os.shutdown, -- startmenu
-			queueEvent = _queue, -- calender
+			queueEvent = _queue, -- calender, contextmenu, taskbar
 		},
 		table = {
+			insert = table.insert, -- taskbar
 			remove = table.remove, -- desktop
 		},
 		_HOSTver = _HOSTver, -- all
