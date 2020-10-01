@@ -7,10 +7,10 @@
 local cursor = 1
 local width = 1
 -- tables
-local mode = 1
+local mode = #(user_data().name or "") > 0 and 2 or 1
 local key_maps = {}
 local menu = {{},{}}
-local settings = settings or {}
+local settings = user_data().settings or {}
 -- functions
 local function create(a,b,c,d)
 	if (term.isColor and term.isColor()) or a then
@@ -20,6 +20,7 @@ local function create(a,b,c,d)
 		menu[2][#menu[2]+1] = {c,d}
 	end
 end
+local my_win = user_data().windows[1]
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
 	local b = ({...})[a]
@@ -28,6 +29,18 @@ end
 local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
+end
+local function set_my_vis(a)
+	if my_win.window.get_visible() == a then return nil end
+	my_win.window.set_visible(a)
+	local b = user_data().windows
+	for k, v in next, b do
+		if my_win == v then
+			local tmp = v
+			table.remove(b, k)
+			table.insert(b, a and 1 or #b + 1, tmp)
+		end
+	end
 end
 local function draw()
 	back_color(32768, 256, settings.startmenu_back or 256)
@@ -48,7 +61,27 @@ local function size()
 		width = #a > width and #a or width
 	end
 	width = width + 2
-	set_size(width, #menu[mode])
+	set_pos(1, 2, width, #menu[mode])
+end
+local function show_desktop()
+	set_my_vis(false)
+	local uData = user_data()
+	if #uData.windows > 0 then
+		local tmpd = uData.desktop
+		if #tmpd == 0 then
+			for i = 1, #uData.windows do
+				if uData.windows[i].window.get_visible() then
+					uData.windows[i].window.set_visible(false)
+					tmpd[#tmpd + 1] = i
+				end
+			end
+		else
+			for i = 1, #tmpd do
+				uData.windows[tmpd[i]].window.set_visible(true)
+			end
+			uData.desktop = {}
+		end
+	end
 end
 -- start
 do
@@ -59,9 +92,9 @@ do
 end
 create(true, false, "CraftOS", function() close_os() end)
 if fs.exists("/magiczockerOS/programs/settings.lua") then
-	create(true, false, "Settings", function() set_visible("startmenu", false) create_window("/magiczockerOS/programs/settings.lua", true) end)
+	create(true, false, "Settings", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings.lua", true) end)
 end
-create(true, false, "Shell", function() set_visible("startmenu", false) create_window() end)
+create(true, false, "Shell", function() set_my_vis(false) create_window() end)
 create(true, false, "Show Desktop", function() show_desktop() end)
 create(true, false, "", function() end)
 if fs.exists("/magiczockerOS/programs/login.lua") then
@@ -70,7 +103,7 @@ if fs.exists("/magiczockerOS/programs/login.lua") then
 	create(true, false, "", function() end)
 end
 if fs.exists("/magiczockerOS/programs/osk.lua") then
-	create(false, true, "Keyboard", function() set_visible("osk", not get_visible("osk")) set_visible("startmenu", not get_visible("startmenu")) end)
+	create(false, true, "Keyboard", function() set_my_vis(false) set_visible("osk", not get_visible("osk")) end)
 	create(false, true, "", function() end)
 end
 if os.reboot then
@@ -83,11 +116,7 @@ draw()
 while true do
 	local a, b, _, c = coroutine.yield()
 	if a == "refresh_settings" then
-		settings = get_settings()
-		draw()
-	elseif a == "user" then
-		mode = #(user_data().name or "") > 0 and 2 or 1
-		size()
+		settings = user_data().settings or {}
 		draw()
 	elseif a == "mouse_click" and b == 1 then
 		menu[mode][c][2]()
@@ -99,6 +128,8 @@ while true do
 		elseif key_maps[b] == "down" then
 			cursor = cursor == #menu[mode] and 1 or cursor + 1
 		end
+		draw()
+	elseif a == "term_resize" then
 		draw()
 	end
 end

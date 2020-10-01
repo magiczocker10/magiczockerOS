@@ -20,7 +20,7 @@ local textline_width = w - 2
 local textline_offset = 0
 local user_input_cursor = 1
 local entry_selected
-local settings = settings or {}
+local settings = user_data().settings or {}
 local function return_text(a, b, c, d)
 	return not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b
 end
@@ -301,7 +301,7 @@ while true do
 		correct_entries_scroll()
 		draw()
 	elseif e == "refresh_settings" then
-		settings = get_settings()
+		settings = user_data().settings or {}
 		draw()
 	end
 end

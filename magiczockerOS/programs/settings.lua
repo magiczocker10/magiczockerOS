@@ -898,7 +898,7 @@ local function correct_scroll()
 	list_scroll = list_scroll < 0 and 0 or list_scroll
 end
 function load_settings()
-	settings = get_settings() or {}
+	settings = user_data().settings or {}
 end
 local function change_mon_setting(num)
 	local tmp = categories[num].entries[2]
@@ -1019,9 +1019,9 @@ local function load_system_settings()
 	end
 end
 function reset_user_settings()
-	if reset_settings(user) then
-		settings=get_settings(user)
-	end
+	save_settings(user, {})
+	set_settings()
+	settings = user_data().settings or {}
 end
 local function load_sidemenu()
 	menu = {[0] = {func = function() view = -1 end}}
@@ -1548,7 +1548,7 @@ while true do
 		end
 		save_system_settings()
 	elseif e[1] == "refresh_settings" then
-		settings = get_settings()
+		settings = user_data().settings or {}
 		load_key_mapping()
 		draw_bottom()
 	elseif e[1] == "monitor_resize" and view == 2 and mon_settings.mon_selected > #mon_settings.mon_order then

@@ -15,9 +15,10 @@ local _min = math.min
 -- tables
 local front = {}
 local list = {}
-local settings = settings or {}
+local settings = user_data().settings or {}
 local window_pos = {}
 local search_proc = {}
+local startmenu_proc = {}
 -- functions
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
@@ -53,6 +54,9 @@ end
 local function get_search_vis()
 	return search_proc[user] and not search_proc[user].is_dead and search_proc[user].window.get_visible() or false
 end
+local function get_startmenu_vis()
+	return startmenu_proc[user] and not startmenu_proc[user].is_dead and startmenu_proc[user].window.get_visible() or false
+end
 local function create_search()
 	if not (not search_proc[user] or search_proc[user].is_dead) then
 		return nil
@@ -60,26 +64,41 @@ local function create_search()
 	local d = apis.window.get_global_visible()
 	apis.window.set_global_visible(false)
 	create_window("/magiczockerOS/programs/search.lua", true)
-	search_proc[user] = get_top_window()
+	search_proc[user] = user_data().windows[1]
 	local a = search_proc[user].window.get_buttons()
-	table.remove(a, 2)
+	table.remove(a, 1)
 	local b, c = {get_total_size()}, {search_proc[user].window.get_data()}
 	search_proc[user].window.set_buttons(a, true)
 	c[3] = 20
-	c[1], c[2], c[4] = b[1] - c[3] + 1, 2, _min(15, b[2] - 2)
+	c[1], c[2], c[4] = b[1] - c[3] + 1, 2, _min(14, b[2] - 3)
 	apis.window.set_global_visible(d)
 	search_proc[user].env.set_pos(c[1], c[2], c[3], c[4])
 end
+local function create_startmenu()
+	if not (not startmenu_proc[user] or startmenu_proc[user].is_dead) then
+		return nil
+	end
+	local d = apis.window.get_global_visible()
+	apis.window.set_global_visible(false)
+	create_window("/magiczockerOS/programs/startmenu.lua", true)
+	startmenu_proc[user] = user_data().windows[1]
+	startmenu_proc[user].window.set_header_vis(false)
+	startmenu_proc[user].click_outside = true
+	local a = startmenu_proc[user].window.get_buttons()
+	table.remove(a, 1)
+	startmenu_proc[user].window.set_buttons(a, true)
+	apis.window.set_global_visible(d)
+end
 local function draw_start()
 	term.setCursorPos(1,1)
-	if get_visible("startmenu") then
+	if get_startmenu_vis() then
 		back_color(32768,256,settings.startmenu_button_active_back or 256)
 		text_color(1,1,settings.startmenu_button_active_text or 1)
 	else
 		back_color(1,128,settings.startmenu_button_inactive_back or 128)
 		text_color(32768,1,settings.startmenu_button_inactive_text or 1)
 	end
-	term.write((not term.isColor and (get_visible("startmenu") and "-m-" or "_m_")) or " m ")
+	term.write((not term.isColor and (get_startmenu_vis() and "-m-" or "_m_")) or " m ")
 end
 local function draw_search()
 	if user~="" and search then
@@ -145,8 +164,9 @@ local function draw_items()
 	w = tmp
 end
 local function set_items()
-	local a=get_top_window() -- upper_window
-	list=get_label()
+	local a=user_data()
+	a = a.windows and a.windows[1] or nil -- upper_window
+	list=user_data().labels
 	line=""
 	front={}
 	window_pos={}
@@ -154,7 +174,7 @@ local function set_items()
 		local _width=w-#time-3-((not search or user == "") and 0 or 3)
 		local b=0 -- cursor
 		for i=1,#list do
-			if not search_proc[user] or list[i].id ~= search_proc[user].id then
+			if list[i].id ~= (search_proc[user] and search_proc[user].id or -1) and list[i].id ~= (startmenu_proc[user] and startmenu_proc[user].id or -1) then
 				if not term.isColor then
 					line=line.."_"..list[i].name.."_"
 				else
@@ -201,6 +221,8 @@ end
 local function set_vis(ign)
 	if ign == "se" then
 		create_search()
+	elseif ign == "sm" then
+		create_startmenu()
 	end
 	if get_visible("contextmenu") and ign ~= "cm" then
 		set_visible("contextmenu",false)
@@ -225,7 +247,7 @@ while true do
 		if a == "user" then
 			user = user_data().name
 		else
-			settings = get_settings()
+			settings = user_data().settings or {}
 			if settings.clock_visible == nil then
 				settings.clock_visible=true
 			end
@@ -235,10 +257,14 @@ while true do
 		draw_items()
 		draw_search()
 	elseif a == "mouse_click" then
-		if c<4 then -- open/close start menu
+		if c < 4 then -- open/close search
+			local a = not startmenu_proc[user] or startmenu_proc[user].is_dead
 			set_vis("sm")
-			set_visible("startmenu",not get_visible("startmenu"))
+			if not a then
+				switch_visible(startmenu_proc[user].id, not startmenu_proc[user].window.get_visible())
+			end
 			draw_start()
+			set_items()
 		elseif user ~= "" and c >= (w - (user == "" and -1 or 2) - #time) + (search and 0 or 3) and c < (w - (user == "" and -1 or 2)) + (search and 0 or 3) then -- open/close calendar
 			set_vis("ca")
 			set_visible("calendar",not get_visible("calendar"))
@@ -268,8 +294,8 @@ while true do
 			end
 			draw_items()
 		end
-	elseif a == "start_change" then
-		draw_start()
+	elseif a == "switch_start" then
+		os.queueEvent("mouse_click", 1, 1, 1)
 	elseif a == "calendar_change" then
 		draw_clock()
 	elseif a == "window_change" then

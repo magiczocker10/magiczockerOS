@@ -702,9 +702,6 @@ repeat
 		elseif message.mode == "update_settings" then
 			cached_settings[message.username] = message.data
 			message.success = true
-		elseif message.mode == "reset_settings" then
-			cached_settings[message.username] = nil
-			message.success = true
 		end
 		if not answer_send then
 			message.protocol = my_protocol_name

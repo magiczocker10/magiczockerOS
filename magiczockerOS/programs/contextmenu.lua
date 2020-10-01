@@ -9,7 +9,7 @@ local max_width=20
 local my_size = {0,0}
 local scroll
 local key_maps = {}
-local settings = settings or {}
+local settings = user_data().settings or {}
 local caller
 local parents
 local cur_raw

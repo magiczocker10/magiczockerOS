@@ -9,7 +9,7 @@ local selected = {15, 8, 2020}
 local height = 8
 local week_days = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}
 local user = user or ""
-local settings = settings or {}
+local settings = user_data().settings or {}
 local last_views = {}
 local month_names = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 local _month_width = (" "):rep(25)
@@ -431,7 +431,7 @@ while true do
 			end
 		end
 	elseif e == "refresh_settings" then
-		settings = get_settings()
+		settings = user_data().settings or {}
 		draw()
 	elseif e == "user" then
 		last_views[user] = not x and {{cur_day[1], cur_day[2], cur_day[3]}, cur_view, cur_view_cursor} or nil

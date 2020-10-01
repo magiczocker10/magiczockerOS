@@ -8,7 +8,7 @@ local special, mode = { ["<--"] = "<--", ["BACKSPACE"] = "<--", ["TAB"] = "Tab",
 local function loadKeys()
 	posX, posY, layout = 0, 1, {{}}
 	local width, width2 = 0, 0
-	local file = fs.open("/magiczockerOS/key_mappings/cc_qwerty.map", "r")
+	local file = fs.open("/magiczockerOS/key_mappings/cc_querty.map", "r")
 	for line in file.readLine do
 		local count = 1
 		posX = posX + 1
@@ -62,12 +62,13 @@ while true do
 		local count, l = 0, layout[y]
 		for entry = 1, #l do
 			if count < x and count + #l[entry][1] >= x then
+				local proc = user_data().windows[1]
 				if l[entry][1] == "---SPACE---" then -- space temporary
-					send_event("char", " ")
+					proc.env.os.queueEvent("char", " ")
 				elseif not special[l[entry][1]:upper()] then
-					send_event("char", mode == 1 and l[entry][1] or l[entry][2])
+					proc.env.os.queueEvent("char", mode == 1 and l[entry][1] or l[entry][2])
 				end
-				send_event("key", (mode == 1 or l[entry][4] == nil) and l[entry][3] or l[entry][4])
+				proc.env.os.queueEvent("key", (mode == 1 or l[entry][4] == nil) and l[entry][3] or l[entry][4])
 				if mode == 2 then
 					mode = 1
 					draw()
@@ -81,7 +82,7 @@ while true do
 			end
 		end
 	elseif e == "refresh_settings" then
-		current_settings = get_settings()
+		current_settings = user_data().settings or {}
 		loadKeys()
 		draw()
 	end
