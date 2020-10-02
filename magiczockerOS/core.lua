@@ -84,13 +84,12 @@ local key_maps = {}
 local last_click = {x = 0, y = 0, time = 0}
 local screen = {}
 local system_windows = {
-	calendar = {need_resize = true, fs = true, x = w - 24, y = 2, w = 25, h = 9, visible = false, path = "/magiczockerOS/programs/calendar.lua", click_outside = true},
 	contextmenu = {x = 1, y = 1, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true},
 	desktop = {need_resize = true, fs = true, x = 1, y = 2, w = w, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
 	taskbar = {need_resize = true, x = 1, y = 1, w = w, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
 	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false},
 }
-local system_window_order = {"osk", "contextmenu", "taskbar", "calendar", "desktop"} -- osk needs to be the first entry
+local system_window_order = {"osk", "contextmenu", "taskbar", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
 local term = term or nil
 local textutils = textutils or nil
@@ -431,8 +430,6 @@ local function resize_system_windows()
 				w, h = size[1], size[2] - 1
 			elseif win == "taskbar" then
 				w = size[1]
-			elseif win == "calendar" then
-				x = size[1] - 24
 			end
 			system_windows[win].window.reposition(x, y, w, h)
 			resume_system("34" .. win, system_windows[win].coroutine, "term_resize")
@@ -666,7 +663,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					return user_data.windows[1].id
 				end,
 				setFocus = function(_id)
-					if _id ~= id and _id > 0 and user_data.windows[_id] then
+					if _id ~= id and _id > 0 and user_data.windows[_id] and not user_data.windows[_id].is_system then
 						if resize_mode then
 							resize_mode = false
 							user_data.windows[1].window.toggle_border(false)
@@ -685,7 +682,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 							if user_data.labels[i].id == n then
 								user_data.labels[i].name = title
 								for j = 1, #user_data.windows do
-									if user_data.windows[j].id == n then
+									if user_data.windows[j].id == n and not user_data.windows[j].is_system then
 										user_data.windows[j].window.set_title(title, j == 1)
 										_queue(system_windows.taskbar.id .. "", "", "window_change")
 										break
@@ -784,9 +781,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end or nil,
 			switch_user = is_system_program and function(logoff, username, session)
-				if system_windows.calendar.window then
-					system_windows.calendar.window.set_visible(false)
-				end
 				change_user = {logoff = logoff, user = username, active = true, session = session}
 				os_timer = start_timer(os_timer, 0)
 			end or nil,
@@ -1104,6 +1098,14 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	end
 	local function wait_error()
 		my_window.is_dead = true
+		if my_window.auto_kill then
+			if fs then
+				local file = fs.open("/magiczockerOS/error_log.log", "w")
+				file.write(message)
+				file.close()
+			end
+			return false
+		end
 		if env.term.setBackgroundColor then
 			env.term.setBackgroundColor(32768)
 		end
@@ -1211,7 +1213,7 @@ local function create_system_windows(i)
 		coroutine = {
 			yield = coroutine.yield, -- all
 		},
-		tonumber = tonumber, -- osk, calendar
+		tonumber = tonumber, -- osk
 		type = type, -- contextmenu, desktop, osk
 		os = {
 			time = os.time, -- taskbar
@@ -1324,14 +1326,11 @@ end
 local function check_click_outside(id)
 	local a = false
 	if id ~= (system_windows.osk.id or "") and id ~= (system_windows.taskbar.id or "") then
-		local _taskbar, tmp = {startmenu = "start", calendar = "calendar"}, nil
+		local  tmp = nil
 		for i = 1, #system_window_order do
 			tmp = system_windows[system_window_order[i]]
 			if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
 				tmp.window.set_visible(false)
-				if _taskbar[system_window_order[i]] then
-					resume_system("8taskbar", system_windows.taskbar.coroutine, _taskbar[system_window_order[i]] .. "_change")
-				end
 				a = true
 			end
 		end
@@ -1663,21 +1662,13 @@ local function events(...)
 			resume_user(user_data.windows[1].coroutine, "term_resize")
 			sgv(true)
 			draw_windows()
-		elseif _key == "x" or _key == "t" and system_windows.calendar.window or _key == "s" then -- open/close startmenu, calender/clock
-			if not ((_key == "t" or _key == "s") and #gUD(cur_user).name == 0) then
-				if resize_mode then
-					resize_mode = false
-					user_data.windows[1].window.toggle_border(false)
-				end
-				local sys_window = system_windows
-				if sys_window.calendar.window then
-					sys_window.calendar.window.set_visible(_key == "t")
-				end
-				if _key == "x" then
-					resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "switch_start" or _key == "t" and "calendar_change")
-				end
-				draw_windows()
+		elseif _key == "x" or _key == "t" or _key == "s" then -- open/close startmenu, calender/clock
+			if resize_mode then
+				resize_mode = false
+				user_data.windows[1].window.toggle_border(false)
 			end
+			local sys_window = system_windows
+			resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "switch_start" or _key == "s" and "switch_search" or _key == "t" and "switch_calendar")
 		elseif _key == "c" and temp_window and temp_window.get_visible() and temp_window.get_button("close") then -- close window
 			user_data.windows[1].is_dead = true
 			for i = 1, #user_data.labels do

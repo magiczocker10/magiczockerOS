@@ -17,6 +17,7 @@ local _year_width = _month_width
 local cur_day = {15, 8, 2020} -- set the start-date
 local cur_view = 1
 local cur_view_cursor = 0
+local ceil, floor = math.ceil, math.floor
 local function size(w,h)
 	if size then
 		set_pos(nil, nil, w, h)

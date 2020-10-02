@@ -4,6 +4,7 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
 local search = fs.exists("/magiczockerOS/programs/search.lua")
+local calendar = fs.exists("/magiczockerOS/programs/calendar.lua")
 -- numbers
 local w = term.getSize()
 local offset = 0
@@ -17,8 +18,8 @@ local front = {}
 local list = {}
 local settings = user_data().settings or {}
 local window_pos = {}
-local search_proc = {}
-local startmenu_proc = {}
+local procs = {}
+local u_data
 -- functions
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
@@ -51,66 +52,63 @@ local function get_time()
 		return ""
 	end
 end
-local function get_search_vis()
-	return search_proc[user] and not search_proc[user].is_dead and search_proc[user].window.get_visible() or false
+local function get_proc_vis(a)
+	return procs[a] and not procs[a].is_dead and procs[a].window.get_visible() or false
 end
-local function get_startmenu_vis()
-	return startmenu_proc[user] and not startmenu_proc[user].is_dead and startmenu_proc[user].window.get_visible() or false
-end
-local function create_search()
-	if not (not search_proc[user] or search_proc[user].is_dead) then
+local function create_proc(a, b)
+	if not (not procs[a] or procs[a].is_dead) then
 		return nil
 	end
-	local d = apis.window.get_global_visible()
+	local f = apis.window.get_global_visible()
 	apis.window.set_global_visible(false)
-	create_window("/magiczockerOS/programs/search.lua", true)
-	search_proc[user] = user_data().windows[1]
-	local a = search_proc[user].window.get_buttons()
-	table.remove(a, 1)
-	local b, c = {get_total_size()}, {search_proc[user].window.get_data()}
-	search_proc[user].window.set_buttons(a, true)
-	c[3] = 20
-	c[1], c[2], c[4] = b[1] - c[3] + 1, 2, _min(14, b[2] - 3)
-	apis.window.set_global_visible(d)
-	search_proc[user].env.set_pos(c[1], c[2], c[3], c[4])
-end
-local function create_startmenu()
-	if not (not startmenu_proc[user] or startmenu_proc[user].is_dead) then
-		return nil
+	create_window(b, true)
+	procs[a] = user_data().windows[1]
+	local e = procs[a].window.get_buttons()
+	table.remove(e, 1)
+	procs[a].window.set_buttons(e, true)
+	procs[a].is_system = true
+	procs[a].auto_kill = true
+	if a == "startmenu" then
+		procs[a].window.set_header_vis(false)
+		procs[a].click_outside = true
+	elseif a == "search" then
+		local c, d = {get_total_size()}, {procs[a].window.get_data()}
+		d[3] = 20
+		d[1], d[2], d[4] = c[1] - d[3] + 1, 2, _min(14, c[2] - 3)
+		procs[a].env.set_pos(d[1], d[2], d[3], d[4], true)
+	elseif a == "calendar" then
+		procs[a].window.set_header_vis(false)
+		procs[a].click_outside = true
+		procs[a].env.set_pos(w - 24, 2, nil, nil, true)
+		procs[a].env.os.queueEvent("term_resize")
 	end
-	local d = apis.window.get_global_visible()
-	apis.window.set_global_visible(false)
-	create_window("/magiczockerOS/programs/startmenu.lua", true)
-	startmenu_proc[user] = user_data().windows[1]
-	startmenu_proc[user].window.set_header_vis(false)
-	startmenu_proc[user].click_outside = true
-	local a = startmenu_proc[user].window.get_buttons()
-	table.remove(a, 1)
-	startmenu_proc[user].window.set_buttons(a, true)
-	apis.window.set_global_visible(d)
+	apis.window.set_global_visible(f)
+	if a == "search" or a == "calendar" then
+		set_pos()
+	end
 end
 local function draw_start()
 	term.setCursorPos(1,1)
-	if get_startmenu_vis() then
+	if get_proc_vis("startmenu") then
 		back_color(32768,256,settings.startmenu_button_active_back or 256)
 		text_color(1,1,settings.startmenu_button_active_text or 1)
 	else
 		back_color(1,128,settings.startmenu_button_inactive_back or 128)
 		text_color(32768,1,settings.startmenu_button_inactive_text or 1)
 	end
-	term.write((not term.isColor and (get_startmenu_vis() and "-m-" or "_m_")) or " m ")
+	term.write((not term.isColor and (get_proc_vis("startmenu") and "-m-" or "_m_")) or " m ")
 end
 local function draw_search()
 	if user~="" and search then
 		term.setCursorPos(w-2,1)
-		if get_search_vis() then
+		if get_proc_vis("search") then
 			back_color(32768,256,settings.search_button_active_back or 256)
 			text_color(1,1,settings.search_button_active_text or 1)
 		else
 			back_color(1,128,settings.search_button_inactive_back or 128)
 			text_color(32768,1,settings.search_button_inactive_text or 1)
 		end
-		term.write((not term.isColor and (get_search_vis() and "-S-" or "_S_")) or " S ")
+		term.write((not term.isColor and (get_proc_vis("search") and "-S-" or "_S_")) or " S ")
 	end
 end
 local function draw_items()
@@ -174,7 +172,7 @@ local function set_items()
 		local _width=w-#time-3-((not search or user == "") and 0 or 3)
 		local b=0 -- cursor
 		for i=1,#list do
-			if list[i].id ~= (search_proc[user] and search_proc[user].id or -1) and list[i].id ~= (startmenu_proc[user] and startmenu_proc[user].id or -1) then
+			if list[i].id ~= (procs["search"] and procs["search"].id or -1) and list[i].id ~= (procs["startmenu"] and procs["startmenu"].id or -1) and list[i].id ~= (procs["calendar"] and procs["calendar"].id or -1) then
 				if not term.isColor then
 					line=line.."_"..list[i].name.."_"
 				else
@@ -207,7 +205,7 @@ end
 local function draw_clock()
 	time=get_time()
 	if settings.clock_visible then
-		if get_visible("calendar") then
+		if get_proc_vis("calendar") then
 			back_color(32768,256,settings.clock_back_active or 256)
 			text_color(1,32768,settings.clock_text_active or 1)
 		else
@@ -220,19 +218,20 @@ local function draw_clock()
 end
 local function set_vis(ign)
 	if ign == "se" then
-		create_search()
+		create_proc("search", "/magiczockerOS/programs/search.lua")
 	elseif ign == "sm" then
-		create_startmenu()
+		create_proc("startmenu", "/magiczockerOS/programs/startmenu.lua")
+	elseif ign == "ca" then
+		create_proc("calendar", "/magiczockerOS/programs/calendar.lua")
 	end
 	if get_visible("contextmenu") and ign ~= "cm" then
 		set_visible("contextmenu",false)
 	end
-	if get_startmenu_vis() and ign ~= "sm" then
+	if get_proc_vis("startmenu") and ign ~= "sm" then
 		os.queueEvent("mouse_click", 1, 1, 1)
 	end
 	if get_visible("calendar") and ign ~= "ca" then
-		set_visible("calendar",false)
-		draw_clock()
+		os.queueEvent("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
 	end
 end
 local function switch_visible(id, state)
@@ -250,6 +249,13 @@ local function switch_visible(id, state)
 	end
 	set_pos()
 end
+local function toggle(a)
+	local b = not procs[a] or procs[a].is_dead
+	set_vis(a == "startmenu" and "sm" or a == "calendar" and "ca" or "se")
+	if not b then
+		switch_visible(procs[a].id, not procs[a].window.get_visible())
+	end
+end
 -- start
 draw_start()
 set_items()
@@ -258,12 +264,24 @@ draw_search()
 while true do
 	local a, b, c = coroutine.yield()
 	if a == "user" or a == "refresh_settings" then
+		local u_data_old = u_data
 		if a == "user" then
-			user = user_data().name
+			u_data = user_data()
+			if u_data_old then
+				for i = #u_data_old.windows, 1, -1 do
+					local v = u_data_old.windows[i]
+					if v.is_system and (procs["search"] == v or procs["startmenu"] == v or procs["calendar"] == v) then
+						v.window.set_visible(false)
+						u_data.windows[#u_data.windows + 1] = v
+						table.remove(u_data_old.windows, i)
+					end
+				end
+			end
+			user = u_data.name
 		else
-			settings = user_data().settings or {}
+			settings = u_data.settings or {}
 			if settings.clock_visible == nil then
-				settings.clock_visible=true
+				settings.clock_visible = true
 			end
 		end
 		draw_clock()
@@ -271,24 +289,16 @@ while true do
 		draw_items()
 		draw_search()
 	elseif a == "mouse_click" then
-		if c < 4 then -- open/close search
-			local a = not startmenu_proc[user] or startmenu_proc[user].is_dead
-			set_vis("sm")
-			if not a then
-				switch_visible(startmenu_proc[user].id, not startmenu_proc[user].window.get_visible())
-			end
+		if c < 4 then -- open/close startmenu
+			toggle("startmenu")
 			draw_start()
 			set_items()
-		elseif user ~= "" and c >= (w - (user == "" and -1 or 2) - #time) + (search and 0 or 3) and c < (w - (user == "" and -1 or 2)) + (search and 0 or 3) then -- open/close calendar
-			set_vis("ca")
-			set_visible("calendar",not get_visible("calendar"))
-			draw_clock()
+		elseif calendar and user ~= "" and c >= (w - (user == "" and -1 or 2) - #time) + (search and 0 or 3) and c < (w - (user == "" and -1 or 2)) + (search and 0 or 3) then -- open/close calendar
+			toggle("calendar")
+			draw_start()
+			set_items()
 		elseif search and user ~= "" and c > w - 3 then -- open/close search
-			local a = not search_proc[user] or search_proc[user].is_dead
-			set_vis("se")
-			if not a then
-				switch_visible(search_proc[user].id, not search_proc[user].window.get_visible())
-			end
+			toggle("search")
 			draw_search()
 		elseif b == 1 or b == 3 then -- taskbar entries
 			if b == 1 then -- left
@@ -332,8 +342,10 @@ while true do
 		end
 	elseif a == "switch_start" then
 		os.queueEvent("mouse_click", 1, 1, 1)
-	elseif a == "calendar_change" then
-		draw_clock()
+	elseif a == "switch_calendar" then
+		os.queueEvent("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
+	elseif a == "switch_search" and search then
+		os.queueEvent("mouse_click", 1, w, 1)
 	elseif a == "window_change" then
 		draw_start()
 		set_items()
@@ -342,6 +354,9 @@ while true do
 		draw_clock()
 	elseif a == "term_resize" then
 		w=term.getSize()
+		if procs["calendar"] then
+			procs["calendar"].env.set_pos(w - 24, nil, nil, nil, true)
+		end
 		draw_start()
 		set_items()
 		draw_search()
