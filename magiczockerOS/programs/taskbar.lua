@@ -274,6 +274,8 @@ while true do
 						v.window.set_visible(false)
 						u_data.windows[#u_data.windows + 1] = v
 						table.remove(u_data_old.windows, i)
+						v.env.set_user(b)
+						v.env.os.queueEvent("user", b)
 					end
 				end
 			end

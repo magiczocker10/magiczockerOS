@@ -129,6 +129,10 @@ while true do
 			cursor = cursor == #menu[mode] and 1 or cursor + 1
 		end
 		draw()
+	elseif a == "user" then
+		mode = #(user_data().name or "") > 0 and 2 or 1
+		size()
+		draw()
 	elseif a == "term_resize" then
 		draw()
 	end

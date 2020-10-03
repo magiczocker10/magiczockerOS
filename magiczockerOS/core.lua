@@ -595,13 +595,13 @@ local function get_os_commands(win)
 		},
 		get_screen_image = function(a, b)
 			if (a or 0) > 0 then
-				local c = gUD(win.id < 0 and (b or cur_user) or user_)
+				local c = gUD((win.id < 0 or win.is_system) and (b or cur_user) or user_)
 				for i = 1, #c.windows do
 					if c.windows[i].id == a then
 						return c.windows[i].window.get_screen()
 					end
 				end
-			elseif not a and (win.id < 0 or user_ == cur_user) then
+			elseif not a and (win.id < 0 or win.is_system or user_ == cur_user) then
 				return apis.window.get_global_cache()
 			end
 			return nil
@@ -800,9 +800,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end or nil,
 			close_os = is_system_program and function() running = false end or nil,
+			set_user = is_system_program and function(a) user_ = a end or nil,
 			term = {},
 			user = is_system_program and user_ or nil,
-			user_data = is_system_program and function() return user_data end or nil,
+			user_data = is_system_program and function() return gUD(user_) end or nil,
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
 			magiczockerOS = get_os_commands(my_window),
 		}
@@ -1218,7 +1219,7 @@ local function create_system_windows(i)
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
-			queueEvent = _queue, -- calender, contextmenu, taskbar
+			queueEvent = _queue, -- contextmenu, taskbar
 		},
 		table = {
 			insert = table.insert, -- taskbar
@@ -1662,7 +1663,7 @@ local function events(...)
 			resume_user(user_data.windows[1].coroutine, "term_resize")
 			sgv(true)
 			draw_windows()
-		elseif _key == "x" or _key == "t" or _key == "s" then -- open/close startmenu, calender/clock
+		elseif _key == "x" or _key == "t" or _key == "s" then -- open/close startmenu, calendar/clock
 			if resize_mode then
 				resize_mode = false
 				user_data.windows[1].window.toggle_border(false)
