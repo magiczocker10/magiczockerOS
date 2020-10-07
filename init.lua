@@ -140,25 +140,24 @@ if component then
         end,
     }
 end
-loadstring=load
-local file,err=fs.open("/magiczockerOS/core.lua","r")
-if file then
-    local filecontent=file.readAll()
-    file.close()
-    local content,err=load(filecontent,"@/magiczockerOS/core.lua")
-    if content then
-        local ok,err=xpcall(function() return content() end,function(_) return _ end)
-        if not ok then
-            if err and err~="" then
-                error(err,0)
-            end
-            return
-        end
-        return true
-    end
-    if err and err~="" then
-        error(err,0)
-    end
-    return
+loadstring = load
+local file, err = fs.open("/magiczockerOS/core.lua", "r")
+if err then
+    error("/magiczockerOS/core.lua: File not exists", 0)
 end
-error("/magiczockerOS/core.lua: File not exists",0)
+local filecontent = file.readAll()
+file.close()
+local content, err=load(filecontent, "@/magiczockerOS/core.lua")
+if content then
+    local ok, err = xpcall(function() return content() end, function(_) return _ end)
+    if not ok then
+        if err and err ~= "" then
+            error(err, 0)
+        end
+        return
+    end
+    return true
+end
+if err and err ~= "" then
+    error(err, 0)
+end
