@@ -1448,7 +1448,7 @@ draw_windows()
 -- events
 local _yield = computer and computer.pullSignal or coroutine.yield
 local ton = tonumber
-if component then
+if component and os.clock then
 	computer.pushSignal("timer_health")
 end
 local function events(...)
@@ -1501,8 +1501,8 @@ local function events(...)
 	end
 	if e[1] == "timer" and qe[e[2]] and queued_events[qe[e[2]]] then
 		local tmp = qe[e[2]]
+		qe[e[2]] = nil
 		events(_unpack(queued_events[tmp]))
-		queued_events[tmp] = nil
 	elseif (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
@@ -1996,7 +1996,7 @@ local function events(...)
 			end
 		end
 	end
-	if computer then
+	if computer and os.clock then
 		if timer then
 			computer.pushSignal("timer", timer)
 			computer.pushSignal("timer_health")
