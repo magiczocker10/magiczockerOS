@@ -634,7 +634,7 @@ repeat
 	if type(message) == "string" then
 		message = textutils.unserialize(message) or message
 	end
-	if e == "modem_message" and x == my_computer_id and type(message) == "table" and message.protocol == "magiczockerOS-client" and type(message.mode) == "string" and type(message.my_id) == "number" then
+	if e == "modem_message" and x == my_computer_id and type(message) == "table" and (message.protocol == "filetransfer-client" or message.protocol == "magiczockerOS-client") and type(message.mode) == "string" and type(message.my_id) == "number" then
 		local to_return
 		local answer_send = false
 		local user_data = check_sessioncode(message.username, y, message.session_id) and active_sessions[y][message.username] or nil
@@ -704,11 +704,11 @@ repeat
 			message.success = true
 		end
 		if not answer_send then
-			message.protocol = my_protocol_name
+			message.protocol = message.protocol == "filetransfer-client" and "filetransfer-server" or my_protocol_name
 			message.mode = message.mode .. "-answer"
 			local tmp = message.return_id
 			message.return_id = my_computer_id
-			send_message(modem_side, tmp, message.success and message or {success = false})
+			send_message(modem_side, tmp, message.success and message or {protocol = message.protocol, success = false})
 		end
 	elseif e == "char" then
 		if (views[view] or "") == "list" then

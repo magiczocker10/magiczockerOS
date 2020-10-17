@@ -548,7 +548,7 @@ local function get_remote(id, suser, environment)
 		while true do
 			local e = {environment.coroutine.yield()}
 			if e[1] == "modem_message" and type(e[2]) == "number" then
-				if e[2] == my_id then
+				if e[2] == my_id and type(e[3]) == "table" and e[3].protocol == "magiczockerOS-server" then
 					window_messages[send_id] = nil
 					return e[3]
 				end
