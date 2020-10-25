@@ -363,7 +363,7 @@ local function load_key_mapping()
 				if _temp[#_temp] == (tmp or "") then
 					settings.osk_key_mapping = k
 				end
-				if _temp[#_temp]=="en" then
+				if _temp[#_temp]=="qwerty" then
 					categories[i].entries[1].default = k
 				end
 			end

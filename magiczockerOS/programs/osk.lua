@@ -2,21 +2,28 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local current_settings = settings or {}
+local current_settings = user_data().settings or {}
 local layout, posX, posY
+local a = _HOSTver >= 1132
 local special, mode = { ["<--"] = "<--", ["BACKSPACE"] = "<--", ["TAB"] = "Tab", ["SHIFT"] = "Shift", ["LSHIFT"] = "Shift", ["RSHIFT"] = "Shift", ["CTRL"] = "Ctrl", ["LCTRL"] = "Ctrl", ["RCTRL"] = "Ctrl", ["ALT"] = "Alt", ["LALT"] = "Alt", ["RALT"] = "Alt", ["<-"] = "<-", ["ENTER"] = "<-", ["CAPS"] = "Caps", ["SPACE"] = "---SPACE---" }, 1 -- 1 = normal, 2 = shift, 3 = caps
 local function loadKeys()
 	posX, posY, layout = 0, 1, {{}}
 	local width, width2 = 0, 0
-	local file = fs.open("/magiczockerOS/key_mappings/cc_querty.map", "r")
+	local file = fs.open("/magiczockerOS/key_mappings/" .. (current_settings.osk_key_mapping or "qwerty").. ".map", "r")
 	for line in file.readLine do
 		local count = 1
 		posX = posX + 1
 		layout[posY][posX] = {}
 		for word in line:gmatch("[^%s]+") do
 			if special[word] then
-				layout[posY][posX] = {special[word], special[word], tonumber(line:sub(#word+2,#line))}
+        local tmp2 = line:sub(#word+2,#line)
+        local tmp3 = tonumber(tmp2:sub(1,tmp2:find("%s")))
+        local tmp4 = tonumber(tmp2:sub(tmp2:find("%s") or #tmp2+1))
+				layout[posY][posX] = {special[word], special[word], tmp3, tmp3, tmp4, tmp4}
 				width = width + #special[word] + 1
+				break
+			elseif word == "##" then
+				posX = posX - 1
 				break
 			elseif word == "NEWLINE" then
 				layout[posY][posX] = nil
@@ -54,6 +61,12 @@ local function draw()
 		end
 	end
 end
+local function send_event(...)
+	local proc = user_data().windows[1]
+	if proc then
+		proc.env.os.queueEvent(...)
+	end
+end
 loadKeys()
 draw()
 while true do
@@ -62,13 +75,12 @@ while true do
 		local count, l = 0, layout[y]
 		for entry = 1, #l do
 			if count < x and count + #l[entry][1] >= x then
-				local proc = user_data().windows[1]
 				if l[entry][1] == "---SPACE---" then -- space temporary
-					proc.env.os.queueEvent("char", " ")
+					send_event("char", " ")
 				elseif not special[l[entry][1]:upper()] then
-					proc.env.os.queueEvent("char", mode == 1 and l[entry][1] or l[entry][2])
+					send_event("char", mode == 1 and l[entry][1] or l[entry][2])
 				end
-				proc.env.os.queueEvent("key", (mode == 1 or l[entry][4] == nil) and l[entry][3] or l[entry][4])
+				send_event("key", mode == 1 and (a and l[entry][5] or l[entry][3]) or (a and l[entry][6] or l[entry][4]))
 				if mode == 2 then
 					mode = 1
 					draw()
