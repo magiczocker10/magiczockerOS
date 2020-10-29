@@ -4,6 +4,7 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local current_settings = user_data().settings or {}
 local layout, posX, posY
+local window_width = 0
 local a = _HOSTver >= 1132
 local special, mode = { ["<--"] = "<--", ["BACKSPACE"] = "<--", ["TAB"] = "Tab", ["SHIFT"] = "Shift", ["LSHIFT"] = "Shift", ["RSHIFT"] = "Shift", ["CTRL"] = "Ctrl", ["LCTRL"] = "Ctrl", ["RCTRL"] = "Ctrl", ["ALT"] = "Alt", ["LALT"] = "Alt", ["RALT"] = "Alt", ["<-"] = "<-", ["ENTER"] = "<-", ["CAPS"] = "Caps", ["SPACE"] = "---SPACE---" }, 1 -- 1 = normal, 2 = shift, 3 = caps
 local function loadKeys()
@@ -16,9 +17,9 @@ local function loadKeys()
 		layout[posY][posX] = {}
 		for word in line:gmatch("[^%s]+") do
 			if special[word] then
-        local tmp2 = line:sub(#word+2,#line)
-        local tmp3 = tonumber(tmp2:sub(1,tmp2:find("%s")))
-        local tmp4 = tonumber(tmp2:sub(tmp2:find("%s") or #tmp2+1))
+				local tmp2 = line:sub(#word+2,#line)
+				local tmp3 = tonumber(tmp2:sub(1,tmp2:find("%s")))
+				local tmp4 = tonumber(tmp2:sub(tmp2:find("%s") or #tmp2+1))
 				layout[posY][posX] = {special[word], special[word], tmp3, tmp3, tmp4, tmp4}
 				width = width + #special[word] + 1
 				break
@@ -39,6 +40,7 @@ local function loadKeys()
 		end
 	end
 	set_pos(nil, nil, width2 - 1, #layout + 1)
+	window_width = width2 - 1
 	file.close()
 end
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
@@ -54,10 +56,16 @@ local function draw()
 	local b = current_settings.window_bar_active_back or 128
 	back_color(32768, 32768, b)
 	text_color(1, 1, b == 1 and 32768 or current_settings.window_bar_active_text or 1)
+	local c
 	for y = 1, #layout do
 		term.setCursorPos(1, y)
+		c = 0
 		for x = 1, #layout[y] do
 			term.write(layout[y][x][mode > 1 and 2 or 1] .. " ")
+			c = c + #layout[y][x][mode > 1 and 2 or 1] + 1
+		end
+		if c < window_width then
+			term.write((" "):rep(window_width - c))
 		end
 	end
 end
