@@ -319,18 +319,16 @@ local function draw_windows()
 	for i = 1, #system_window_order do
 		temp_window = system_windows[system_window_order[i]].window
 		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
-		if system_window_order[i] == "taskbar" and gUD(cur_user).windows then
-			user_win = gUD(cur_user).windows
-			for j = 1, #user_win do
-				temp_window = user_win[j].window
-				if temp_window.get_visible() then
-					screen = temp_window.redraw(j == 1, screen, j)
-					if temp_window.get_state() == "maximized" then
-						break
-					end
-				else
+		user_win = system_window_order[i] == "taskbar" and gUD(cur_user).windows or nil
+		for j = 1, #(user_win or "") do
+			temp_window = user_win[j].window
+			if temp_window.get_visible() then
+				screen = temp_window.redraw(j == 1, screen, j)
+				if temp_window.get_state() == "maximized" then
 					break
 				end
+			else
+				break
 			end
 		end
 	end
@@ -1249,6 +1247,7 @@ local function create_system_windows(i)
 			queueEvent = function(...)
 				_queue(system_windows[temp].id .. "", "", ...)
 			end,
+			clock = os.clock, --desktop
 		}
 		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
 	end

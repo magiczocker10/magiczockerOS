@@ -267,7 +267,7 @@ while true do
 		local u_data_old = u_data
 		if a == "user" then
 			u_data = user_data()
-			if u_data_old then
+			if u_data_old and u_data ~= u_data_old then
 				for i = #u_data_old.windows, 1, -1 do
 					local v = u_data_old.windows[i]
 					if v.is_system and (procs["search"] == v or procs["startmenu"] == v or procs["calendar"] == v) then
