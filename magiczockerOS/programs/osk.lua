@@ -77,7 +77,7 @@ end
 loadKeys()
 draw()
 while true do
-	local e, _, x, y = os.pullEvent()
+	local e, _, x, y = coroutine.yield()
 	if e == "mouse_click" then
 		local count, l = 0, layout[y]
 		for entry = 1, #l do
@@ -101,6 +101,6 @@ while true do
 		current_settings = user_data().settings or {}
 		loadKeys()
 		draw()
-		set_pos(nil, nil, width2 - 1, #layout + 1)
+		set_pos(nil, nil, window_width - 1, #layout + 1)
 	end
 end
