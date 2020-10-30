@@ -1209,11 +1209,12 @@ local function create_system_windows(i)
 		unpack = _unpack,
 		floor = math.floor,
 		ceil = math.ceil,
+		dofile = dofile, -- osk
 		coroutine = {
 			yield = coroutine.yield, -- all
 		},
 		tonumber = tonumber, -- osk
-		type = type, -- contextmenu, desktop, osk
+		type = type, -- contextmenu, desktop
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
