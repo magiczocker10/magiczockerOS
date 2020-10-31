@@ -29,8 +29,8 @@ local function load_lines()
 		elseif word == "NEWLINE_BASE" then
 			posY = posY + 1
 		elseif word == "PLACEHOLDER" then
-			local count = line:sub(line:find("%s"), #line)
-			local tmp = (" "):rep(tonumber(count)):sub(1, count - 1)
+			local count = tonumber(line:sub(line:find("%s"), #line))
+			local tmp = count > 1 and (" "):rep(count - 1) or ""
 			layout[posY][#layout[posY] + 1] = {tmp, tmp, 0, 0}
 			view[1][posY] = view[1][posY] .. tmp .. " "
 			view[2][posY] = view[2][posY] .. tmp .. " "
@@ -58,11 +58,13 @@ local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
 end
-local function draw()
-	window_width = 0
+local function set_color()
 	local b = current_settings.window_bar_active_back or 128
 	back_color(32768, 32768, b)
 	text_color(1, 1, b == 1 and 32768 or current_settings.window_bar_active_text or 1)
+end
+local function draw()
+	window_width = 0
 	for y = 1, #layout do
 		term.setCursorPos(1, y)
 		term.write(view[mode == 1 and 1 or 2][y])
@@ -75,6 +77,7 @@ local function send_event(...)
 		proc.env.os.queueEvent(...)
 	end
 end
+set_color()
 loadKeys()
 draw()
 while true do
@@ -107,6 +110,7 @@ while true do
 	elseif e == "refresh_settings" then
 		current_settings = user_data().settings or {}
 		loadKeys()
+		set_color()
 		draw()
 		set_pos(nil, nil, window_width - 1, #layout + 1)
 	end
