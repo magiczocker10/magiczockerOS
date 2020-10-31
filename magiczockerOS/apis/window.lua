@@ -675,6 +675,11 @@ function create(x,y,width,height,visible,bar)
 	function window.has_header()
 		return bar
 	end
+	function window.set_header_vis(a)
+		local b = bar
+		bar = a
+		if b ~= bar then data[state].height = data[state].height + (bar and 1 or -1) end
+	end
 	-- window functions
 	function window.drawable(state)
 		can_draw=state~=can_draw and state or can_draw
