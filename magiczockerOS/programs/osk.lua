@@ -1,23 +1,25 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2020
 
--- TODO: Fix some LWJGL keys; add char event
-
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local current_settings = user_data and user_data().settings or {}
 local layout, posY, file
-local window_width, a, mode, word = 0, _HOSTver or 0 >= 1132, 1, ""
+local window_width, glfw, mode = 0, (_HOSTver or 0) >= 1132, 1
 local codes = dofile("/magiczockerOS/key_mappings/data.lua")
-local view = {{},{}}
+local view = {{}, {}}
+local arrows = {}
 local function load_lines()
 	local file_line = 0
 	for line in file.readLine do
 		file_line = file_line + 1
 		for word in line:gmatch("[^%s]+") do
 			if codes[word] then
-				layout[posY][#layout[posY]+1] = codes[word]
+				layout[posY][#layout[posY] + 1] = codes[word]
 				view[1][posY] = view[1][posY] .. codes[word][1] .. " "
 				view[2][posY] = view[2][posY] .. codes[word][2] .. " "
+				if word == "UP" or word == "DOWN" or word == "LEFT" or word == "RIGHT" then
+					arrows[glfw and codes[word][3] or codes[word][4]] = true
+				end
 			elseif word == "##" then
 			elseif word == "NEWLINE" then
 				posY = posY + 1
@@ -27,20 +29,22 @@ local function load_lines()
 			elseif word == "NEWLINE_BASE" then
 				posY = posY + 1
 			elseif word == "PLACEHOLDER" then
-				local tmp = (" "):rep(tonumber(line:sub(line:find("%s"),#line)))
-				layout[posY][#layout[posY]+1] = {tmp, tmp, 0, 0}
-				view[1][posY] = view[1][posY] .. tmp
-				view[2][posY] = view[2][posY] .. tmp
+				local count = line:sub(line:find("%s"), #line)
+				local tmp = (" "):rep(tonumber(count)):sub(1, count - 1)
+				layout[posY][#layout[posY] + 1] = {tmp, tmp, 0, 0}
+				view[1][posY] = view[1][posY] .. tmp .. " "
+				view[2][posY] = view[2][posY] .. tmp .. " "
+
 			else
-				error("Line "..file_line..": "..word)
+				error("Line " .. file_line .. ": " .. word)
 			end
 			break
 		end
 	end
 end
 local function loadKeys()
-	posY, layout, view = 2, {{},{}}, {{"",""},{"",""}}
-	file = fs.open("/magiczockerOS/key_mappings/" .. (current_settings.osk_key_mapping or "qwerty").. ".map", "r")
+	posY, layout, view = 2, {{}, {}}, {{"", ""}, {"", ""}}
+	file = fs.open("/magiczockerOS/key_mappings/" .. (current_settings.osk_key_mapping or "qwerty") .. ".map", "r")
 	load_lines()
 	file.close()
 	posY = 1
@@ -83,7 +87,13 @@ while true do
 		for entry = 1, #l do
 			if count < x and count + #l[entry][1] >= x then
 				if l[entry][3] > 0 then
-					send_event("key", mode == 1 and l[entry][3] or l[entry][4])
+					local tmp = mode > 1 and l[entry][2] or l[entry][1]
+					if tmp == "---SPACE---" then
+						send_event("char", " ")
+					elseif #tmp == 1 and not arrows[glfw and l[entry][3] or l[entry][4]] then
+						send_event("char", tmp)
+					end
+					send_event("key", glfw and l[entry][3] or (mode > 1 and l[entry][5] or l[entry][4]))
 					if mode == 2 then
 						mode = 1
 						draw()
