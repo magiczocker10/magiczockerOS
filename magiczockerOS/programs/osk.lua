@@ -12,33 +12,30 @@ local function load_lines()
 	local file_line = 0
 	for line in file.readLine do
 		file_line = file_line + 1
-		for word in line:gmatch("[^%s]+") do
-			if codes[word] then
-				layout[posY][#layout[posY] + 1] = codes[word]
-				view[1][posY] = view[1][posY] .. codes[word][1] .. " "
-				view[2][posY] = view[2][posY] .. codes[word][2] .. " "
-				if word == "UP" or word == "DOWN" or word == "LEFT" or word == "RIGHT" then
-					arrows[glfw and codes[word][3] or codes[word][4]] = true
-				end
-			elseif word == "##" then
-			elseif word == "NEWLINE" then
-				posY = posY + 1
-				layout[posY] = {}
-				view[1][posY] = ""
-				view[2][posY] = ""
-			elseif word == "NEWLINE_BASE" then
-				posY = posY + 1
-			elseif word == "PLACEHOLDER" then
-				local count = line:sub(line:find("%s"), #line)
-				local tmp = (" "):rep(tonumber(count)):sub(1, count - 1)
-				layout[posY][#layout[posY] + 1] = {tmp, tmp, 0, 0}
-				view[1][posY] = view[1][posY] .. tmp .. " "
-				view[2][posY] = view[2][posY] .. tmp .. " "
-
-			else
-				error("Line " .. file_line .. ": " .. word)
+		word = line:gmatch("[^%s]+")()
+		if codes[word] then
+			layout[posY][#layout[posY] + 1] = codes[word]
+			view[1][posY] = view[1][posY] .. codes[word][1] .. " "
+			view[2][posY] = view[2][posY] .. codes[word][2] .. " "
+			if word == "UP" or word == "DOWN" or word == "LEFT" or word == "RIGHT" then
+				arrows[glfw and codes[word][3] or codes[word][4]] = true
 			end
-			break
+		elseif word == "##" then
+		elseif word == "NEWLINE" then
+			posY = posY + 1
+			layout[posY] = {}
+			view[1][posY] = ""
+			view[2][posY] = ""
+		elseif word == "NEWLINE_BASE" then
+			posY = posY + 1
+		elseif word == "PLACEHOLDER" then
+			local count = line:sub(line:find("%s"), #line)
+			local tmp = (" "):rep(tonumber(count)):sub(1, count - 1)
+			layout[posY][#layout[posY] + 1] = {tmp, tmp, 0, 0}
+			view[1][posY] = view[1][posY] .. tmp .. " "
+			view[2][posY] = view[2][posY] .. tmp .. " "
+		else
+			error("Line " .. file_line .. ": " .. word)
 		end
 	end
 end
