@@ -12,7 +12,7 @@ local function load_lines()
 	local file_line = 0
 	for line in file.readLine do
 		file_line = file_line + 1
-		word = line:gmatch("[^%s]+")()
+		word = line:match("[^%s]+")
 		if codes[word] then
 			layout[posY][#layout[posY] + 1] = codes[word]
 			view[1][posY] = view[1][posY] .. codes[word][1] .. " "
