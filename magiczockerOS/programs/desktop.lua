@@ -4,8 +4,8 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local w,h = term.getSize()
 h = h - 2
-local folder = "desktop"
-local items = fs.list(folder)
+local folder = "/desktop"
+local items = fs.exists(folder) and fs.list(folder) or {}
 local offset = 0
 local selected = 0
 local last_click = {0,0,os.clock()}
@@ -56,7 +56,7 @@ local function draw_icon(id,line,x)
 		term.write("   ")
 	else
 		term.setTextColor(32768)
-		local tmp2 = tmpName:sub(1,tmpName:find("%.")):sub(1,10)
+		local tmp2 = tmpName:sub(1,(tmpName:find("%.") or #tmpName + 1) - 1):sub(1,10)
 		local tmp3 = (10-#tmp2)*0.5
 		term.write((" "):rep(math.floor(tmp3))..tmp2..(" "):rep(math.ceil(tmp3)))
 		term.setTextColor(1)
@@ -110,7 +110,11 @@ end
 draw()
 while true do
 	local e,d,x,y = coroutine.yield()
-	if e == "mouse_click" then
+	if e == "user" then
+		items = fs.exists(folder) and fs.list(folder) or {}
+		pages = math.ceil(#items/(iconsw*iconsh))
+		draw()
+	elseif e == "mouse_click" then
 		if x == last_click[1] and y == last_click[2] and os.clock() - last_click[3] < 0.2 and selected > 0 then
 			local tmp = folder..items[selected]
 			if fs.isDir(tmp) then
