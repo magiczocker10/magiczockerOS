@@ -2,310 +2,149 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-
--- variables
-local space_right_tabs = 0
-local w, h = term.getSize()
-local max_icons_per_row
-local max_rows
-local space_left
-local space_right
-local page
-local selected = 1
-local is_colored = not (not term or not term.isColor or not term.isColor())
-local user = user or ""
-local my_background
--- tables
-local key_maps = {}
-local settings = settings or {}
-local pages
-local windows = {}
-local available = {}
-local textbox_available = native_fs.exists("/magiczockerOS/programs/desktop/textbox_dialog.lua")
--- functions
-_max = math.max
-local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
-local function back_color(...)
-	local b = ({...})[a]
-	if b then term.setBackgroundColor(b) end
+local w,h = term.getSize()
+h = h - 2
+local folder = "desktop"
+local items = fs.list(folder)
+local offset = 0
+local selected = 0
+local last_click = {0,0,os.clock()}
+local iconw, iconh = 10, 4
+local iconsw, iconsh = math.floor(w/(iconw+1)), math.floor(h/(iconh+1))
+local borderw, borderh = (w-((iconw+1)*iconsw-1))*0.5, (h-((iconh+1)*iconsh-1))*0.5
+local page = 1
+local pages = math.ceil(#items/(iconsw*iconsh))
+local icon = {
+	file = {">_  ","prog","    "},
+	folder = {"  ","    ","Fldr"}
+}
+local col = {}
+local col_ = 3
+for i = 0, 15 do
+	col[i] = (i+8)%16
 end
-local function text_color(...)
-	local b = ({...})[a]
-	if b then term.setTextColor(b) end
+local function invert()
+	col_=col[col_]
+	term.setBackgroundColor(2^col_)
 end
-local function position_icons()
-	pages = {{}}
-	if w - 1 < 7 then
-		return
-	end
-	max_icons_per_row = floor((w - 1) / 7)
-	max_rows = floor((h - 3) / 6)
-	space_left = floor((w - max_icons_per_row * 7) * 0.5)
-	space_right = ceil((w - max_icons_per_row * 7) * 0.5)
-	local file_list = fs.exists("desktop") and fs.list("desktop") or {}
-	page = 1
-	local cur_x, cur_y = space_left + 1, 2
-	local max_icons_per_page = max_icons_per_row * max_rows
-	for i = 1, #file_list do
-		local tmp = pages[#pages]
-		tmp[#tmp + 1] = {name = file_list[i], x = cur_x, y = cur_y}
-		cur_x = cur_x + 7
-		if i % max_icons_per_row == 0 then
-			cur_x = space_left + 1
-			cur_y = cur_y + 6
+local function draw_icon(id,line,x)
+	if id then
+		if id == 0 then
+			return
 		end
-		if i % max_icons_per_page == 0 and i < #file_list then
-			page = page + 1
-			cur_x, cur_y = space_left + 1, 2
-			pages[#pages + 1] = {}
-		end
+		x = id
+		local tmp = math.floor((id-1)/iconsw)
+		term.setCursorPos(borderw+1+(id-(tmp*iconsw)-1)*(iconw+1),borderh+line+tmp*(iconh+1))
 	end
-	page = 1
+	if selected == offset+x then
+		invert()
+	end
+	local tmpName = items[offset+x] or ""
+	if line < 4 then
+		local tmp2 = #tmpName>0 and (fs.isDir(folder..tmpName) and "folder" or "file") or "empty"
+		term.write("   ")
+		if term.isColor and tmp2~="empty" then
+			invert()
+			term.write(icon[tmp2][line])
+			invert()
+			if #icon[tmp2][line]<4 then
+				term.write((" "):rep(4-#icon[tmp2][line]))
+			end
+		else
+			term.write("    ")
+		end
+		term.write("   ")
+	else
+		term.setTextColor(32768)
+		local tmp2 = tmpName:sub(1,tmpName:find("%.")):sub(1,10)
+		local tmp3 = (10-#tmp2)*0.5
+		term.write((" "):rep(math.floor(tmp3))..tmp2..(" "):rep(math.ceil(tmp3)))
+		term.setTextColor(1)
+	end
+	if selected == offset+x then
+		invert()
+	end
 end
 local function draw()
-	if magiczockerOS.contextmenu then
-		magiczockerOS.contextmenu.clear_map()
-		magiczockerOS.contextmenu.add_map(1, 1, w, h, {{"Refresh", "refresh"}, {"New background", "new_background"}, {"New File", "new file"}})
-	end
-	space_right_tabs = floor((w - #pages * 2 + 1) * 0.5)
-	local line = 0
-	local _width = (" "):rep(w)
-	local s_r = (" "):rep(space_right)
-	for i = 1, h do
-		term.setCursorPos(1, i)
-		if i == h - 1 and user ~= "" then
-			back_color(32768, 256, my_background or settings.desktop_back or 2)
-			term.write((" "):rep(space_right_tabs))
-			for j = 1, #pages do
-				if j == page then
-					back_color(1, 128, 128)
-				else
-					back_color(1, 256, 256)
-				end
-				term.write" "
-				if j < #pages then
-					back_color(32768, 256, my_background or settings.desktop_back or 2)
-					term.write" "
-				end
-			end
-			back_color(32768, 256, my_background or settings.desktop_back or 2)
-			term.write((" "):rep(ceil((w - #pages * 2 + 1) * 0.5)))
+	local _width, _f, _c = (" "):rep(w), math.floor(borderh), math.ceil(borderh)
+	term.setBackgroundColor(8)
+	for y = 1, h do
+		term.setCursorPos(1,y)
+		if y < _f or y > h-_c then
+			term.write(_width)
+		elseif (y-_f)%5 == 0 then
+			term.write(_width)
+			offset = offset + iconsw
 		else
-			back_color(32768, 256, my_background or settings.desktop_back or 2)
-			local tmp = i % 6
-			if tmp == 2 then
-				line = line + 1
-			end
-			if line <= max_rows and tmp > 1 and tmp < 5 or tmp == 0 then
-				term.write((" "):rep(_max(space_left - 1, 0)))
-				local __ = max_icons_per_row * (line - 1) + 1
-				term.write(not is_colored and pages[page][__] and selected == __ and ">" or " ")
-			end
-			if line > max_rows or line > 0 and not pages[page][max_icons_per_row * (line - 1) + 1] then
-				tmp = 1
-			end
-			if tmp == 2 then -- first icon line
-				local __ = max_icons_per_row * (line - 1) + max_icons_per_row
-				for j = max_icons_per_row * (line - 1) + 1, __ do
-					if pages[page][j] then
-						if magiczockerOS.contextmenu then
-							magiczockerOS.contextmenu.add_map(pages[page][j].x, pages[page][j].y, 6, 5, {{"Open", "open", pages[page][j].name}, {"Delete","delete", pages[page][j].name}, {"Edit", "edit", pages[page][j].name}, {"Rename", "rename", pages[page][j].name}})
-						end
-						term.setBackgroundColor(1)
-						text_color(1, 128, 16)
-						term.write"1	    "
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						text_color(1, 1, 1)
-						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
-					else
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						term.write"       "
-					end
-				end
-			elseif tmp == 3 then -- second icon line
-				local __ = max_icons_per_row * (line - 1) + max_icons_per_row
-				for j = max_icons_per_row * (line - 1) + 1, max_icons_per_row * (line - 1) + max_icons_per_row do
-					if pages[page][j] then
-						term.setBackgroundColor(1)
-						text_color(1, 128, 16)
-						term.write"2	    "
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						text_color(1, 1, 1)
-						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
-					else
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						term.write"       "
-					end
-				end
-			elseif tmp == 4 then -- third icon line
-				local __ = max_icons_per_row * (line - 1) + max_icons_per_row
-				for j = max_icons_per_row * (line - 1) + 1, max_icons_per_row * (line - 1) + max_icons_per_row do
-					if pages[page][j] then
-						term.setBackgroundColor(1)
-						text_color(1, 128, 16)
-						term.write"3	    "
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						text_color(1, 1, 1)
-						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
-					else
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						term.write"       "
-					end
-				end
-			elseif tmp == 0 then -- file name
-				local __ = max_icons_per_row * (line - 1) + max_icons_per_row
-				for j = max_icons_per_row * (line - 1) + 1, max_icons_per_row * (line - 1) + max_icons_per_row do
-					if pages[page][j] then
-						local tmp = pages[page][j].name
-						if #tmp > 6 then
-							tmp = tmp:sub(1, 4) .. ".."
-						end
-						text_color(1, 1, 1)
-						term.write((tmp .. "      "):sub(1, 6))
-						text_color(1, 1, 1)
-						term.write(not is_colored and selected == j and "<" or not is_colored and j < __ and selected == j + 1 and ">" or " ")
-					else
-						back_color(32768, 256, my_background or settings.desktop_back or 2)
-						term.write"       "
-					end
-				end
-			else
+			if offset >= #items then
 				term.write(_width)
-			end
-			if tmp > 1 and tmp < 5 or tmp == 0 then
-				term.write(s_r)
+			else
+				term.write((" "):rep(math.floor(borderw)))
+				local line = (y-_f)%5
+				for x = 1, iconsw do
+					draw_icon(nil,line,x)
+					if x < iconsw then
+						term.write(" ")
+					end
+				end
+				term.write((" "):rep(math.ceil(borderw)))
 			end
 		end
 	end
-end
-local function check_windows()
-	for i=#windows,1,-1 do
-		if windows[i].done then
-			position_icons()
-			draw()
-			table.remove(windows,i)
+	offset = 0
+	term.setCursorPos(1,h+1)
+	term.write((" "):rep(math.floor((w-(pages*2-1))*0.5)))
+	for x = 1,pages do
+		term.setBackgroundColor(1)
+		term.setTextColor(32768)
+		term.write(x==page and "#" or " ")
+		term.setBackgroundColor(8)
+		if x<pages then
+			term.write(" ")
 		end
 	end
+	term.write((" "):rep(math.ceil((w-(pages*2-1))*0.5)))
+	term.setCursorPos(1,h+2)
+	term.write(_width)
 end
-if textbox_available then
-	available["rename"]={"textbox_dialog", "Rename"}
-	available["new file"]={"textbox_dialog", "Create"}
-end
--- start
-do
-	local a = _HOSTver >= 1132
-	key_maps[a and 257 or 28] = "enter"
-	key_maps[a and 262 or 205] = "right"
-	key_maps[a and 263 or 203] = "left"
-	key_maps[a and 264 or 208] = "down"
-	key_maps[a and 265 or 200] = "up"
-end
-position_icons()
 draw()
--- events
 while true do
-	local e = {coroutine.yield()}
-	if e[1] == "new_background" then
-		check_windows()
-		my_background = 2 ^ math.random(0,15)
-		draw()
-	elseif e[1] == "refresh" then
-		position_icons()
-		draw()
-	elseif e[1] == "mouse_click" and user ~= "" and e[4] == h - 1 and e[3] > space_right_tabs then
-		local tmp = (e[3] - space_right_tabs + 1) * 0.5
-		if pages[tmp] then
-			page = tmp
-			draw()
-		end
-	elseif e[1] == "mouse_click" and e[3] > space_left and e[4] > 1 then
-		for i = 1, #pages[page] do
-			if e[3] >= pages[page][i].x and e[3] < pages[page][i].x + 6 and e[4] >= pages[page][i].y and e[4] < pages[page][i].y + 5 then
-				selected = i
-				draw()
-				create_window(pages[page][selected].name)
-				break
+	local e,d,x,y = coroutine.yield()
+	if e == "mouse_click" then
+		if x == last_click[1] and y == last_click[2] and os.clock() - last_click[3] < 0.2 and selected > 0 then
+			local tmp = folder..items[selected]
+			if fs.isDir(tmp) then
+				error("Launcher explorer..")
+			else
+				error("Launching program..")
 			end
-		end
-	elseif e[1] == "mouse_scroll" then
-		if page + e[2] > 0 and pages[page + e[2]] then
-			page = page + e[2]
-			if selected > #pages[page] then
-				selected = #pages[page]
-			end
-			draw()
-		end
-	elseif e[1] == "key" and not is_colored and key_maps[e[2]] then
-		local _key = key_maps[e[2]]
-		if _key == "left" then
-			if (selected - 1) % max_icons_per_row == 0 then
-				if page > 1 then
-					local success
-					local tmp = (selected - 1) / max_icons_per_row + 1
-					for j = tmp, 1, -1 do
-						for i = max_icons_per_row, 1, -1 do
-							if pages[page - 1][(j - 1) * max_icons_per_row + i] then
-								success = true
-								selected = (j - 1) * max_icons_per_row + i
-								page = page - 1
-								draw()
-								break
-							end
-						end
-						if success then
-							break
-						end
+		else
+			-- if x == last_click[1] and y == last_click[2] and ((y-math.floor(borderh))/(iconh+1))%1 == 0.8 and selected > 0 then
+				-- error("Rename..")
+			-- else
+				last_click = {x,y,os.clock()}
+				local bw, bh = math.floor(borderw), math.floor(borderh)
+				local tmp = selected
+				if x > bw and x < w-bw+1 and y > bh and y < h-bh+1 then
+					x, y = x - bw, y - bh
+					selected = ((x/(iconw+1))%1 == 0 or (y/(iconh+1))%1 == 0) and 0 or math.floor(y/(iconh+1))*iconsw+math.floor(x/(iconw+1))+1
+					selected = selected>#items and 0 or selected
+				else
+					selected = 0
+				end
+				if selected ~= tmp then
+					for y = 1,iconh do
+						draw_icon(tmp,y)
+						draw_icon(selected,y)
 					end
 				end
-			elseif selected > 1 then
-				selected = selected - 1
-				draw()
-			end
-		elseif _key == "right" then
-			if selected % max_icons_per_row == 0 then
-				if page < #pages then
-					local tmp = selected / max_icons_per_row
-					for i = tmp, 1, -1 do
-						if pages[page + 1][(i - 1) * max_icons_per_row + 1] then
-							selected = (i - 1) * max_icons_per_row + 1
-							page = page + 1
-							draw()
-							break
-						end
-					end
-				end
-			elseif selected < #pages[page] then
-				selected = selected + 1
-				draw()
-			end
-		elseif _key == "up" and selected > max_icons_per_row then
-			selected = selected - max_icons_per_row
-			draw()
-		elseif _key == "down" and ceil(selected / max_icons_per_row) < ceil(#pages[page] / max_icons_per_row) then
-			selected = selected + max_icons_per_row
-			if selected > #pages[page] then
-				selected = #pages[page]
-			end
-			draw()
-		elseif _key == "enter" and pages[page][selected] then
-			create_window(pages[page][selected].name)
+			-- end
 		end
-	elseif e[1] == "term_resize" then
+	elseif e == "term_resize" then
 		w, h = term.getSize()
-		local page_old = page
-		position_icons()
-		page = #pages <= page_old and page_old or #pages
+		h = h - 2
+		iconsw, iconsh = math.floor(w/(iconw+1)), math.floor(h/(iconh+1))
+		borderw, borderh = (w-((iconw+1)*iconsw-1))*0.5, (h-((iconh+1)*iconsh-1))*0.5
 		draw()
-	elseif e[1] == "refresh_settings" then
-		settings = get_settings()
-		draw()
-	elseif e[1] == "user" then
-		user = e[2]
-		position_icons()
-		draw()
-	elseif e[1] and available[e[1]:lower()] then
-		local a = e[1]:lower()
-		windows[#windows + 1] = {data = false, mode = e[1], other = available[a], file = e[2] or ""}
-		create_window("/magiczockerOS/programs/desktop/" .. available[a][1] .. ".lua", true, windows[#windows])
 	end
 end

@@ -6,22 +6,11 @@
 local w, h = term.getSize()
 -- strings
 local field = 1
-local L1=" Login "
+local L1 = " Login "
 -- tables
 local fields = { -- cursor, height, offset, text, symbol
-	{ -- username
-		1,
-		3,
-		0,
-		"test",
-	},
-	{ -- password
-		1,
-		6,
-		0,
-		"",
-		"*",
-	},
+	{1, 3, 0, "test"}, -- username
+	{1, 6, 0, "", "*"}, -- password
 }
 local key_maps = {}
 -- functions
@@ -73,37 +62,29 @@ local function draw()
 	text_color(1, 1, 1)
 	back_color(32768, 128, 2048)
 	for y = 1, h do
-		term.setCursorPos(1,y)
-		if y == 2 or y == 5 then
-			term.write((y==2 and " Username" or " Password")..line)
-		elseif y == 3 or y == 6 then
+		term.setCursorPos(1, y)
+		if y == 3 or y == 6 then
 			term.write" "
-			draw_field(y==3 and 1 or 2)
+			draw_field(y == 3 and 1 or 2)
 			term.write" "
 		elseif y == 8 then
-			term.write((" "):rep(w-8))
+			term.write((" "):rep(w - 8))
 			back_color(1, 256, 256)
 			if field < 1 then
-				term.write((term.isColor and term.isColor() and L1) or textutils and type(textutils.complete) == "function" and L1 or ">Login<")
+				term.write(term.isColor and term.isColor() and L1 or textutils and type(textutils.complete) == "function" and L1 or ">Login<")
 			else
 				term.write(L1)
 			end
 			back_color(32768, 128, 2048)
 			term.write(" ")
 		else
-			term.write(line.."         ")
+			term.write((y == 2 and " Username" or y == 5 and " Password" or "         ") .. line)
 		end
 	end
 	set_blink()
 end
 local function reset()
-	fields[2] = {
-		1,
-		6,
-		0,
-		"",
-		"*",
-	}
+	fields[2] = {1, 6, 0, "", "*"}
 	draw_field(2)
 end
 local function login()
@@ -111,7 +92,7 @@ local function login()
 	if fields[1][4]:find("\\") then
 		local tmp = fields[1][4]
 		local found = tmp:find("\\")
-		signin_user(tonumber(tmp:sub(1,found-1)), tmp:sub(found+1), fields[2][4])
+		signin_user(tonumber(tmp:sub(1, found - 1)), tmp:sub(found + 1), fields[2][4])
 	elseif fields[1][4]:match("[a-zA-Z0-9]") and fs.exists("/magiczockerOS/users/" .. fields[1][4]) and fs.isDir("/magiczockerOS/users/" .. fields[1][4]) then
 		local a = ""
 		local file = fs.exists("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt") and fs.open("/magiczockerOS/users/" .. fields[1][4] .. "/password.txt", "r")
@@ -173,7 +154,7 @@ while true do
 		end
 	elseif a == "mouse_click" then
 		if c > 1 and c < w and (d == 3 or d == 6) then
-			field = d==3 and 1 or 2
+			field = d == 3 and 1 or 2
 			fields[field][1] = c - 1 + fields[field][3]
 			draw_field(field)
 		elseif c > w - 8 and c < w and d == 8 then
