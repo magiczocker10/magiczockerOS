@@ -6,7 +6,7 @@
 local w, h = 25, 1
 local cur_date = os.date and os.date("*t") or {} -- day hour min month sec wday yday year
 local cursor = {1, 1}
-local view, month, year, offset, months, width, month_keys, year_keys, display, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2020, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, {}, false, {}
+local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2020, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}
 local settings = user_data().settings or {}
 local function get_week_day(a, b, c) -- Source: http://mathforum.org/dr.math/faq/faq.calendar.html
 	local year2 = tonumber(tostring(c):sub(-2))
@@ -18,30 +18,32 @@ local function get_week(a, b, c) -- Source: http://www.salesianer.de/util/kalwoc
 	local d = (b > 1 and months[b - 1][3] or 0) + (c % 4 == 0 and not (c % 100 == 0 and c % 400 > 0) and b > 2 and 1 or 0)
 	return (d + a - get_week_day(a, b, c) + get_week_day(4, 1, c) - 4) / 7 + 1
 end
-local function generate_view()
-	display = {}
+local function draw(a, b)
+	local line = ""
 	if view < 3 then -- Year and Month overview
-		for y = 1, 8 do
+		for y = a or 1, b or 8 do
 			if y == 2 then
-				display[y] = view == 1 and " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year > 1970 and "<" or " ") .. "  Please select  " .. ">" .. (cursor[2] == 1 and "-" or " ") .. " " or " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year > 1970 and "<" or " ") .. (" "):rep(math.floor((17 - #tostring(year)) * 0.5)) .. year .. (" "):rep(math.ceil((17 - #tostring(year)) * 0.5)) .. "> " .. (cursor[2] == 1 and "-" or " ") .. " "
+				line = view == 1 and " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year > 1970 and "<" or " ") .. "  Please select  " .. ">" .. (cursor[2] == 1 and "-" or " ") .. " " or " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year > 1970 and "<" or " ") .. (" "):rep(math.floor((17 - #tostring(year)) * 0.5)) .. year .. (" "):rep(math.ceil((17 - #tostring(year)) * 0.5)) .. "> " .. (cursor[2] == 1 and "-" or " ") .. " "
 			elseif y == 4 or y == 6 then
 				if view == 1 then -- Year overview
-					display[y] = " " .. (cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 5 or 1) and ">" or " ")
+					line = " " .. (cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 5 or 1) and ">" or " ")
 					local start, iend = year - 1, y == 6 and 8 or 4
 					for i = y == 6 and 5 or 1, iend do
-						display[y] = display[y] .. start + i .. (cursor[1] == i + 1 and i < iend and ">" or cursor[1] == i and "<" or " ")
+						line = line .. start + i .. (cursor[1] == i + 1 and i < iend and ">" or cursor[1] == i and "<" or " ")
 					end
-					display[y] = display[y] .. "  "
+					line = line .. "  "
 				else -- Month overview
-					display[y] = cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 7 or 1) and ">" or " "
+					line = cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 7 or 1) and ">" or " "
 					local iend = y == 6 and 12 or 6
 					for i = y == 6 and 7 or 1, iend do
-						display[y] = display[y] .. months[i][1] .. (cursor[1] == i + 1 and i < iend and ">" or cursor[1] == i and "<" or " ")
+						line = line .. months[i][1] .. (cursor[1] == i + 1 and i < iend and ">" or cursor[1] == i and "<" or " ")
 					end
 				end
 			else
-				display[y] = width
+				line = width
 			end
+			term.setCursorPos(1,y)
+			term.write(line)
 		end
 		if 8 ~= h then
 			h = 8
@@ -53,22 +55,24 @@ local function generate_view()
 		local endline = 10
 		months[2][2] = leap_year and 29 or 28
 		local tmp2 = get_week(1, month, year)
-		for y = 1, 11 do
+		for y = a or 1, b or 11 do
 			if y == 2 then
-				display[y] = " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year == 1970 and month == 1 and " " or "<") .. (" "):rep(math.floor((17 - #tmp) * 0.5)) .. tmp .. (" "):rep(math.ceil((17 - #tmp) * 0.5)) .. "> " .. (cursor[2] == 1 and "-" or " ") .. " "
+				line = " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year == 1970 and month == 1 and " " or "<") .. (" "):rep(math.floor((17 - #tmp) * 0.5)) .. tmp .. (" "):rep(math.ceil((17 - #tmp) * 0.5)) .. "> " .. (cursor[2] == 1 and "-" or " ") .. " "
 			elseif y == 4 then
-				display[y] = "    Mo,Tu,We,Th,Fr,Sa,Su "
+				line = "    Mo,Tu,We,Th,Fr,Sa,Su "
 			elseif y > 4 and y < endline then
-				display[y] = " " .. ("0" .. (tmp2 == 0 and get_week(31, 12, year - 1) or tmp2)):sub(-2) .. " "
+				line = " " .. ("0" .. (tmp2 == 0 and get_week(31, 12, year - 1) or tmp2)):sub(-2) .. " "
 				tmp2 = tmp2 + 1
 				for i = 1, 7 do
 					local num = (y - 5) * 7 + i - offset + 1
-					display[y] = display[y] .. ((cur_date.day or 0) == num and (cur_date.month or 0) == month and (cur_date.year or 0) == year and "##" or (num > 0 and num <= months[month][2] and (" " .. num):sub(-2) or "  ")) .. (num < months[month][2] and i < 7 and ";" or " ")
+					line = line .. ((cur_date.day or 0) == num and (cur_date.month or 0) == month and (cur_date.year or 0) == year and "##" or (num > 0 and num <= months[month][2] and (" " .. num):sub(-2) or "  ")) .. (num < months[month][2] and i < 7 and ";" or " ")
 					endline = num >= months[month][2] and y or 11
 				end
 			else
-				display[y] = width
+				line = width
 			end
+			term.setCursorPos(1,y)
+			term.write(line)
 			if y == endline + 1 then
 				if y ~= h then
 					h = y
@@ -77,13 +81,6 @@ local function generate_view()
 				break
 			end
 		end
-	end
-end
-local function draw()
-	generate_view()
-	for y = 1, #display do
-		term.setCursorPos(1, y)
-		term.write(display[y])
 	end
 end
 do
@@ -106,7 +103,7 @@ while true do
 	if e == "mouse_click" then
 		if x > 4 and x < w - 3 and y == 2 and view > 1 then
 			view = view - 1
-			year = view == 1 and year - year % 8 or year
+			year = view == 1 and year - year % 8 + 2 or year
 			cursor[1], cursor[2] = view == 2 and -5 or -3, 1
 			draw()
 		elseif view == 3 then
@@ -122,10 +119,10 @@ while true do
 		elseif view == 2 then
 			if x == 4 and y == 2 and year > 1970 then
 				year = year - 1
-				draw()
+				draw(2, 2)
 			elseif x == w - 3 and y == 2 then
 				year = year + 1
-				draw()
+				draw(2, 2)
 			elseif (y == 4 or y == 6) and (x - 1) % 4 > 0 then
 				month = math.ceil((x - 1) * 0.25) + (y == 6 and 6 or 0)
 				view = view + 1
@@ -151,7 +148,7 @@ while true do
 			year = year + d
 			draw()
 		elseif view == 1 and not (d == -1 and year == 1970) then
-			year = year - year % 8 + 8 * d
+			year = year + 8 * d
 			draw()
 		end
 	elseif e == "key" then
@@ -173,7 +170,7 @@ while true do
 			draw()
 		elseif d == "enter" and cursor[2] == 1 and view > 1 then
 			view = view - 1
-			year = view == 1 and year - year % 8 or year
+			year = view == 1 and year - year % 8 + 2 or year
 			cursor[1] = view == 2 and -5 or view == 1 and -3 or 1
 			draw()
 		elseif d == "enter" and cursor[2] > 1 and view < 3 then
