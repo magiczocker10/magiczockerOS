@@ -53,8 +53,16 @@ local textfield_variables = {}
 local cur_textfield = {}
 local categories = {
 	{
+		active = not filter_calendar,
+		title = "Calendar",
+		entries = {
+			{title = "Background", type = "color", value = "calendar_back", default = 256},
+			{title = "Text", type = "color", value = "calendar_text", default = 1},
+		}
+	},
+	{
 		active = os.time ~= nil,
-		title = filter_calendar and "Clock" or "Calendar / Clock",
+		title = "Clock",
 		entries = {
 			{title = "24h", type = "boolean", value = "clock_format", default = false},
 			{title = "Background Active", type = "color", value = "clock_back_active", default = 256},
