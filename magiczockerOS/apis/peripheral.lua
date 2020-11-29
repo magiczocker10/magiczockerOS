@@ -138,6 +138,8 @@ function create(is_system)
 				local tmp=get_device(list[i])
 				to_return[#to_return+1]=func(list[i],tmp) and list[i] or nil
 			end
+		else
+			to_return = list
 		end
 		return unpack(to_return)
 	end

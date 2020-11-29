@@ -121,7 +121,7 @@ if component then
                     if is_opened and content_ then
                         local text = ({content_:find("\n")})[1]
                         if text then
-                            local __ = content_:sub(1, text - 2)
+                            local __ = content_:sub(1, text - 1)
                             content_ = content_:sub(text + 1)
                             return __
                         else

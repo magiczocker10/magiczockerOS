@@ -46,6 +46,7 @@ local error_org = error
 local ggv, sgv
 
 -- variables
+local events
 local coro_create = coroutine.create
 local coro_resume = coroutine.resume
 local coro_yield = coroutine.yield
@@ -126,9 +127,17 @@ local function fallback_serialise(data, processed)
 	end
 	return "{" .. to_return .. "}"
 end
+local last_qe = 0
 local function _queue(...)
 	queued_events[#queued_events + 1] = {...}
-	qe[os.startTimer(0.00000001)] = #queued_events
+	local a = os.startTimer and os.startTimer(0.00000001) or "QE" .. last_qe
+	if not os.startTimer then
+		last_qe = last_qe + 1
+	end
+	if computer then
+		computer.pushSignal("timer", a)
+	end
+	qe[a] = #queued_events
 end
 local function _unpack(a, b)
 	local b = b or 1
@@ -218,7 +227,10 @@ local function error_message(program, message)
 		if term.setTextColor then
 			term.setTextColor(1)
 		end
-		term.clear()
+		if term.clear then
+			term.clear()
+		end
+		error(program .. ":" .. (message or ""))
 		term.setCursorPos(1, 1)
 		term.write(program .. "\n")
 	end
@@ -273,7 +285,7 @@ local function load_api(name)
 	local file = fs.open("/magiczockerOS/apis/" .. name .. ".lua", "r")
 	if file then
 		setmetatable(env, {__index = _G})
-		env.math, env.unpack = math, _unpack
+		env.math, env.unpack, env.apis = math, _unpack, apis
 		local content = file.readAll()
 		file.close()
 		local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
@@ -807,11 +819,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		}
 		env.os.reboot = is_system_program and os.reboot or env.os.shutdown
 		for k, v in next, my_window.window do
-			if term[k] or k == "setCursorBlink" then
-				native_term[k] = v
-				active_term[k] = v
-				env.term[k] = function(...) return active_term[k](...) end
-			end
+			native_term[k] = v
+			active_term[k] = v
+			env.term[k] = function(...) return active_term[k](...) end
 		end
 		env.term.getGraphicsMode = term.getGraphicsMode or nil -- CraftOS-PC support
 		env.term.current = function() return active_term end
@@ -1111,6 +1121,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		if env.term.setTextColor then
 			env.term.setTextColor(1)
 		end
+		v=""
+		for k in next,env.term do v=v..":"..k end
+		error(v)
 		env.term.clear()
 		env.term.setCursorPos(1, 1)
 		env.print(message)
@@ -1182,12 +1195,11 @@ local function create_system_windows(i)
 	local env = {
 		math = math,
 		fs = system_windows[temp].filesystem or fs,
-		native_fs = fs,
 		create_window = function(path, root, env, ...)
 			create_user_window(cur_user, root, env, path, ...)
 		end,
 		get_visible = function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
-		set_pos = function(posx, posy, posw, posh, not_redraw)
+		set_pos = function(posx, posy, posw, posh, not_redraw) -- contextmeu, osk, taskbar
 			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
 			system_windows[window_number].window.reposition(posx or _x, posy or _y, posw or _w, posh or _h)
 			apis.window.clear_cache()
@@ -1206,15 +1218,13 @@ local function create_system_windows(i)
 		term = system_windows[temp].window,
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
-		unpack = _unpack,
-		floor = math.floor,
-		ceil = math.ceil,
 		dofile = dofile, -- osk
+		loadstring = loadstring,
 		coroutine = {
 			yield = coroutine.yield, -- all
 		},
 		tonumber = tonumber, -- osk
-		type = type, -- contextmenu, desktop
+		type = type, -- contextmenu
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
@@ -1222,14 +1232,14 @@ local function create_system_windows(i)
 		},
 		table = {
 			insert = table.insert, -- taskbar
-			remove = table.remove, -- desktop
+			remove = table.remove, -- taskbar
 		},
 		_HOSTver = _HOSTver, -- all
 		textutils = {
-			complete = textutils.complete -- all
+			complete = textutils.complete -- contextmenu, osk, taskbar
 		},
 		apis = apis, -- taskbar
-		magiczockerOS = get_os_commands(system_windows[temp]),
+		-- magiczockerOS = get_os_commands(system_windows[temp]),
 		error = error,
 	}
 	if system_windows[temp].filesystem then
@@ -1381,16 +1391,9 @@ if not textutils or not textutils.serialize or not textutils.unserialize then
 	textutils.unserialise = textutils.unserialize
 end
 load_system_settings()
-load_api("math")
 load_api("filesystem")
 load_api("peripheral")
 load_api("window")
-do
-	local a = apis and apis.math.create() or math
-	for k, v in next, a do
-		math[k] = math[k] or v
-	end
-end
 ggv = apis.window.get_global_visible
 sgv = apis.window.set_global_visible
 apis.window.set_peripheral(apis.peripheral.create(true))
@@ -1451,7 +1454,7 @@ local ton = tonumber
 if component and os.clock then
 	computer.pushSignal("timer_health")
 end
-local function events(...)
+function events(...)
 	local e = {...}
 	local timer
 	if e[1] == "timer_health" then
@@ -2015,7 +2018,9 @@ if not has_errored then
 	if term.setTextColor then
 		term.setTextColor(1)
 	end
-	term.clear()
+	if term.clear then
+		term.clear()
+	end
 	if term.setCursorBlink then
 		term.setCursorBlink(true)
 	end

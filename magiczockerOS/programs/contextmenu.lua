@@ -86,7 +86,7 @@ local function draw()
 				tmp=tmp:sub(1,my_size[1]-2)
 			end
 			tmp = (align==1 and "" or to_add)..tmp..(align==3 and "" or to_add)
-			local half = align==2 and floor((#tmp-my_size[1]+1)*0.5)+2
+			local half = align==2 and math.floor((#tmp-my_size[1]+1)*0.5)+2
 			local part_one = (align==2 and half or align==1 and 1 or (my_size[1]-2)*-1)
 			local part_two = (align==2 and half-3+my_size[1] or align==1 and my_size[1]-2 or nil)
 			tmp = tmp:sub(part_one,part_two)
@@ -113,6 +113,12 @@ local function setup_data(data)
 		items[#items+1]={txt=data[i][1],event=data[i][2],raw=data[i]}
 	end
 	process_data(my_pos[1],my_pos[2])
+end
+local function unpack(a, b)
+	local b = b or 1
+	if a[b] then
+		return a[b], unpack(a, b + 1)
+	end
 end
 local function handle_click(a)
 	if type(items[a].event)=="function" and items[a].system_added then
@@ -176,8 +182,8 @@ while true do
 		elseif _key == "enter" and items[cursor].event then
 			handle_click(cursor)
 		end
-	elseif a == "settings" then
-		settings = b
+	elseif a == "refresh_settings" then
+		settings = user_data().settings or {}
 		draw()
 	end
 end

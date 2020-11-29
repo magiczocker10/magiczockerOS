@@ -15,7 +15,8 @@ local monitor_list={
 	right=true,
 	top=true
 }
-local _computer_only={"computer"}
+local peri = apis.peripheral.create(true)
+local _computer_only=component and {} or {"computer"}
 local validate_modes={
 	["normal"]=true,
 	["extend"]=true,
@@ -241,7 +242,9 @@ function set_devices(mode,...)
 					if term.setBackgroundColor then
 						term.setBackgroundColor(32768)
 					end
-					term.clear()
+					if term.clear then
+						term.clear()
+					end
 				end
 				to_clear[list[i]]=nil
 				monitor_order[#monitor_order+1]={name=list[i]}
@@ -259,7 +262,7 @@ function set_devices(mode,...)
 			peri_call(k,"clear")
 		end
 	end
-	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = "computer"} or nil
+	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "computer"} or nil
 	calculate_device_offset()
 	clear_cache()
 end
@@ -405,6 +408,9 @@ local cp={
 	{.967,.033,0,0,.733,.267,0,.183,.817}, -- tritanomaly *
 	{.95,.05,0,0,.433,.567,0,.475,.525}, -- tritanopia *
 } -- * https://www.reddit.com/r/gamedev/comments/2i9edg/code_to_create_filters_for_colorblind/
+function round(a)
+	return a%1 >= 0.5 and math.ceil(a) or math.floor(a)
+end
 function reload_color_palette(settings)
 	if (term.isColor and term.isColor()) and term.setPaletteColor then
 		if (settings.color_mode or 1)~=last_palette.mode or (settings.invert_colors or false)~=last_palette.inverted or (settings.original_colors or false)~=last_palette.original then
@@ -416,9 +422,9 @@ function reload_color_palette(settings)
 				local green
 				local blue
 				local b=cp[settings.color_mode]
-				red=b and math.round(temp_color[1]*b[1]+temp_color[2]*b[2]+temp_color[3]*b[3]) or nil
-				green=b and math.round(temp_color[1]*b[4]+temp_color[2]*b[5]+temp_color[3]*b[6]) or nil
-				blue=b and math.round(temp_color[1]*b[7]+temp_color[2]*b[8]+temp_color[3]*b[9]) or nil
+				red=b and round(temp_color[1]*b[1]+temp_color[2]*b[2]+temp_color[3]*b[3]) or nil
+				green=b and round(temp_color[1]*b[4]+temp_color[2]*b[5]+temp_color[3]*b[6]) or nil
+				blue=b and round(temp_color[1]*b[7]+temp_color[2]*b[8]+temp_color[3]*b[9]) or nil
 				local c = settings.color_mode and settings.color_mode > 1
 				temp_color[1] = c and (red>255 and 255 or red) or temp_color[1]
 				temp_color[2] = c and (green>255 and 255 or green) or temp_color[2]

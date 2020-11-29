@@ -5,9 +5,13 @@
 local current_settings = user_data and user_data().settings or {}
 local layout, posY, file
 local window_width, glfw, mode = 0, (_HOSTver or 0) >= 1132, 1
-local codes = dofile("/magiczockerOS/key_mappings/data.lua")
+local codes = nil
 local view = {{}, {}}
 local arrows = {}
+local file = fs.open("/magiczockerOS/key_mappings/data.lua", "r")
+local codes_ = file.readAll()
+file.close()
+codes = loadstring(codes_)()
 local function load_lines()
 	local file_line = 0
 	for line in file.readLine do

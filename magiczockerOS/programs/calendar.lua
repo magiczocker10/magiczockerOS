@@ -8,6 +8,7 @@ local cur_date = os.date and os.date("*t") or {} -- day hour min month sec wday 
 local cursor = {1, 1}
 local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2020, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}
 local settings = user_data().settings or {}
+local term = term
 local function get_week_day(a, b, c) -- Source: http://mathforum.org/dr.math/faq/faq.calendar.html
 	local year2 = tonumber(tostring(c):sub(-2))
 	leap_year = c % 4 == 0 and not (c % 100 == 0 and c % 400 > 0)
@@ -42,7 +43,7 @@ local function draw(a, b)
 			else
 				line = width
 			end
-			term.setCursorPos(1,y)
+			term.setCursorPos(1, y)
 			term.write(line)
 		end
 		if 8 ~= h then
@@ -71,7 +72,7 @@ local function draw(a, b)
 			else
 				line = width
 			end
-			term.setCursorPos(1,y)
+			term.setCursorPos(1, y)
 			term.write(line)
 			if y == endline + 1 then
 				if y ~= h then
@@ -211,8 +212,14 @@ while true do
 		end
 	elseif e == "term_resize" then
 		draw()
-	elseif a == "settings" then
-		settings = b
+	elseif e == "refresh_settings" then
+		settings = user_data().settings or {}
+		if term.setBackgroundColor then
+			term.setBackgroundColor(settings.calendar_back or 256)
+		end
+		if term.setTextColor then
+			term.setTextColor(settings.calendar_text or 1)
+		end
 		draw()
 	end
 end

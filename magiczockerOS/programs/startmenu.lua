@@ -9,15 +9,16 @@ local width = 1
 -- tables
 local mode = #(user_data().name or "") > 0 and 2 or 1
 local key_maps = {}
-local menu = {{},{}}
+local menu = {{}, {}}
 local settings = user_data().settings or {}
+local term, textutils = term, textutils
 -- functions
-local function create(a,b,c,d)
-	if (term.isColor and term.isColor()) or a then
+local function create(a, b, c, d)
+	if term.isColor and term.isColor() or a then
 		if b then
-			menu[1][#menu[1]+1] = {c,d}
+			menu[1][#menu[1] + 1] = {c, d}
 		end
-		menu[2][#menu[2]+1] = {c,d}
+		menu[2][#menu[2] + 1] = {c, d}
 	end
 end
 local my_win = user_data().windows[1]
@@ -43,15 +44,13 @@ local function set_my_vis(a)
 	end
 end
 local function draw()
-	back_color(32768, 256, settings.startmenu_back or 256)
-	text_color(1, 1, settings.startmenu_text or 1)
 	for y = 1, #menu[mode] do
 		local a = menu[mode][y][1]
 		local b = settings.startmenu_items_align
 		local c = cursor == y and (not term or not term.isColor or not term.isColor()) and "-" or " "
 		local d = (width - #a) * 0.5
 		term.setCursorPos(1, y)
-		term.write(c .. (a=="" and ("-"):rep(width - 2) or b==2 and (" "):rep(floor(d) - 1) .. a .. (" "):rep(ceil(d) - 1) or b==3 and (" "):rep(width - #a - 2) .. a or a .. (" "):rep(width - #a - 2)) .. c)
+		term.write(c .. (a == "" and ("-"):rep(width - 2) or b == 2 and (" "):rep(math.floor(d) - 1) .. a .. (" "):rep(math.ceil(d) - 1) or b == 3 and (" "):rep(width - #a - 2) .. a or a .. (" "):rep(width - #a - 2)) .. c)
 	end
 end
 local function size()
@@ -111,12 +110,16 @@ if os.reboot then
 end
 create(true, true, "Shutdown", function() os.shutdown() end)
 size()
+back_color(32768, 256, settings.startmenu_back or 256)
+text_color(1, 1, settings.startmenu_text or 1)
 draw()
 -- events
 while true do
 	local a, b, _, c = coroutine.yield()
 	if a == "refresh_settings" then
 		settings = user_data().settings or {}
+		back_color(32768, 256, settings.startmenu_back or 256)
+		text_color(1, 1, settings.startmenu_text or 1)
 		draw()
 	elseif a == "mouse_click" and b == 1 then
 		menu[mode][c][2]()
