@@ -1228,7 +1228,7 @@ local function create_system_windows(i)
 		os = {
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
-			queueEvent = _queue, -- contextmenu, taskbar
+			queueEvent = _queue, -- contextmenu
 		},
 		table = {
 			insert = table.insert, -- taskbar
@@ -1744,13 +1744,10 @@ function events(...)
 			local temp_window = cur_window.window
 			local win_x, win_y, win_w, win_h = temp_window.get_data()
 			if id ~= 1 and resize_mode then
+				resize_mode = false
 				user_data.windows[1].window.toggle_border(false)
 			end
 			if e[1] == "mouse_click" and id > 1 then
-				if resize_mode then
-					resize_mode = false
-					user_data.windows[1].window.toggle_border(false)
-				end
 				local temp_window = user_data.windows[id]
 				table.remove(user_data.windows, id)
 				table.insert(user_data.windows, 1, temp_window)

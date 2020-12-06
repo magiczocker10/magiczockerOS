@@ -20,6 +20,7 @@ local settings = user_data().settings or {}
 local window_pos = {}
 local procs = {}
 local u_data
+local events
 -- functions
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
@@ -228,10 +229,10 @@ local function set_vis(ign)
 		set_visible("contextmenu",false)
 	end
 	if get_proc_vis("startmenu") and ign ~= "sm" then
-		os.queueEvent("mouse_click", 1, 1, 1)
+		events("mouse_click", 1, 1, 1)
 	end
 	if get_visible("calendar") and ign ~= "ca" then
-		os.queueEvent("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
+		events("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
 	end
 end
 local function switch_visible(id, state)
@@ -261,8 +262,7 @@ draw_start()
 set_items()
 draw_search()
 -- events
-while true do
-	local a, b, c = coroutine.yield()
+function events(a, b, c)
 	if a == "user" or a == "refresh_settings" then
 		local u_data_old = u_data
 		if a == "user" then
@@ -292,12 +292,20 @@ while true do
 		draw_search()
 	elseif a == "mouse_click" then
 		if c < 4 then -- open/close startmenu
+			if get_proc_vis("calendar") then
+				toggle("calendar")
+				draw_clock()
+			end
 			toggle("startmenu")
 			draw_start()
 			set_items()
 		elseif calendar and user ~= "" and c >= (w - (user == "" and -1 or 2) - #time) + (search and 0 or 3) and c < (w - (user == "" and -1 or 2)) + (search and 0 or 3) then -- open/close calendar
+			if get_proc_vis("startmenu") then
+				toggle("startmenu")
+				draw_start()
+			end
 			toggle("calendar")
-			draw_start()
+			draw_clock()
 			set_items()
 		elseif search and user ~= "" and c > w - 3 then -- open/close search
 			toggle("search")
@@ -343,17 +351,18 @@ while true do
 			draw_items()
 		end
 	elseif a == "switch_start" then
-		os.queueEvent("mouse_click", 1, 1, 1)
+		events("mouse_click", 1, 1, 1)
 	elseif a == "switch_calendar" then
-		os.queueEvent("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
+		events("mouse_click", 1, (w - 1 - (user == "" and -1 or 2)) + (search and 0 or 3), 1)
 	elseif a == "switch_search" and search then
-		os.queueEvent("mouse_click", 1, w, 1)
-	elseif a == "window_change" then
+		events("mouse_click", 1, w, 1)
+	elseif a == "window_change" or a == "start_change" then
 		draw_start()
 		set_items()
+		draw_clock()
 		draw_search()
 	elseif a == "os_time" then
-		draw_clock()
+		events("window_change")
 	elseif a == "term_resize" then
 		w=term.getSize()
 		if procs["calendar"] then
@@ -363,4 +372,7 @@ while true do
 		set_items()
 		draw_search()
 	end
+end
+while true do
+	events(coroutine.yield())
 end

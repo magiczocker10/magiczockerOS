@@ -33,6 +33,7 @@ local filter_login = not fs.exists("/magiczockerOS/programs/login.lua")
 local filter_osk = not fs.exists("/magiczockerOS/programs/osk.lua")
 local filter_search = not fs.exists("/magiczockerOS/programs/search.lua")
 local key_map_setting
+local events
 if not term.isColor or not term.isColor() then
 	filter_colors = true
 end
@@ -991,7 +992,7 @@ local function save_system_settings(not_set)
 				change_mon_setting(id)
 				generate_list()
 			end
-			os.queueEvent("term_resize")
+			events("term_resize")
 		end
 	end
 end
@@ -1083,8 +1084,8 @@ generate_list()
 load_sidemenu()
 redraw()
 -- events
-while true do
-	local e = {coroutine.yield()}
+local function events(...)
+	local e = {...}
 	if e[1] == "char" and view == 1 then
 		cur_textfield.value = cur_textfield.value:sub(1, cur_textfield.cursor - 1) .. e[2] .. cur_textfield.value:sub(cur_textfield.cursor)
 		cur_textfield.cursor = cur_textfield.cursor + 1
@@ -1563,4 +1564,7 @@ while true do
 		setup_entries()
 		draw_bottom()
 	end
+end
+while true do
+	events(coroutine.yield())
 end
