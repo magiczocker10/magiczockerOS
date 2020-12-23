@@ -362,20 +362,21 @@ local function load_key_mapping()
 	for i = 1, #categories do
 		if categories[i].title == "Key-Mapping" then
 			categories[i].entries[1].default = 1
-			if not key_map_setting then
-				key_map_setting = i
-			end
+			key_map_setting = key_map_setting or i
 			categories[i].entries[1].entries={}
 			local _temp = categories[i].entries[1].entries
-			for k,v in next,fs.list("/magiczockerOS/key_mappings/") do
-				_temp[#_temp + 1] = v:sub(1,-5)
-				if _temp[#_temp] == (tmp or "") then
-					settings.osk_key_mapping = k
-				end
-				if _temp[#_temp]=="qwerty" then
-					categories[i].entries[1].default = k
+			for k, v in next, fs.list("/magiczockerOS/key_mappings/") do
+				if v:sub(-4) == ".map" and v ~= "base.map" then
+					_temp[#_temp + 1] = v:sub(1, -5)
+					if _temp[#_temp] == (tmp or "") then
+						settings.osk_key_mapping = #_temp
+					end
+					if _temp[#_temp] == "qwerty" then
+						categories[i].entries[1].default = #_temp
+					end
 				end
 			end
+			break
 		end
 	end
 end
