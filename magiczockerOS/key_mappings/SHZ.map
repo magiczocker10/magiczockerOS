@@ -1,0 +1,70 @@
+## SHZ keyboard layout (https://www.keyboard-design.com/kb-images/shz.en.ansi.png)
+## magiczockerOS - Copyright by Julian Kriete 2016-2020
+##
+## My ComputerCraft-Forum account:
+## http://www.computercraft.info/forums2/index.php?showuser=57180
+GRAVE_ACCENT
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+MINUS
+EQUAL
+BACKSPACE
+PLACEHOLDER 6
+NEWLINE
+TAB
+J
+P
+U
+O
+APOSTROPHE
+B
+D
+R
+F
+Q
+P
+LEFT_BRACKET
+RIGHT_BRACKET
+BACKSLASH
+PLACEHOLDER 4
+NEWLINE
+CAPS_LOCK
+W
+I
+E
+A
+PERIOD
+M
+T
+N
+S
+H
+ENTER
+PLACEHOLDER 7
+NEWLINE
+LEFT_SHIFT
+SLASH
+Y
+SEMICOLON
+COMMA
+K
+V
+G
+L
+C
+X
+RIGHT_SHIFT
+NEWLINE
+LEFT_CONTROL
+LEFT_ALT
+SPACE
+RIGHT_ALT
+RIGHT_CONTROL

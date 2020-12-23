@@ -1,0 +1,70 @@
+## Capewell-Dvorak keyboard layout (http://www.michaelcapewell.com/projects/keyboard/layout_capewell-dvorak.htm)
+## magiczockerOS - Copyright by Julian Kriete 2016-2020
+##
+## My ComputerCraft-Forum account:
+## http://www.computercraft.info/forums2/index.php?showuser=57180
+GRAVE_ACCENT
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+LEFT_BRACKET
+RIGHT_BRACKET
+BACKSPACE
+PLACEHOLDER 6
+NEWLINE
+TAB
+APOSTROPHE
+COMMA
+PERIOD
+P
+Y
+Q
+F
+G
+R
+K
+BACKSLASH
+EQUAL
+ENTER
+PLACEHOLDER 4
+NEWLINE
+CAPS_LOCK
+O
+A
+E
+I
+U
+D
+H
+T
+N
+S
+MINUS
+SLASH
+PLACEHOLDER 7
+NEWLINE
+LEFT_SHIFT
+Z
+X
+C
+V
+J
+L
+M
+W
+B
+SEMICOLON
+RIGHT_SHIFT
+NEWLINE
+LEFT_CONTROL
+LEFT_ALT
+SPACE
+RIGHT_ALT
+RIGHT_CONTROL

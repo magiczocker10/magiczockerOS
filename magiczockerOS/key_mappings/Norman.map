@@ -1,0 +1,70 @@
+## Norman keyboard layout (https://normanlayout.info)
+## magiczockerOS - Copyright by Julian Kriete 2016-2020
+##
+## My ComputerCraft-Forum account:
+## http://www.computercraft.info/forums2/index.php?showuser=57180
+GRAVE_ACCENT
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+MINUS
+EQUAL
+BACKSPACE
+PLACEHOLDER 6
+NEWLINE
+TAB
+Q
+W
+D
+F
+K
+J
+U
+R
+L
+SEMICOLON
+LEFT_BRACKET
+RIGHT_BRACKET
+BACKSLASH
+PLACEHOLDER 6
+NEWLINE
+CAPS_LOCK
+A
+S
+E
+T
+G
+Y
+N
+I
+O
+H
+APOSTROPHE
+ENTER
+PLACEHOLDER 5
+NEWLINE
+LEFT_SHIFT
+Z
+X
+C
+V
+B
+P
+M
+COMMA
+PERIOD
+SLASH
+RIGHT_SHIFT
+NEWLINE
+LEFT_CONTROL
+LEFT_ALT
+SPACE
+RIGHT_ALT
+RIGHT_CONTROL

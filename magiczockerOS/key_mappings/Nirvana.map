@@ -1,0 +1,70 @@
+## Nirvana keyboard layout (https://www.keyboard-design.com/kb-images/nirvana-ansi.jpg)
+## magiczockerOS - Copyright by Julian Kriete 2016-2020
+##
+## My ComputerCraft-Forum account:
+## http://www.computercraft.info/forums2/index.php?showuser=57180
+GRAVE_ACCENT
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+MINUS
+EQUAL
+BACKSPACE
+PLACEHOLDER 6
+NEWLINE
+TAB
+J
+P
+U
+O
+K
+B
+D
+R
+F
+Q
+LEFT_BRACKET
+RIGHT_BRACKET
+BACKSLASH
+PLACEHOLDER 6
+NEWLINE
+CAPS_LOCK
+W
+I
+E
+A
+PERIOD
+G
+T
+N
+S
+H
+Z
+ENTER
+PLACEHOLDER 5
+NEWLINE
+LEFT_SHIFT
+SLASH
+Y
+SEMICOLON
+COMMA
+APOSTROPHE
+V
+M
+L
+C
+X
+RIGHT_SHIFT
+NEWLINE
+LEFT_CONTROL
+LEFT_ALT
+SPACE
+RIGHT_ALT
+RIGHT_CONTROL

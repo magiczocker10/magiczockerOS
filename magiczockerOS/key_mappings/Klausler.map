@@ -1,0 +1,70 @@
+## Klausler keyboard layout (https://www.keyboard-design.com/letterlayout.html?layout=klausler.en.ansi)
+## magiczockerOS - Copyright by Julian Kriete 2016-2020
+##
+## My ComputerCraft-Forum account:
+## http://www.computercraft.info/forums2/index.php?showuser=57180
+GRAVE_ACCENT
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+LEFT_BRACKET
+RIGHT_BRACKET
+BACKSPACE
+PLACEHOLDER 6
+NEWLINE
+TAB
+K
+COMMA
+U
+Y
+P
+W
+L
+M
+F
+C
+BACKSLASH
+EQUAL
+SLASH
+PLACEHOLDER 6
+NEWLINE
+CAPS_LOCK
+O
+A
+E
+I
+D
+R
+N
+T
+H
+S
+MINUS
+ENTER
+PLACEHOLDER 5
+NEWLINE
+LEFT_SHIFT
+Q
+PERIOD
+APOSTROPHE
+SEMICOLON
+Z
+X
+V
+G
+B
+J
+RIGHT_SHIFT
+NEWLINE
+LEFT_CONTROL
+LEFT_ALT
+SPACE
+RIGHT_ALT
+RIGHT_CONTROL
