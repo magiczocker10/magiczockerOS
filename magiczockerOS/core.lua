@@ -61,7 +61,6 @@ local monitor_last_clicked = 0
 local resize_mode = false
 local running = true
 local refresh_startbutton
-local os_timer = 0
 local cursorblink_timer
 local printError = printError or nil
 local user
@@ -93,7 +92,7 @@ local system_windows = {
 local system_window_order = {"osk", "contextmenu", "taskbar", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
 local term = term or nil
-local textutils = textutils or nil
+local textutils = textutils or {}
 local peripheral = peripheral or nil
 local math = math or nil
 if term then
@@ -618,6 +617,28 @@ local function get_os_commands(win)
 		end,
 	}
 end
+local function switch_user()
+	local user_data = gUD(cur_user)
+	if change_user.active then
+		for j = 1, #user_data.windows do
+			user_data.windows[j].window.drawable(false)
+		end
+		if change_user.logoff then
+			users[cur_user] = nil
+		end
+		setup_user(change_user.user, change_user.session)
+		change_user.active = false
+	end
+	if refresh_startbutton then
+		refresh_startbutton = false
+		resume_system("7taskbar", system_windows.taskbar.coroutine, "window_change")
+	end
+	if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
+		user_data.windows[1].window.restore_cursor()
+	elseif term.setCursorBlink then
+		term.setCursorBlink(false)
+	end
+end
 local function create_user_window(sUser, os_root, uenv, path, ...)
 	local args = {...}
 	local message = ""
@@ -757,6 +778,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					local _, param = env.os.pullEvent( "timer" )
 				until param == timer
 			end,
+			textutils = textutils,
 			unserialise = is_system_program and unserialise or nil,
 			set_monitor_settings = is_system_program and function(mode, ...)
 				system_settings.monitor_mode = mode or "normal"
@@ -791,8 +813,11 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end or nil,
 			switch_user = is_system_program and function(logoff, username, session)
-				change_user = {logoff = logoff, user = username, active = true, session = session}
-				os_timer = start_timer(os_timer, 0)
+				change_user.logoff = logoff
+				change_user.user = username
+				change_user.active = true
+				change_user.session = session
+				switch_user()
 			end or nil,
 			logout_user = is_system_program and function(username)
 				if not username or user_ == username then
@@ -1121,9 +1146,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		if env.term.setTextColor then
 			env.term.setTextColor(1)
 		end
-		v=""
-		for k in next,env.term do v=v..":"..k end
-		error(v)
+		if not env.term then
+			error(message or "Unknown error")
+		end
 		env.term.clear()
 		env.term.setCursorPos(1, 1)
 		env.print(message)
@@ -1383,13 +1408,10 @@ do
 	for k, v in next, key_maps do b[v] = k end
 	for k, v in next, b do key_maps[k] = v end
 end
-if not textutils or not textutils.serialize or not textutils.unserialize then
-	textutils = textutils or {}
-	textutils.serialize = textutils.serialize or fallback_serialise
-	textutils.serialise = textutils.serialize
-	textutils.unserialize = textutils.unserialize or unserialise
-	textutils.unserialise = textutils.unserialize
-end
+textutils.serialize = textutils.serialize or fallback_serialise
+textutils.serialise = textutils.serialize
+textutils.unserialize = textutils.unserialize or unserialise
+textutils.unserialise = textutils.unserialize
 load_system_settings()
 load_api("filesystem")
 load_api("peripheral")
@@ -1441,7 +1463,6 @@ do
 	end
 end
 add_to_log("Loaded user")
-os_timer = start_timer(os_timer, 0)
 if not term.setCursorBlink then
 	cursorblink_timer = start_timer(cursorblink_timer, 0.5)
 end
@@ -1835,28 +1856,6 @@ function events(...)
 			end
 		end
 	elseif e[1] == "mouse_drag" or e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor" then
-	elseif e[1] == "timer" and e[2] == os_timer then
-		if change_user.active then
-			for j = 1, #user_data.windows do
-				user_data.windows[j].window.drawable(false)
-			end
-			if change_user.logoff then
-				users[cur_user] = nil
-			end
-			setup_user(change_user.user, change_user.session)
-			change_user.active = false
-		end
-		if refresh_startbutton then
-			refresh_startbutton = false
-			resume_system("7taskbar", system_windows.taskbar.coroutine, "window_change")
-		end
-		resume_system("6taskbar", system_windows.taskbar.coroutine, "os_time")
-		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
-			user_data.windows[1].window.restore_cursor()
-		elseif term.setCursorBlink then
-			term.setCursorBlink(false)
-		end
-		os_timer = start_timer(os_timer, 0.5)
 	elseif e[1] == "timer" and e[2] == cursorblink_timer then
 		if user_data.windows[1] then
 			user_data.windows[1].window.toggle_cursor_blink()
@@ -2021,5 +2020,7 @@ if not has_errored then
 	if term.setCursorBlink then
 		term.setCursorBlink(true)
 	end
-	term.setCursorPos(1, 1)
+	if term.setCursorPos then
+		term.setCursorPos(1, 1)
+	end
 end
