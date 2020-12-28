@@ -4,24 +4,6 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 if component then
 	os.queueEvent=computer.pushSignal
-	colors = {
-		white=1,
-		orange=2,
-		magenta=4,
-		lightBlue=8,
-		yellow=16,
-		lime=32,
-		pink=64,
-		gray=128,
-		lightGray=256,
-		cyan=512,
-		purple=1024,
-		blue=2048,
-		brown=4096,
-		green=8192,
-		red=16384,
-		black=32768
-	}
 	-- https://oc.cil.li/topic/1793-how-to-mount-filesystem-component-without-openos/?do=findComment&comment=8263
 	for k,v in next,component.list("filesystem",true) do
 		fs=component.proxy(k)
@@ -155,21 +137,21 @@ end
 loadstring = load
 local file, err = fs.open("/magiczockerOS/core.lua", "r")
 if err then
-		error("/magiczockerOS/core.lua: File not exists", 0)
+	error("/magiczockerOS/core.lua: File not exists", 0)
 end
 local filecontent = file.readAll()
 file.close()
 local content, err=load(filecontent, "@/magiczockerOS/core.lua")
 if content then
-		local ok, err = xpcall(function() return content() end, function(_) return _ end)
-		if not ok then
-				if err and err ~= "" then
-						error(err, 0)
-				end
-				return
+	local ok, err = xpcall(function() return content() end, function(_) return _ end)
+	if not ok then
+		if err and err ~= "" then
+			error(err, 0)
 		end
-		return true
+		return
+	end
+	return true
 end
 if err and err ~= "" then
-		error(err, 0)
+	error(err, 0)
 end

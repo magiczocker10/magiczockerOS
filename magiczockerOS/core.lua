@@ -1420,8 +1420,8 @@ ggv = apis.window.get_global_visible
 sgv = apis.window.set_global_visible
 apis.window.set_peripheral(apis.peripheral.create(true))
 if not term then
-	term = {isColor = function() return true end}
---	term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "monitor")[1])
+	-- term = {isColor = function() return true end}
+	term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "monitor")[1])
 end
 setup_monitors(_unpack(system_settings.devices or {}))
 sgv(false)
@@ -1504,8 +1504,12 @@ function events(...)
 			e[2] = e[5] + 1
 		end
 	elseif e[1] == "scroll" then
-		e[1] = "mouse_scroll"
-		e[2] = e[5] * -1
+		if monitor_devices[e[2]] then
+			e[1] = "monitor_scroll"
+		else
+			e[1] = "mouse_scroll"
+			e[2] = e[5] * -1
+		end
 	elseif e[1] == "screen_resized" then
 		--e[1] = "term_resize"
 	end
@@ -1622,10 +1626,16 @@ function events(...)
 		search_modem()
 	elseif e[1] == "rednet_message" and use_old then
 		_queue("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
-	elseif e[1] == "monitor_touch" then
+	elseif e[1] == "monitor_touch" or e[1] == "monitor_scroll" then
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
-			_queue(os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", user_data.settings and user_data.settings.mouse_left_handed and 2 or 1, e[3] + monitor_order[monitor_devices[e[2]]].offset, e[4])
-			monitor_last_clicked = os.clock()
+			local is_scroll = e[1] == "monitor_scroll"
+			_queue(
+					is_scroll and "mouse_scroll" or os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", 
+					is_scroll and e[5] * -1 or user_data.settings and user_data.settings.mouse_left_handed and 2 or 1,
+					e[3] + monitor_order[monitor_devices[e[2]]].offset,
+					e[4]
+				)
+			monitor_last_clicked = is_scroll and monitor_last_clicked or os.clock()
 		end
 	elseif e[1] == "double_click" then
 		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
@@ -1748,7 +1758,7 @@ function events(...)
 			end
 		end
 		key_timer = nil
-	elseif (monitor_devices.computer and (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll") or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size[2] and e[3] <= total_size[1] then
+	elseif (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size[2] and e[3] <= total_size[1] then
 		drag_old[1] = 0
 		drag_old[2] = 0
 		last_window = nil

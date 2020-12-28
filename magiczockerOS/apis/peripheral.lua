@@ -21,37 +21,32 @@ function get_type(side)
 		return nil
 	end
 end
-local colorstest = {
-	[1]=0xF0F0F0,   [2]=0xF2B233,   [4]=0xE57FD8,    [8]=0x99B2F2,
-	[16]=0xDEDE6C,  [32]=0x7FCC19,  [64]=0xF2B2CC,   [128]=0x4C4C4C,
-	[256]=0x999999, [512]=0x4C99B2, [1024]=0xB266E5, [2048]=0x3366CC,
-	[4096]=0x7F664C,[8192]=0x57A64E,[16384]=0xCC4C4C,[32768]=0x000000
-}
+local color_link = {}
+for i = 0, 15 do
+	color_link[2 ^ i] = i
+end
 local cur_name=""
+local w, h = 51, 19
 local function get_mon_device(name)
-	local name=name
-	local x,y=1,1
-	local w,h=51,19
-	local gpu=name and component.list("gpu")()
-	local cur_colors={
-		colorstest[32768], -- back
-		colorstest[1] -- text
-	}
-	local function set_col(mode,col)
-		if cur_name~=name then
-			component.invoke(gpu,"bind",name)
-			--component.invoke(gpu,"setResolution",w,h)
+	local name, x, y, cur_colors = name, 1, 1, {15, 0}
+	local gpu = name and component.list("gpu")()
+	local function set_col(mode, col)
+		if cur_name ~= name then
+			component.invoke(gpu, "bind", name)
+			local wm, hm = component.invoke(gpu,"maxResolution")
+			local w_, h_ = 0, 0
+			w_, h_ = w > wm and wm or w, h > hm and hm or h
+			component.invoke(gpu, "setResolution", w_, h_)
 		end
 		if cur_name~=name or mode=="back" and col and cur_colors[1]~=col then
-			component.invoke(gpu,"setBackground",col or cur_colors[1])
+			component.invoke(gpu,"setBackground",col or cur_colors[1], true)
 		elseif cur_name~=name or mode=="text" and col and cur_colors[2]~=col then
-			component.invoke(gpu,"setForeground",col or cur_colors[2])
+			component.invoke(gpu,"setForeground",col or cur_colors[2], true)
 		end
 		if cur_name~=name then
 			cur_name=name
 		end
 	end
-   
 	set_col()
 	to_return={
 		clear=function() set_col() component.invoke(gpu,"fill",1,1,w,h," ") end,
@@ -59,8 +54,9 @@ local function get_mon_device(name)
 		getCursorPos=function() return x,y end,
 		getSize=function() set_col() return component.invoke(gpu,"getResolution") end,
 		isColor=function() set_col() return true end, -- return component.invoke(gpu,"maxDepth")>1 and true or false
-		setBackgroundColor=function(color) set_col("back",colorstest[color]) cur_colors[1]=colorstest[color] end,
-		setTextColor=function(color) set_col("text",colorstest[color]) cur_colors[2]=colorstest[color] end,
+		setBackgroundColor=function(color) if color_link[color] then color = color_link[color] set_col("back",color) cur_colors[1]=color end end,
+		setPaletteColor=function(a, b) if color_link[a] then component.invoke(gpu, "setPaletteColor", a, b) end end,
+		setTextColor=function(color) if color_link[color] then color = color_link[color] set_col("text",color) cur_colors[2]=color end end,
 		write=function(txt) if txt then set_col(true) component.invoke(gpu,"set",x,y,txt) x=x+#txt end end
 	}
 	to_return.isColour = to_return.isColor
@@ -103,7 +99,7 @@ function get_devices(system,whitelist,...) -- whitelist: true/false
 			end
 		end
 	elseif component then
-		for k,v in next,component.list() do
+		for k,v in next, component.list() do
 			local tmp=translate[v] or v
 			if (system or tmp~="monitor") and whitelist==(to_filter[tmp] or false) then
 				to_return[#to_return+1]=k

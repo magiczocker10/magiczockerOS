@@ -208,6 +208,9 @@ local function calculate_device_offset()
 		w=total_width
 		total_size[1], total_size[2] = total_width, h
 	end
+	if not w or not h or #monitor_order == 0 then
+		error"Empty variable"
+	end
 end
 function get_devices()
 	return monitor_order
@@ -262,7 +265,7 @@ function set_devices(mode,...)
 			peri_call(k,"clear")
 		end
 	end
-	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "computer"} or nil
+	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name=(component and peri.find("monitor") or "computer")} or nil
 	calculate_device_offset()
 	clear_cache()
 end
