@@ -10,8 +10,9 @@ Also the OS can highly be customizable through the build-in settings.
 1. Download and extract the ZIP-File from the [releases-section](https://github.com/magiczocker10/magiczockerOS/releases) of this repository.
 2. Create "/magiczockerOS/CC" and "/magiczockerOS/CCTweaked"
 3. Download [io.lua](https://raw.githubusercontent.com/dan200/ComputerCraft/master/src/main/resources/assets/computercraft/lua/rom/apis/io.lua) to "/magiczockerOS/CC/io.lua"
+- This step is only required, if there is no "/rom/apis/io.lua" existing.
 4. Download [bios.lua](https://raw.githubusercontent.com/SquidDev-CC/CC-Tweaked/mc-1.15.x/src/main/resources/data/computercraft/lua/bios.lua) to /magiczockerOS/CCTweaked/bios.lua"
-- This step is only required, if there is no "/rom/modules/main/cc/expect.lua" **and** you want to run it in CCTweaked-Based ComputerCraft existing.
+- This step is only required, if there is no "/rom/modules/main/cc/expect.lua" existing **and** you want to run it in CCTweaked-Based ComputerCraft.
 5. Start the OS
 
 **How to use the server.lua (Currently CC-Compatible only)**
@@ -21,10 +22,9 @@ Also the OS can highly be customizable through the build-in settings.
 4. Run it and create your first useraccount.
 
 **The following included files are optional and can be removed, if you haven't enough space on your computer**
-* /magiczockerOS/apis/math.lua
 * /magiczockerOS/programs/calendar.lua
 * /magiczockerOS/programs/contextmenu.lua
-* /magiczockerOS/programs/login.lua (If at least one useraccount is existing)
+* /magiczockerOS/programs/login.lua (If at least one local useraccount is existing)
 * /magiczockerOS/programs/osk.lua
 * /magiczockerOS/programs/search.lua
 * /magiczockerOS/programs/settings.lua
