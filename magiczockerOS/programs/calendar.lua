@@ -1,4 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2020
+-- magiczockerOS - Copyright by Julian Kriete 2016-2021
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
@@ -6,7 +6,7 @@
 local w, h = 25, 1
 local cur_date = os.date and os.date("*t") or {} -- day hour min month sec wday yday year
 local cursor = {1, 1}
-local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2020, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}
+local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2021, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}
 local settings = user_data().settings or {}
 local term = term
 local function get_week_day(a, b, c) -- Source: http://mathforum.org/dr.math/faq/faq.calendar.html

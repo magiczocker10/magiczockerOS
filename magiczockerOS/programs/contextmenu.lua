@@ -1,4 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2020
+-- magiczockerOS - Copyright by Julian Kriete 2016-2021
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
