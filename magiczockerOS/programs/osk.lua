@@ -2,10 +2,8 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local current_settings = user_data and user_data().settings or {}
-local layout, posY, file
+local codes, current_settings, layout, posY
 local window_width, glfw, mode = 0, (_HOSTver or 0) >= 1132, 1
-local codes = nil
 local view = {{}, {}}
 local arrows = {}
 local file = fs.open("/magiczockerOS/key_mappings/data.lua", "r")
@@ -81,11 +79,7 @@ local function send_event(...)
 		proc.env.os.queueEvent(...)
 	end
 end
-set_color()
-loadKeys()
-draw()
-while true do
-	local e, _, x, y = coroutine.yield()
+local function events(e, _, x, y)
 	if e == "mouse_click" then
 		local count, l = 0, layout[y]
 		for entry = 1, #l do
@@ -118,4 +112,8 @@ while true do
 		draw()
 		set_pos(nil, nil, window_width - 1, #layout + 1)
 	end
+end
+events("refresh_settings")
+while true do
+	events(coroutine.yield())
 end

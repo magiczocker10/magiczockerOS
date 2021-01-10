@@ -84,23 +84,7 @@ local function draw(a, b)
 		end
 	end
 end
-do
-	local a = _HOSTver >= 1132
-	key_maps[a and 257 or 28] = "enter"
-	key_maps[a and 262 or 205] = "right"
-	key_maps[a and 263 or 203] = "left"
-	key_maps[a and 264 or 208] = "down"
-	key_maps[a and 265 or 200] = "up"
-end
-if term.setBackgroundColor then
-	term.setBackgroundColor(settings.calendar_back or 256)
-end
-if term.setTextColor then
-	term.setTextColor(settings.calendar_text or 1)
-end
-draw()
-while true do
-	local e, d, x, y = coroutine.yield()
+local function events(e, d, x, y)
 	if e == "mouse_click" then
 		if x > 4 and x < w - 3 and y == 2 and view > 1 then
 			view = view - 1
@@ -222,4 +206,22 @@ while true do
 		end
 		draw()
 	end
+end
+do
+	local a = _HOSTver >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+end
+if term.setBackgroundColor then
+	term.setBackgroundColor(settings.calendar_back or 256)
+end
+if term.setTextColor then
+	term.setTextColor(settings.calendar_text or 1)
+end
+draw()
+while true do
+	events(coroutine.yield())
 end

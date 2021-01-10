@@ -3,16 +3,13 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
--- numbers
 local cursor = 1
 local width = 1
--- tables
 local mode = #(user_data().name or "") > 0 and 2 or 1
 local key_maps = {}
 local menu = {{}, {}}
 local settings = user_data().settings or {}
 local term, textutils = term, textutils
--- functions
 local function create(a, b, c, d)
 	if term.isColor and term.isColor() or a then
 		if b then
@@ -82,7 +79,31 @@ local function show_desktop()
 		end
 	end
 end
--- start
+local function events(a, b, _, c)
+	if a == "refresh_settings" then
+		settings = user_data().settings or {}
+		back_color(32768, 256, settings.startmenu_back or 256)
+		text_color(1, 1, settings.startmenu_text or 1)
+		draw()
+	elseif a == "mouse_click" and b == 1 then
+		menu[mode][c][2]()
+	elseif a == "key" and key_maps[b] and (not term.isColor or not term.isColor()) then
+		if key_maps[b] == "enter" then
+			menu[mode][cursor][2]()
+		elseif key_maps[b] == "up" then
+			cursor = cursor == 1 and #menu[mode] or cursor - 1
+		elseif key_maps[b] == "down" then
+			cursor = cursor == #menu[mode] and 1 or cursor + 1
+		end
+		draw()
+	elseif a == "user" then
+		mode = #(user_data().name or "") > 0 and 2 or 1
+		size()
+		draw()
+	elseif a == "term_resize" then
+		draw()
+	end
+end
 do
 	local a = _HOSTver >= 1132
 	key_maps[a and 257 or 28] = "enter"
@@ -113,30 +134,6 @@ size()
 back_color(32768, 256, settings.startmenu_back or 256)
 text_color(1, 1, settings.startmenu_text or 1)
 draw()
--- events
 while true do
-	local a, b, _, c = coroutine.yield()
-	if a == "refresh_settings" then
-		settings = user_data().settings or {}
-		back_color(32768, 256, settings.startmenu_back or 256)
-		text_color(1, 1, settings.startmenu_text or 1)
-		draw()
-	elseif a == "mouse_click" and b == 1 then
-		menu[mode][c][2]()
-	elseif a == "key" and key_maps[b] and (not term.isColor or not term.isColor()) then
-		if key_maps[b] == "enter" then
-			menu[mode][cursor][2]()
-		elseif key_maps[b] == "up" then
-			cursor = cursor == 1 and #menu[mode] or cursor - 1
-		elseif key_maps[b] == "down" then
-			cursor = cursor == #menu[mode] and 1 or cursor + 1
-		end
-		draw()
-	elseif a == "user" then
-		mode = #(user_data().name or "") > 0 and 2 or 1
-		size()
-		draw()
-	elseif a == "term_resize" then
-		draw()
-	end
+	events(coroutine.yield())
 end

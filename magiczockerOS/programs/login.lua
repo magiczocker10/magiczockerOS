@@ -2,18 +2,14 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
--- numbers
 local w, h = term.getSize()
--- strings
 local field = 1
 local L1 = " Login "
--- tables
 local fields = { -- cursor, height, offset, text, symbol
 	{1, 3, 0, "test"}, -- username
 	{1, 6, 0, "", "*"}, -- password
 }
 local key_maps = {}
--- functions
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
 	local b = ({...})[a]
@@ -27,17 +23,9 @@ local function set_blink()
 	if field > 0 then
 		local a = fields[field]
 		local length = w - 2
-		if a[1] > #a[4] + 1 then
-			a[1] = #a[4] + 1
-		end
-		if a[1] - a[3] > length then
-			a[3] = a[3] + 1
-		elseif a[1] - a[3] < 1 then
-			a[3] = a[3] - 1
-		end
-		if a[3] > 0 and #a[4] - a[3] < length then
-			a[3] = #a[4] - length + 1 > 0 and #a[4] - length + 1 or 0
-		end
+		a[1] = a[1] > #a[4] + 1 and #a[4] + 1 or a[1]
+		a[3] = a[1] - a[3] > length and a[3] + 1 or a[1] - a[3] < 1 and a[3] - 1 or a[3]
+		a[3] = a[3] > 0 and #a[4] - a[3] < length and (#a[4] - length + 1 > 0 and #a[4] - length + 1 or 0) or a[3]
 		text_color(32768, 32768, 32768)
 		term.setCursorPos(1 + fields[field][1] - fields[field][3], fields[field][2])
 		term.setCursorBlink(true)
@@ -108,21 +96,7 @@ local function login()
 		reset()
 	end
 end
--- start
-do
-	local a = _HOSTver >= 1132
-	key_maps[a and 32 or 57] = "space"
-	key_maps[a and 257 or 28] = "enter"
-	key_maps[a and 258 or 15] = "tab"
-	key_maps[a and 259 or 14] = "backspace"
-	key_maps[a and 261 or 211] = "delete"
-	key_maps[a and 262 or 205] = "right"
-	key_maps[a and 263 or 203] = "left"
-end
-draw()
--- events
-while true do
-	local a, b, c, d = coroutine.yield()
+local function events(a, b, c, d)
 	local e = fields[field]
 	if a == "char" and e then
 		if b:match("[a-zA-Z%d-_.]") then
@@ -174,4 +148,18 @@ while true do
 		w, h = term.getSize()
 		draw()
 	end
+end
+do
+	local a = _HOSTver >= 1132
+	key_maps[a and 32 or 57] = "space"
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 258 or 15] = "tab"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+end
+draw()
+while true do
+	events(coroutine.yield())
 end
