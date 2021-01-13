@@ -129,7 +129,7 @@ end
 local last_qe = 0
 local function _queue(...)
 	queued_events[#queued_events + 1] = {...}
-	local a = os.startTimer and os.startTimer(0.00000001) or "QE" .. last_qe
+	local a = os.startTimer and os.startTimer(0.05) or "QE" .. last_qe
 	if not os.startTimer then
 		last_qe = last_qe + 1
 	end
