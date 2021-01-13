@@ -789,7 +789,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				return user_data.server ~= nil
 			end or nil,
 			create_window = is_system_program and function(path, root, env, ...)
-				create_user_window(cur_user, root, env, path, ...)
+				create_user_window(user_, root, env, path, ...)
 			end,
 			save_settings = is_system_program and function(data)
 				save_user_settings(user_, data)
@@ -849,6 +849,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			env.term[k] = function(...) return active_term[k](...) end
 		end
 		env.term.getGraphicsMode = term.getGraphicsMode or nil -- CraftOS-PC support
+		env.term.setGraphicsMode = term.setGraphicsMode or nil -- CraftOS-PC support
 		env.term.current = function() return active_term end
 		env.term.native = type(term.native) == "function" and function() return native_term end or native_term -- before 1.6 > table; since 1.6 > function
 		env.term.redirect = function(target)
@@ -1929,7 +1930,7 @@ function events(...)
 		local _id = ton(e[1])
 		local _user = e[2]
 		if _id > 0 and gUD(_user) then
-			local tmp = gUD(_user).windows
+			local tmp = gUD(_user).windows or ""
 			for i = 1, #tmp do
 				if tmp[i].id == _id then
 					resume_user(tmp[i].coroutine, _unpack(e, 3))
