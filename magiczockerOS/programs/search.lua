@@ -4,12 +4,10 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-
-local data=user_data()
+local data = user_data()
 if not data.server then
 	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
 end
-
 local w, h = term.getSize()
 local user = user or ""
 local results = {}
@@ -21,9 +19,7 @@ local textline_offset = 0
 local user_input_cursor = 1
 local entry_selected
 local settings = user_data().settings or {}
-local function return_text(a, b, c, d)
-	return not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b
-end
+local reposed = false
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
 	local b = ({...})[a]
@@ -35,6 +31,13 @@ local function text_color(...)
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b)
+end
+local function set_position(a)
+	local wt, ht = get_total_size()
+	local w, h = math.floor(wt * 0.5), math.min(math.floor(ht * 0.5), 3 + #results)
+	local x, y = math.floor((wt - w) * 0.5), 4
+	reposed = true
+	set_pos(x, y, w, h, a)
 end
 local function search(search_term)
 	local search_term = search_term:lower()
@@ -84,20 +87,19 @@ local function prepare_list()
 		local _file = tmp_results[i]:sub(1, _found - 1)
 		local _folder = tmp_results[i]:sub(_found + 1)
 		local _on_click = multishell.launch and function() multishell.launch({}, _folder .. "/" .. _file) end
-		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "empty_line", first = true}
-		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _file}
-		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _folder}
-		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "empty_line"}
-		results[#results + 1] = {entry_no = i, type = "shadow"}
-		results[#results + 1] = {entry_no = i, type = "empty", last = true}
+		results[#results + 1] = i == 1 and {type = "empty_line"} or nil
+		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _file, first = true}
+		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _folder, last = true}
+		results[#results + 1] = {type = "empty_line"}
 	end
+	set_position()
 end
 local function draw_text_line(blink)
 	if not blink then
 		term.setCursorPos(2, 2)
 	end
-	back_color(1, 1, 1)
-	text_color(32768, 32768, 32768)
+	back_color(32768, 128, settings.search_back or 128)
+	text_color(1, 1, settings.search_field_text or 1)
 	term.write((user_input .. (not term.isColor and "_" or " "):rep(textline_width)):sub(1 + textline_offset, textline_width + textline_offset))
 	if not blink then
 		term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
@@ -120,103 +122,60 @@ end
 local function correct_entries_scroll()
 	if results_scroll > 0 then
 		local tmp = #results - results_scroll
-		if tmp < h - 3 then
-			results_scroll = #results-h+3
-		end
+		results_scroll = tmp < h - 4 and #results - h + 4 or results_scroll
 	end
-	if results_scroll < 0 then
-		results_scroll = 0
-	end
+	results_scroll = results_scroll < 0 and 0 or results_scroll
 end
 local function scroll_to_result(dir)
 	for i = 1, #results do
 		if results[i].entry_no == entry_selected and (dir == "down" and results[i].last ~= nil or dir == "up" and results[i].first ~= nil) then
 			local tmp = i - results_scroll
-			if tmp < 1 then
-				results_scroll = i - 1
-			end
-			if tmp > h - 3 then
-				results_scroll = i + 3 - h
-			end
+			results_scroll = tmp < 0 and i - 2 or results_scroll
+			results_scroll = tmp > h - 4 and i + 4 - h or results_scroll
 			break
 		end
 	end
-	if results_scroll < 0 then
-		results_scroll = 0
-	end
+	results_scroll = results_scroll < 0 and 0 or results_scroll
 end
 local function draw()
 	term.setCursorBlink(false)
 	local empty = (" "):rep(w)
-	local empty_line = empty:sub(4)
-	local shadow
-	local shadow_border
-	back_color(32768, 256, settings.search_background or 16)
+	back_color(32768, 128, settings.search_back or 128)
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
 	term.write" "
-	back_color(1, 1, settings.search_bar_background or 1)
-	text_color(32768, 32768, settings.search_bar_text or 32768)
 	set_cursor(true)
-	back_color(32768, 256, settings.search_background or 16)
 	term.write" "
 	term.setCursorPos(1, 3)
-	term.write(empty)
+	text_color(1, 256, settings.search_seperator_text or 256)
+	term.write(#results == 0 and empty or empty:gsub(" ", "_"))
 	for i = 4, h do
 		term.setCursorPos(1, i)
-		back_color(32768, 256, settings.search_background or 16)
 		if results[i - 3 + results_scroll] then
 			local temp = results[i - 3 + results_scroll]
-			if entry_selected == temp.entry_no then
-				text_color(1, 1, 1)
-			end
-			if temp.type == "empty" then
-				term.write(empty)
-			elseif temp.type == "empty_line" then
-				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
-				back_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
-				term.write(empty_line)
-			elseif temp.type == "shadow" then
-				if not shadow then
-					local tmp = ("-"):rep(w - 5) .. " "
-					local tmp2 = empty_line:sub(2)
-					shadow = return_text(tmp, tmp, tmp2, tmp2)
-				end
-				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
-				term.write" "
-				back_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
-				term.write(shadow)
+			local selected = temp.entry_no == entry_selected
+			selected = selected or entry_selected == (results[i - 4 + results_scroll] and results[i - 4 + results_scroll].entry_no or 0)
+			selected = selected or entry_selected == (results[i - 2 + results_scroll] and results[i - 2 + results_scroll].entry_no or 0)
+			local a, b = nil, ""
+			if temp.type == "empty_line" then
+				a = empty
 			else
-				write_text(entry_selected == temp.entry_no and ">" or " ", entry_selected == temp.entry_no and ">" or " ", " ", " ")
-				back_color(1, entry_selected == temp.entry_no and 128 or 1, settings.search_entry_background or 1)
-				text_color(32768, entry_selected == temp.entry_no and 1 or 32768, settings.search_entry_text or 32768)
-				term.write((" " .. temp.text .. empty_line):sub(1, w - 3))
+				text_color(1, selected and 1 or 256, settings.search_text or 1)
+				a = (" " .. temp.text .. empty):sub(1, w)
 			end
-			if not results[i - 4 + results_scroll] or results[i - 4 + results_scroll].type == "empty" then -- no shadow
-				back_color(32768, 256, settings.search_background or 16)
-				term.write(" ")
-				write_text(entry_selected == temp.entry_no and "<" or " ", entry_selected == temp.entry_no and "<" or " ", " ", " ")
-			else -- shadow
-				if not shadow_border then
-					shadow_border = return_text("|", "|", " ", " ")
-				end
-				text_color(1, 1, 1)
-				back_color(32768, entry_selected == temp.entry_no and 32768 or 128, settings.search_entry_shadow or 128)
-				term.write(temp.type == "shadow" and " " or shadow_border)
-				back_color(32768, 256, settings.search_background or 16)
-				write_text(entry_selected == temp.entry_no and "<" or " ", entry_selected == temp.entry_no and "<" or " ", " ", " ")
+			if selected then
+				b = a:gsub(" ", ".")
 			end
+			write_text(b, b, b, a)
+			term.write(a)
 		else
 			term.write(empty)
 		end
 	end
-	text_color(32768, 32768, settings.search_bar_text or 32768)
+	text_color(1, 1, settings.search_field_text or 1)
 	term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
 	term.setCursorBlink(true)
-end
-local function update_title()
-	multishell.setTitle(multishell.getCurrent(), #user_input == 0 and "Search" or "Search - \"" .. user_input .. "\"")
 end
 do
 	local a = _HOSTver >= 1132
@@ -229,14 +188,13 @@ do
 	key_maps[a and 265 or 200] = "up"
 end
 prepare_list()
-update_title()
+set_position()
 draw()
 while true do
 	local e, d, x, y = coroutine.yield()
 	if e == "char" then
 		user_input = user_input:sub(1, user_input_cursor - 1) .. d .. user_input:sub(user_input_cursor)
 		user_input_cursor = user_input_cursor + 1
-		update_title()
 		prepare_list()
 		draw()
 	elseif e == "key" and #user_input > 0 and (
@@ -249,7 +207,6 @@ while true do
 		if _key == "backspace" and user_input_cursor > 1 then
 			user_input_cursor = user_input_cursor - 1
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
-			update_title()
 			prepare_list()
 			draw()
 		elseif _key == "left" and user_input_cursor > 1 then
@@ -260,7 +217,6 @@ while true do
 			set_cursor()
 		elseif _key == "delete" and user_input_cursor <= #user_input then
 			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
-			update_title()
 			prepare_list()
 			set_cursor()
 		end
@@ -289,13 +245,17 @@ while true do
 				end
 			end
 		end
-	elseif e == "mouse_click" and x > 1 and x < w-1 and y > 3 and results[y - 3 + results_scroll] and results[y - 3 + results_scroll].on_click then
+	elseif e == "mouse_click" and x > 1 and x < w - 1 and y > 3 and results[y - 3 + results_scroll] and results[y - 3 + results_scroll].on_click then
 		results[y - 3 + results_scroll].on_click()
 	elseif e == "mouse_scroll" and y > 3 and y <= h and (d > 0 and #results - results_scroll > h - 3 or d < 0 and results_scroll > 0) then
 		results_scroll = results_scroll + d
 		correct_entries_scroll()
 		draw()
 	elseif e == "term_resize" then
+		if not reposed then
+			set_position(true)
+		end
+		reposed = false
 		w, h = term.getSize()
 		textline_width = w - 2
 		correct_entries_scroll()

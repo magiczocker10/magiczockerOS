@@ -472,6 +472,7 @@ local function setup_monitors(...)
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
+	total_size[1], total_size[2] = apis.window.get_size()
 	sgv(false)
 	resize_system_windows()
 	move_windows_to_screen()
@@ -808,6 +809,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				change_user.session = session
 				switch_user()
 			end or nil,
+			get_total_size = is_system_program and function() return total_size[1], total_size[2] end or nil,
 			get_visible = is_system_program and function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
 			set_visible = is_system_program and function(name, state)
 				if system_windows[name] and system_windows[name].window then
@@ -1890,9 +1892,6 @@ function events(...)
 			w, h = 51, 19
 		end
 		setup_monitors(_unpack(system_settings.devices or {}))
-		sgv(false)
-		resize_system_windows()
-		sgv(true)
 		draw_windows()
 	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
 		if monitor_resized and monitor_resized[e[2]] then

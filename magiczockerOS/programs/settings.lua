@@ -160,12 +160,10 @@ local categories = {
 		active = not filter_search,
 		title = "Search",
 		entries = {
-			{title = "Background", value = "search_background", default = 16, type = "color"},
-			{title = "Entry Background", value = "search_entry_background", default = 1, type = "color"},
-			{title = "Entry Shadow Background", value = "search_entry_shadow", default = 128, type = "color"},
-			{title = "Entry Text", value = "search_entry_text", default = 32768, type = "color"},
-			{title = "Searchbar Background", value = "search_bar_background", default = 1, type = "color"},
-			{title = "Searchbar Text", value = "search_bar_text", default = 32768, type = "color"},
+			{title = "Background", value = "search_back", default = 128, type = "color"},
+			{title = "Text", value = "search_text", default = 1, type = "color"},
+			{title = "Seperator-Text", value = "search_seperator_text", default = 256, type = "color"},
+			{title = "Searchfield Text", value = "search_field_text", default = 1, type = "color"},
 		},
 	},
 	{

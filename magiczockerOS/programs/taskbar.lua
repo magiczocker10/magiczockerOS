@@ -69,14 +69,9 @@ local function create_proc(a, b)
 	procs[a].window.set_buttons(e, true)
 	procs[a].is_system = true
 	procs[a].auto_kill = true
-	if a == "startmenu" then
+	if a == "startmenu" or a == "search" then
 		procs[a].window.set_header_vis(false)
 		procs[a].click_outside = true
-	elseif a == "search" then
-		local c, d = {get_total_size()}, {procs[a].window.get_data()}
-		d[3] = 20
-		d[1], d[2], d[4] = c[1] - d[3] + 1, 2, _min(14, c[2] - 3)
-		procs[a].env.set_pos(d[1], d[2], d[3], d[4], true)
 	elseif a == "calendar" then
 		procs[a].window.set_header_vis(false)
 		procs[a].click_outside = true
