@@ -330,8 +330,8 @@ local function draw_windows()
 	for i = 1, #system_window_order do
 		temp_window = system_windows[system_window_order[i]].window
 		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
-		user_win = system_window_order[i] == "taskbar" and gUD(cur_user).windows or nil
-		for j = 1, #(user_win or "") do
+		user_win = system_window_order[i] == "taskbar" and gUD(cur_user).windows or ""
+		for j = 1, #user_win do
 			temp_window = user_win[j].window
 			if temp_window.get_visible() then
 				screen = temp_window.redraw(j == 1, screen, j)
@@ -365,6 +365,23 @@ local function get_user_id(name, server)
 		users[to_return] = {name = name, server = server, windows = {}, labels = {}, desktop = {}, settings = {}, session_id = nil}
 	end
 	return to_return
+end
+local function copy_table(des, source, processed)
+	processed = processed or {}
+	for k, v in next, source do
+		if not des[k] and v ~= source then
+			if type(v) == "table" then
+				if not processed[v] then
+					des[k] = {}
+					processed[v] = true
+					copy_table(des[k], v, processed)
+					processed[v] = nil
+				end
+			else
+				des[k] = v
+			end
+		end
+	end
 end
 local function load_settings(user)
 	local tmpU = gUD(user)
@@ -471,8 +488,8 @@ local function load_system_settings()
 		file.close()
 	end
 	local a = system_settings
-	system_settings.monitor_mode = a.monitor_mode or "normal"
-	system_settings.devices = a.devices or {"computer"}
+	a.monitor_mode = a.monitor_mode or "normal"
+	a.devices = a.devices or {"computer"}
 end
 local function update_windows(user)
 	local user = user or cur_user
@@ -679,11 +696,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				getCurrent = function() return id end,
 				getFocus = function() return user_data.windows[1].id end,
 				getTitle = function()
-					for i = 1, #user_data.labels do
-						if user_data.labels[i].id == id then
-							return user_data.labels[i].name
-						end
-					end
+					return my_window.label.name
 				end,
 				launch = function(environment, path, ...)
 					if type(path) ~= "string" then
@@ -709,16 +722,11 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				setTitle = function(n, title)
 					if type(n) == "number" and type(title) == "string" then
 						title = title:gsub("\t", "")
-						for i = 1, #user_data.labels do
-							if user_data.labels[i].id == n then
-								user_data.labels[i].name = title
-								for j = 1, #user_data.windows do
-									if user_data.windows[j].id == n and not user_data.windows[j].is_system then
-										user_data.windows[j].window.set_title(title, j == 1)
-										_queue(system_windows.taskbar.id .. "", "", "window_change")
-										break
-									end
-								end
+						for j = 1, #user_data.windows do
+							if user_data.windows[j].id == n and not user_data.windows[j].is_system then
+								user_data.windows[j].label.name = title
+								user_data.windows[j].window.set_title(title, j == 1)
+								_queue(system_windows.taskbar.id .. "", "", "window_change")
 								break
 							end
 						end
@@ -739,23 +747,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					user_data.settings.computer_label = new_label or user_data.settings.computer_label
 					save_user_settings(user_)
 				end,
-				shutdown = is_system_program and os.shutdown or function()
-					for i = 1, #user_data.windows do
-						if user_data.windows[i].id == id then
-							user_data.windows[i].window.drawable(false)
-							table.remove(user_data.windows, i)
-							break
-						end
-					end
-					for i = 1, #user_data.labels do
-						if user_data.labels[i].id == id then
-							table.remove(user_data.labels, i)
-							break
-						end
-					end
-					resume_system("28taskbar", system_windows.taskbar.coroutine, "window_change")
-					draw_windows()
-				end,
+				shutdown = is_system_program and os.shutdown or function() my_window.kill() end,
 				version = function() return "magiczockerOS 4.0 Preview 4" end,
 				queueEvent = function(...)
 					_queue(id .. "", user_, ...)
@@ -819,13 +811,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				change_user.session = session
 				switch_user()
 			end or nil,
-			logout_user = is_system_program and function(username)
-				if not username or user_ == username then
-					return false
-				end
-				env.switch_user(true, username)
-				return true
-			end or nil,
 			get_visible = is_system_program and function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
 			set_visible = is_system_program and function(name, state)
 				if system_windows[name] and system_windows[name].window then
@@ -854,7 +839,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		env.term.native = type(term.native) == "function" and function() return native_term end or native_term -- before 1.6 > table; since 1.6 > function
 		env.term.redirect = function(target)
 			if type(target) ~= "table" then
-				env.error("bad argument #1 (expected table, got " .. type(target) .. ")", 2) 
+				env.error("bad argument #1 (expected table, got " .. type(target) .. ")", 2)
 			end
 			if target == term then
 				env.error("term is not a recommended redirect target, try term.current() instead", 2)
@@ -889,23 +874,17 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 		end
 		env, uenv = uenv, env
-		for k, v in next, uenv do
-			env[k] = v
-		end
-		for k, v in next, _G do
-			if not env[k] then
-				env[k] = v
-			end
-		end
+		copy_table(env, uenv)
+		copy_table(env, _G)
 		my_window.env = env
 		env.os.run = function(_tEnv, path, ...)
 			if type(_tEnv) ~= "table" then
-				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2) 
+				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2)
 			end
 			if type(path) ~= "string" then
-				env.error("bad argument #2 (expected string, got " .. type(path) .. ")", 2) 
+				env.error("bad argument #2 (expected string, got " .. type(path) .. ")", 2)
 			end
-			local title_old
+			local title_old = my_window.label.name
 			path = apis.filesystem.get_path(path)
 			if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
 				local name = path
@@ -916,20 +895,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if name:sub(-4) == ".lua" then
 					name = name:sub(1, -5)
 				end
-				for i = 1, #user_data.labels do
-					if user_data.labels[i].id == id then
-						title_old = user_data.labels[i].name
-						user_data.labels[i].name = name
-						for j = 1, #user_data.windows do
-							if user_data.windows[j].id == id then
-								user_data.windows[j].window.set_title(name:gsub("\t", ""), j == 1)
-								resume_system("27taskbar", system_windows.taskbar.coroutine, "window_change")
-								break
-							end
-						end
-						break
-					end
-				end
+				my_window.label.name = name
+				my_window.window.set_title(name:gsub("\t", ""), user_data.windows[1] == my_window)
+				resume_system("27taskbar", system_windows.taskbar.coroutine, "window_change")
 			end
 			local file = env.fs.open(path, "r")
 			if file then
@@ -946,19 +914,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					end
 					local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
 					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
-						for i = 1, #user_data.labels do
-							if user_data.labels[i].id == id then
-								user_data.labels[i].name = title_old
-								for j = 1, #user_data.windows do
-									if user_data.windows[j].id == id then
-										user_data.windows[j].window.set_title(title_old, j == 1)
-										resume_system("26taskbar", system_windows.taskbar.coroutine, "window_change")
-										break
-									end
-								end
-								break
-							end
-						end
+						my_window.label.name = title_old
+						my_window.window.set_title(title_old, user_data.windows[1] == my_window)
+						resume_system("26taskbar", system_windows.taskbar.coroutine, "window_change")
 					end
 					if not ok then
 						if err and err ~= "" then
@@ -975,11 +933,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 			env.printError(path .. ": File not exists", 0)
 		end
-		for k, v in next, _G.os do
-			if not env.os[k] and v then
-				env.os[k] = v
-			end
-		end
+		copy_table(env.os, _G.os)
 		do
 			local tmp = my_window.filesystem
 			for k in next, is_system_program and tmp or _G.fs do
@@ -1059,11 +1013,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				local ok = run_program(function() return program() end, function(err) return err end)
 				if ok then
 					env.io = {}
-					for k, v in next, tEnv do
-						if v ~= tEnv then
-							env.io[k] = v
-						end
-					end
+					copy_table(env.io, tEnv)
 				end
 			end
 		elseif not fs.exists("/rom/apis") and io then -- io-Fix for MC 1.0 and higher without apis-folder
@@ -1104,6 +1054,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		name = tmp and name:sub(-tmp + 1) or name
 		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
 		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
+		my_window.label = user_data.labels[#user_data.labels]
 		my_window.window.settings(user_data.settings, true)
 		my_window.window.set_title(name, true)
 	end
@@ -1165,6 +1116,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	end
 	local function kill_window()
 		my_window.is_dead = true
+		my_window.window.drawable(false)
 		for i = #user_data.windows, 1, -1 do
 			if my_window.id == user_data.windows[i].id then
 				if i == 1 then
@@ -1183,6 +1135,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		_queue(system_windows.taskbar.id .. "", "", "window_change")
 		draw_windows()
 	end
+	my_window.kill = kill_window
 	my_window.coroutine = coroutine.create(
 		function()
 			if #message > 0 then
@@ -1255,7 +1208,19 @@ local function create_system_windows(i)
 			time = os.time, -- taskbar
 			date = os.date, -- taskbar
 			queueEvent = _queue, -- contextmenu
+			startTimer = function(nTime) -- taskbar
+				local var = 0
+				if nTime <= 0 then
+					var = 1
+					_queue(system_windows[temp].id .. "", nil, "timer", 1)
+				else
+					var = os.startTimer(nTime)
+					window_timers[var] = {system_windows[temp].id}
+				end
+				return var
+			end,
 		},
+		keys = keys,
 		table = {
 			insert = table.insert, -- taskbar
 			remove = table.remove, -- taskbar
@@ -1631,7 +1596,7 @@ function events(...)
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
 			local is_scroll = e[1] == "monitor_scroll"
 			_queue(
-					is_scroll and "mouse_scroll" or os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor", 
+					is_scroll and "mouse_scroll" or os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor",
 					is_scroll and e[5] * -1 or user_data.settings and user_data.settings.mouse_left_handed and 2 or 1,
 					e[3] + monitor_order[monitor_devices[e[2]]].offset,
 					e[4]
@@ -1706,17 +1671,7 @@ function events(...)
 			local sys_window = system_windows
 			resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "switch_start" or _key == "s" and "switch_search" or _key == "t" and "switch_calendar")
 		elseif _key == "c" and temp_window and temp_window.get_visible() and temp_window.get_button("close") then -- close window
-			user_data.windows[1].is_dead = true
-			for i = 1, #user_data.labels do
-				if user_data.labels[i].id == user_data.windows[1].id then
-					resize_mode = false
-					table.remove(user_data.labels, i)
-					break
-				end
-			end
-			table.remove(user_data.windows, 1)
-			resume_system("16taskbar", system_windows.taskbar.coroutine, "window_change")
-			draw_windows()
+			user_data.windows[1].kill()
 		elseif _key == "n" and cur_user > 0 then -- new window
 			create_user_window(cur_user)
 		elseif _key == "m" and temp_window and temp_window.get_visible() and temp_window.get_button("minimize") then -- minimize window
@@ -1874,21 +1829,20 @@ function events(...)
 		cursorblink_timer = start_timer(cursorblink_timer, 0.5)
 	elseif e[1] == "timer" then
 		local tmp = window_timers
-		if tmp[e[2]] and tmp[e[2]][1] > 0 then
+		if tmp[e[2]] and (tmp[e[2]][1] or 0) > 0 then
 			local tmpu = gUD(tmp[e[2]][2])
 			local tmp1 = tmpu.windows or {}
 			for i = 1, #tmp1 do
 				if tmp1[i].id == tmp[e[2]][1] then
 					resume_user(tmp1[i].coroutine, _unpack(e))
-					tmp[e[2]] = nil
 					break
 				end
 			end
-		elseif tmp[e[2]] and tmp[e[2]][1] < 0 then
+		elseif tmp[e[2]] and (tmp[e[2]][1] or 0) < 0 then
 			local tmp_ = system_window_order[tmp[e[2]][1] * -1]
 			resume_system("5" .. tmp_, system_windows[tmp_].coroutine, _unpack(e))
-			tmp[e[2]] = nil
 		end
+		tmp[e[2]] = nil
 	elseif e[1] == "modem_message" then
 		if type(e[5]) == "string" then
 			e[5] = textutils.unserialise(e[5])
@@ -1984,8 +1938,8 @@ function events(...)
 			temp_window = system_windows[system_window_order[i]]
 			if temp_window.window.get_visible() then
 				local _status = coroutine.status(temp_window.coroutine)
-				local continue = (system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible()) or 
-				(system_window_order[i] == "desktop" and not user_data.windows[1]) or 
+				local continue = (system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible()) or
+				(system_window_order[i] == "desktop" and not user_data.windows[1]) or
 				system_window_order[i] ~= "desktop"
 				if continue and (_status == "normal" or _status == "suspended") then
 					resume_system("1" .. system_window_order[i], temp_window.coroutine, _unpack(e))
