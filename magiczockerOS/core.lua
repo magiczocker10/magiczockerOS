@@ -62,8 +62,6 @@ local resize_mode = false
 local running = true
 local refresh_startbutton
 local cursorblink_timer
-local printError = printError or nil
-local user
 local _HOSTver = tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
 -- tables
 local drag_old = {0, 0}
@@ -74,7 +72,6 @@ local total_size = {0, 0}
 local system_settings = {}
 local window_timers = {}
 local position_to_add = {left = {-1, 0}, right = {1, 0}, up = {0, -1}, down = {0, 1}}
-local number_to_check
 local overrides
 local monitor_order
 local monitor_devices
@@ -368,7 +365,7 @@ local function get_user_id(name, server)
 end
 local function copy_table(des, source, processed)
 	processed = processed or {}
-	for k, v in next, source do
+	for k, v in next, source or {} do
 		if not des[k] and v ~= source then
 			if type(v) == "table" then
 				if not processed[v] then
@@ -840,8 +837,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		env.term.redirect = function(target)
 			if type(target) ~= "table" then
 				env.error("bad argument #1 (expected table, got " .. type(target) .. ")", 2)
-			end
-			if target == term then
+			elseif target == term then
 				env.error("term is not a recommended redirect target, try term.current() instead", 2)
 			end
 			for k, v in next, native_term do
@@ -880,8 +876,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		env.os.run = function(_tEnv, path, ...)
 			if type(_tEnv) ~= "table" then
 				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2)
-			end
-			if type(path) ~= "string" then
+			elseif type(path) ~= "string" then
 				env.error("bad argument #2 (expected string, got " .. type(path) .. ")", 2)
 			end
 			local title_old = my_window.label.name
@@ -980,11 +975,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 						return
 					end
 					local api_ = {}
-					for k, v in next, env2 do
-						if v ~= env2 then
-							api_[k] = v
-						end
-					end
+					copy_table(api_, env2)
 					env[name:gsub(".lua", "")] = api_
 					return true
 				end
@@ -1220,14 +1211,13 @@ local function create_system_windows(i)
 				return var
 			end,
 		},
-		keys = keys,
 		table = {
 			insert = table.insert, -- taskbar
 			remove = table.remove, -- taskbar
 		},
 		_HOSTver = _HOSTver, -- all
 		textutils = {
-			complete = textutils.complete -- contextmenu, osk, taskbar
+			complete = textutils.complete, -- contextmenu, osk, taskbar
 		},
 		apis = apis, -- taskbar
 		-- magiczockerOS = get_os_commands(system_windows[temp]),
@@ -1656,7 +1646,7 @@ function events(...)
 		if _key == "r" and temp_window and temp_window.get_visible() then -- maximize/resize window
 			if resize_mode then
 				resize_mode = false
-				user_data.windows[1].window.toggle_border(false)
+				temp_window.toggle_border(false)
 			end
 			temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
 			sgv(false)
@@ -1678,7 +1668,7 @@ function events(...)
 			temp_window.set_visible(false)
 			local a = user_data.windows[1]
 			table.remove(user_data.windows, 1)
-			user_data.windows[#user_data.windows+1] = a
+			user_data.windows[#user_data.windows + 1] = a
 			resume_system("32taskbar", system_windows.taskbar.coroutine, "window_change")
 			draw_windows()
 		elseif position_to_add[_key] and temp_window.get_visible() and temp_window then -- move window
@@ -1868,13 +1858,9 @@ function events(...)
 				end
 			elseif tmp and tmp[1] == 0 and data.mode == "get_settings-answer" then
 				window_messages[data.my_id] = nil
-				local tmp
 				for k, v in next, users do
 					if v.name == data.username and v.server == data.return_id then
-						tmp = gUD(k).settings
-						for k, v in next, data.data do
-							tmp[k] = v
-						end
+						copy_table(gUD(k).settings, data.data)
 						update_windows(k)
 					end
 				end
@@ -1938,8 +1924,8 @@ function events(...)
 			temp_window = system_windows[system_window_order[i]]
 			if temp_window.window.get_visible() then
 				local _status = coroutine.status(temp_window.coroutine)
-				local continue = (system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible()) or
-				(system_window_order[i] == "desktop" and not user_data.windows[1]) or
+				local continue = system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible() or
+				system_window_order[i] == "desktop" and not user_data.windows[1] or
 				system_window_order[i] ~= "desktop"
 				if continue and (_status == "normal" or _status == "suspended") then
 					resume_system("1" .. system_window_order[i], temp_window.coroutine, _unpack(e))
