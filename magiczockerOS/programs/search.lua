@@ -1,5 +1,3 @@
--- ToDo: sorting, opening files
-
 -- magiczockerOS - Copyright by Julian Kriete 2016-2021
 
 -- My ComputerCraft-Forum account:
@@ -12,16 +10,20 @@ local w, h = term.getSize()
 local user = user or ""
 local results = {}
 local results_scroll
-local user_input = ""
 local key_maps = {}
-local textline_width = w - 2
-local textline_offset = 0
-local user_input_cursor = 1
 local entry_selected
 local settings = user_data().settings or {}
 local reposed = false
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local last_pos = {0, 0, 0, 0}
+local field = {
+	allowed_pattern = "[a-zA-Z0-9-/\.+_\(\)]",
+	cursor = 1,
+	endx = w - 1,
+	offset = 0,
+	startx = 2,
+	text = "",
+}
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -48,50 +50,34 @@ end
 local function search(search_term)
 	local search_term = search_term:lower()
 	local to_return = {}
-	local to_search = {"/"}
+	local to_search = {{folder = "/", file = ""}}
 	for i = 1, #to_search do
 		local files_to_search = {to_search[i]}
 		for _, v in next, files_to_search do
-			if fs.isDir(v) then
-				local files = fs.list(v)
+			if fs.isDir(v.folder .. v.file) then
+				local files = fs.list(v.folder .. v.file)
 				for j = 1, #files do
-					files_to_search[#files_to_search + 1] = v .. "/" .. files[j]
+					files_to_search[#files_to_search + 1] = {folder = v.folder .. v.file .. "/", file = files[j]}
 				end
-			else
-				local tmp = v
+			elseif #v.file > 0 then
+				local tmp = v.folder .. v.file
 				if tmp:lower():find(search_term) then
-					if not tmp:find("/") then
-						tmp = "/" .. tmp
-					end
-					local _tmp = tmp:reverse():find("/")
-					local _file = tmp:sub(#tmp - _tmp + 2)
-					local _path = tmp:sub(1, #tmp - _tmp)
-					if #_path == 0 then
-						_path = "/"
-					end
-					if _path:sub(1, 1) ~= "/" then
-						_path = "/" .. _path
-					end
-					if _path:sub(1, 2) == "//" then
-						_path = _path:sub(2)
-					end
-					to_return[#to_return + 1] = _file .. "|" .. _path
+					to_return[#to_return + 1] = {path = v.folder:sub(2, -2), name = v.file}
 				end
 			end
 		end
 	end
-	table.sort(to_return)
+	table.sort(to_return, function(a, b) return a.name == b.name and a.path < b.path or a.name < b.name end)
 	return to_return
 end
 local function prepare_list()
-	local tmp_results = search(user_input)
+	local tmp_results = search(field.text)
 	entry_selected = 1
 	results = {}
 	results_scroll = 0
 	for i = 1, #tmp_results do
-		local _found = tmp_results[i]:find("|")
-		local _file = tmp_results[i]:sub(1, _found - 1)
-		local _folder = tmp_results[i]:sub(_found + 1)
+		local _file = tmp_results[i].name
+		local _folder = tmp_results[i].path
 		local _on_click = multishell.launch and function() multishell.launch({}, _folder .. "/" .. _file) end
 		results[#results + 1] = i == 1 and {type = "empty_line"} or nil
 		results[#results + 1] = {entry_no = i, on_click = _on_click, type = "text", text = _file, first = true}
@@ -100,30 +86,30 @@ local function prepare_list()
 	end
 	set_position()
 end
-local function draw_text_line(blink)
-	if not blink then
+local function draw_field(block_pos)
+	local data = field
+	if not block_pos then
 		term.setCursorPos(2, 2)
 	end
+	local a = data.text or ""
 	back_color(32768, 128, settings.search_back or 128)
 	text_color(1, 1, settings.search_field_text or 1)
-	term.write((user_input .. (not term.isColor and "_" or " "):rep(textline_width)):sub(1 + textline_offset, textline_width + textline_offset))
-	if not blink then
-		term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
+	if #a == 0 then
+		a = data.watermark or ""
 	end
+	term.write((a .. ((not term.isColor or not term.isColor()) and "_" or " "):rep(w)):sub(1 + data.offset, w - 2 + data.offset))
 end
-local function set_cursor(blink)
-	if user_input_cursor - 1 > #user_input then
-		user_input_cursor = #user_input + 1
+local function set_cursor(block_pos)
+	local data = field
+	term.setCursorBlink(false)
+	data.cursor = data.cursor - 1 > #data.text and #data.text + 1 or data.cursor
+	if data.cursor <= data.offset then
+		data.offset = data.cursor - 1
+	elseif data.cursor > w - 2 + data.offset then
+		data.offset = data.cursor - w + 2
 	end
-	if user_input_cursor <= textline_offset then
-		textline_offset = user_input_cursor - 1
-	elseif user_input_cursor > textline_width + textline_offset then
-		textline_offset = user_input_cursor - textline_width
-	end
-	if textline_offset < 0 then
-		textline_offset = 0
-	end
-	draw_text_line(blink)
+	data.offset = data.offset < 0 and 0 or data.offset
+	draw_field(block_pos)
 end
 local function correct_entries_scroll()
 	if results_scroll > 0 then
@@ -142,6 +128,11 @@ local function scroll_to_result(dir)
 		end
 	end
 	results_scroll = results_scroll < 0 and 0 or results_scroll
+end
+local function set_blink()
+	text_color(1, 1, settings.search_field_text or 1)
+	term.setCursorPos(1 + field.cursor - field.offset, 2)
+	term.setCursorBlink(true)
 end
 local function draw()
 	term.setCursorBlink(false)
@@ -179,9 +170,7 @@ local function draw()
 			term.write(empty)
 		end
 	end
-	text_color(1, 1, settings.search_field_text or 1)
-	term.setCursorPos(1 + user_input_cursor - textline_offset, 2)
-	term.setCursorBlink(true)
+	set_blink()
 end
 do
 	local a = _HOSTver >= 1132
@@ -198,34 +187,48 @@ set_position()
 draw()
 while true do
 	local e, d, x, y = coroutine.yield()
-	if e == "char" then
-		user_input = user_input:sub(1, user_input_cursor - 1) .. d .. user_input:sub(user_input_cursor)
-		user_input_cursor = user_input_cursor + 1
+	if e == "char" or e == "paste" then
+		local b = {}
+		d = d:gsub("\\", "/")
+		for char in d:gmatch(".") do
+			b[#b + 1] = char:match(field.allowed_pattern) or nil
+		end
+		field.text = field.text:sub(1, field.cursor - 1) .. table.concat(b, "") .. field.text:sub(field.cursor)
+		field.cursor = field.cursor + #b
 		prepare_list()
+		set_position()
 		draw()
-	elseif e == "key" and #user_input > 0 and (
+	elseif e == "key" and #field.text > 0 and (
 		key_maps[d] == "backspace" or
 		key_maps[d] == "left" or
 		key_maps[d] == "right" or
 		key_maps[d] == "delete"
 	) then
 		local _key = key_maps[d]
-		if _key == "backspace" and user_input_cursor > 1 then
-			user_input_cursor = user_input_cursor - 1
-			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
+		if _key == "backspace" and field.cursor > 1 then
+			field.text = field.text:sub(1, field.cursor - 2) .. field.text:sub(field.cursor)
+			field.cursor = field.cursor - 1
 			prepare_list()
+			set_position()
 			draw()
-		elseif _key == "left" and user_input_cursor > 1 then
-			user_input_cursor = user_input_cursor - 1
-			set_cursor()
-		elseif _key == "right" and user_input_cursor <= #user_input then
-			user_input_cursor = user_input_cursor + 1
-			set_cursor()
-		elseif _key == "delete" and user_input_cursor <= #user_input then
-			user_input = user_input:sub(1, user_input_cursor - 1) .. user_input:sub(user_input_cursor + 1)
+		elseif _key == "delete" and field.cursor <= #field.text then
+			field.text = field.text:sub(1, field.cursor - 1) .. field.text:sub(field.cursor + 1)
 			prepare_list()
+			set_position()
+			draw()
+		elseif _key == "left" and field.cursor > 1 then
+			field.cursor = field.cursor - 1
 			set_cursor()
+			set_blink()
+		elseif _key == "right" and field.cursor <= #field.text then
+			field.cursor = field.cursor + 1
+			set_cursor()
+			set_blink()
 		end
+	elseif (e == "mouse_click" or e == "mouse_drag") and y == 2 then
+		field.cursor = math.min(#field.text + 1, x - 1)
+		set_cursor()
+		set_blink()
 	elseif e == "key" and key_maps[d] and (not term or not term.isColor or not term.isColor()) then
 		local _key = key_maps[d]
 		if _key == "enter" then
@@ -263,7 +266,6 @@ while true do
 		end
 		reposed = false
 		w, h = term.getSize()
-		textline_width = w - 2
 		correct_entries_scroll()
 		draw()
 	elseif e == "refresh_settings" then
