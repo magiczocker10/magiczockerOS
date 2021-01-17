@@ -88,6 +88,7 @@ local system_windows = {
 }
 local system_window_order = {"osk", "contextmenu", "taskbar", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
+local term_org = term
 local term = term or nil
 local textutils = textutils or {}
 local peripheral = peripheral or nil
@@ -798,7 +799,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				my_window.window.reposition(x or _a, y or _b, width or _c, height and height + (my_window.window.has_header() and 1 or 0) or _d)
 				apis.window.clear_cache()
 				_queue(id .. "", user_, "term_resize")
-				if not not_redraw then
+				if not not_redraw and my_window.window.get_visible() then
 					draw_windows()
 				end
 			end or nil,
@@ -1175,7 +1176,7 @@ local function create_system_windows(i)
 			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
 			system_windows[window_number].window.reposition(posx or _x, posy or _y, posw or _w, posh or _h)
 			apis.window.clear_cache()
-			if not not_redraw then
+			if not not_redraw and system_windows[window_number].window.get_visible() then
 				draw_windows()
 			end
 		end,
@@ -1213,6 +1214,7 @@ local function create_system_windows(i)
 				return var
 			end,
 		},
+		keys = keys,
 		table = {
 			insert = table.insert, -- taskbar
 			remove = table.remove, -- taskbar
@@ -1469,7 +1471,7 @@ function events(...)
 			e[2] = e[5] * -1
 		end
 	elseif e[1] == "screen_resized" then
-		--e[1] = "term_resize"
+		--e[1] = "monitor_resize"
 	end
 	local user_data = gUD(cur_user)
 	if monitor_devices.computer and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
@@ -1883,16 +1885,15 @@ function events(...)
 			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e, 3))
 		end
 	elseif e[1] == "term_resize" then
-		if term and term.getSize then
-			w, h = term.getSize()
+		local wold, hold = w, h
+		if term_org and term_org.getSize then
+			w, h = term_org.getSize()
 		else
 			w, h = nil, nil
 		end
 		if not w then
 			w, h = 51, 19
 		end
-		setup_monitors(_unpack(system_settings.devices or {}))
-		draw_windows()
 	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
 		if monitor_resized and monitor_resized[e[2]] then
 			monitor_resized[e[2]] = nil

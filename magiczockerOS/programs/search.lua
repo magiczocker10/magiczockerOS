@@ -21,6 +21,7 @@ local entry_selected
 local settings = user_data().settings or {}
 local reposed = false
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local last_pos = {0, 0, 0, 0}
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -36,8 +37,13 @@ local function set_position(a)
 	local wt, ht = get_total_size()
 	local w, h = math.floor(wt * 0.5), math.min(math.floor(ht * 0.5), 3 + #results)
 	local x, y = math.floor((wt - w) * 0.5), 4
+	w = wt - x * 2
+	x = x + 1
 	reposed = true
-	set_pos(x, y, w, h, a)
+	if last_pos[1] ~= x or last_pos[2] ~= y or last_pos[3] ~= w or last_pos[4] ~= h then
+		last_pos[1], last_pos[2], last_pos[3], last_pos[4] = x, y, w, h
+		set_pos(x, y, w, h, a)
+	end
 end
 local function search(search_term)
 	local search_term = search_term:lower()
