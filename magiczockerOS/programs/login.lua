@@ -41,7 +41,7 @@ local function set_cursor(field, blink)
 	if data[1] <= data[3] then
 		data[3] = data[1] - 1
 	elseif data[1] > w - 2 + data[3] then
-		data[3] = data[1] - w
+		data[3] = data[1] - w + 2
 	end
 	data[3] = data[3] < 0 and 0 or data[3]
 	draw_field(blink, data)
@@ -49,10 +49,6 @@ end
 local function set_blink()
 	if field > 0 then
 		local a = fields[field]
-		local length = w - 2
-		a[1] = a[1] > #a[4] + 1 and #a[4] + 1 or a[1]
-		a[3] = a[1] - a[3] > length and a[3] + 1 or a[1] - a[3] < 1 and a[3] - 1 or a[3]
-		a[3] = a[3] > 0 and #a[4] - a[3] < length and (#a[4] - length + 1 > 0 and #a[4] - length + 1 or 0) or a[3]
 		text_color(32768, 32768, 32768)
 		term.setCursorPos(1 + a[1] - a[3], a[2])
 		term.setCursorBlink(true)
