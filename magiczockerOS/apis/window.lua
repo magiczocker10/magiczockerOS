@@ -108,8 +108,8 @@ function get_global_visible()
 	return global_visible
 end
 function clear_cache()
-	global_cache={}
-	global_cache_old={}
+	global_cache={t = {}, b = {}, s = {}}
+	global_cache_old={t = {}, b = {}, s = {}}
 end
 local to_log
 local logger=false
@@ -262,15 +262,15 @@ function set_devices(mode,...)
 	calculate_device_offset()
 	clear_cache()
 end
-local function can_added(data,to_add,x)
-	if #data[2]==0 or data[1]==x-#data[2] and to_add.b==data[3] and (to_add.s==" " or data[4]==-1 or to_add.t==data[4]) then
+local function can_added(data,content,text,back,x)
+	if #data[2]==0 or data[1]==x-#data[2] and back==data[3] and (content==" " or data[4]==-1 or text==data[4]) then
 		if #data[2]==0 then
 			data[1]=x
-			data[3]=to_add.b
+			data[3]=back
 			data[4]=-1
 		end
-		data[4]=data[4]==-1 and to_add.s~=" " and to_add.t or data[4]
-		data[2][#data[2]+1]=to_add.s
+		data[4]=data[4]==-1 and content~=" " and text or data[4]
+		data[2][#data[2]+1]=content
 		return true
 	end
 	return false
@@ -297,7 +297,7 @@ function draw_text(screen,data,new,line,rdata)
 	set_term(screen,"write",table.concat(new[2],""))
 end
 function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
-	if not global_visible or not line or line>h or not global_cache[line] then
+	if not global_visible or not line or line>h or not global_cache.s[line] then
 		return nil
 	end
 	local monitor_mode_=monitor_mode
@@ -315,32 +315,40 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 		continue = endx>=startx and startx<=s.endx and s.startx<=endx
 		to_draw={-1,{},-1,-1} -- x, text, bcol, tcol
 		cur_data={0,-1,-1} -- x, backc, textc
-		_line=global_cache[line]
-		global_cache_old[line]=global_cache_old[line] or {}
+		_sline=global_cache.s[line]
+		_bline=global_cache.b[line]
+		_tline=global_cache.t[line]
+		global_cache_old.s[line] = global_cache_old.s[line] or {}
+		global_cache_old.b[line] = global_cache_old.b[line] or {}
+		global_cache_old.t[line] = global_cache_old.t[line] or {}
+		_slineold=global_cache_old.s[line]
+		_blineold=global_cache_old.b[line]
+		_tlineold=global_cache_old.t[line]
 		_line_old=global_cache_old[line]
 		startx, endx = not continue and 1 or startx, not continue and 0 or endx
-		local a, b, tmp
+		local tmp
 		for i = startx, endx do
-			a, b = _line and _line[i], _line_old and _line_old[i]
-			if a and (not check_changes or not b or ((a.b ~= b.b or a.t ~= b.t or a.s ~= b.s) and not (a.b == b.b and a.s == " " and b.s == " "))) then
-				if not can_added(to_draw, a, i) then
+			local s, b, t, _s, _b, _t = _sline[i], _bline[i], _tline[i], _slineold[i], _blineold[i], _tlineold[i]
+			if s and (not check_changes or not global_cache_old.s[line] or not global_cache_old.s[line][i] or ((b ~= _b or t ~= _t or s ~= _s) and not (b == _b and s == " " and _s == " "))) then
+				if not can_added(to_draw, s, t, b, i) then
 					draw_text(screen, cur_data, to_draw, line, return_data and to_repeat)
 					to_draw[2] = {}
 					to_draw[4] = -1
-					can_added(to_draw, a, i)
+					can_added(to_draw, s, t, b, i)
 				end
-				tmp = global_cache_old[line]
-				tmp[i] = tmp[i] or {}
-				tmp[i].b = to_draw[3]
-				tmp[i].t = to_draw[4] < 1 and a.t or to_draw[4]
-				tmp[i].s = a.s
-				_line[i]=not (limit_set and screen == goto_limit) and _line[i] or nil
+				tmp = global_cache_old.b[line]
+				tmp[i] = to_draw[3]
+				tmp = global_cache_old.t[line]
+				tmp[i] = to_draw[4] < 1 and t or to_draw[4]
+				tmp = global_cache_old.s[line]
+				tmp[i] = s
+				_sline[i]=not (limit_set and screen == goto_limit) and s or nil
 			end
 		end
 		draw_text(screen,cur_data, to_draw, line, return_data and to_repeat)
 	end
-	local empty = not limit_set or not next(global_cache[line])
-	global_cache[line], monitor_mode = not (empty or not limit_set and screen == goto_limit) and global_cache[line] or nil, monitor_mode_
+	local empty = not limit_set or not next(global_cache.s[line])
+	global_cache.s[line], monitor_mode = not (empty or not limit_set and screen == goto_limit) and global_cache.s[line] or nil, monitor_mode_
 	return to_repeat
 end
 function redraw_global_cache(check_changes)
@@ -465,7 +473,10 @@ function create(x,y,width,height,visible,bar)
 			y=y
 		}
 	}
-	local screen={}
+	local screen_s = {}
+	local screen_b = {}
+	local screen_t = {}
+	
 	local screen2={}
 	local settings={}
 	local window={}
@@ -474,18 +485,11 @@ function create(x,y,width,height,visible,bar)
 	local my_buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
 
 	-- functions
-	local function set_size(y)
-		local a, b = screen[y], data[state].width
-		a=a or {
-			back=hex[back_color]:rep(b),
-			char=(" "):rep(b),
-			text=hex[text_color]:rep(b)
-		}
-		if b>#a.char then
-			screen[y]={back=a.back..hex[back_color]:rep(b-#a.back),char=a.char..(" "):rep(b-#a.char),text=a.text..hex[text_color]:rep(b-#a.text)}
-		elseif b<#a.char then
-			screen[y]={back=a.back:sub(1,b),char=a.char:sub(1,b),text=a.text:sub(1,b)}
-		end
+	local function set_size(y) -- ToDo
+		local b = data[state].width
+		screen_s[y] = screen_s[y] or {}
+		screen_t[y] = screen_t[y] or {}
+		screen_b[y] = screen_b[y] or {}
 	end
 	local function set_cursor()
 		if not global_visible then
@@ -513,9 +517,9 @@ function create(x,y,width,height,visible,bar)
 					elseif my_blink and blink then
 						process_data.last_textcolor[i]=text_color
 						local tmpy = cursor[2]+(bar and 1 or 0)
-						local sdata=screen[tmpy]
-						if sdata and cursor[1]>0 and #sdata.back>=cursor[1] then
-							local btmp=get_color[sdata.back:sub(cursor[1],cursor[1])]
+						local s, t, b = screen_s[tmpy], screen_t[tmpy], screen_b[tmpy]
+						if b[cursor[1]] then
+							local btmp=get_color[b[cursor[1]]]
 							process_data.last_backcolor[i]=btmp
 							set_term(i,"setBackgroundColor",btmp)
 							set_term(i,"setTextColor",text_color)
@@ -524,14 +528,13 @@ function create(x,y,width,height,visible,bar)
 						end
 					elseif not my_blink then
 						local tmpy = cursor[2]+(bar and 1 or 0)
-						local sdata = screen[tmpy]
-						if sdata and cursor[1]>0 and #sdata.back>=cursor[1] then
-							process_data.last_backcolor[i]=get_color[sdata.back:sub(cursor[1],cursor[1])]
-							process_data.last_textcolor[i]=get_color[sdata.text:sub(cursor[1],cursor[1])]
-							set_term(i,"setBackgroundColor",get_color[sdata.back:sub(cursor[1],cursor[1])])
-							set_term(i,"setTextColor",get_color[sdata.text:sub(cursor[1],cursor[1])])
+						if b[cursor[1]] then
+							process_data.last_backcolor[i]=get_color[b[cursor[1]]]
+							process_data.last_textcolor[i]=get_color[t[cursor[1]]]
+							set_term(i,"setBackgroundColor",get_color[b[cursor[1]]])
+							set_term(i,"setTextColor",get_color[t[cursor[1]]])
 							set_term(i,"setCursorPos",_x-monitor_order[i].offset,_y)
-							set_term(i,"write",sdata.char:sub(cursor[1],cursor[1]))
+							set_term(i,"write",s[cursor[1]])
 						end
 					end
 					break
@@ -580,14 +583,17 @@ function create(x,y,width,height,visible,bar)
 		b[7]=a and hex[conf.window_resize_button_back or 128] or b[7]
 		b[8]=a and ((foreground and state=="normal" and id>0 and "o") or " ") or b[8]
 		b[9]=a and hex[conf.window_resize_button_text or 256] or b[9]
-		header_tmp[1], header_tmp[2], header_tmp[3] = b[1], b[5]:rep(#b[4]), b[7]
-		header_tmp[4], header_tmp[5], header_tmp[6] = b[2], b[4], b[8]
-		header_tmp[7], header_tmp[8], header_tmp[9] = b[3], b[6]:rep(#b[4]), b[9]
-		screen[1] = {
-			back = table.concat(header_tmp, "", 1, 3),
-			char = table.concat(header_tmp, "", 4, 6),
-			text = table.concat(header_tmp, "", 7, 9)
-		}
+		header_tmp[1] = table.concat({b[1], b[5]:rep(#b[4]), b[7]})
+		header_tmp[2] = table.concat({b[2], b[4], b[8]})
+		header_tmp[3] = table.concat({b[3], b[6]:rep(#b[4]), b[9]})
+		screen_s[1] = {}
+		screen_t[1] = {}
+		screen_b[1] = {}
+		for i = 1, data[state].width do
+			screen_b[1][i] = header_tmp[1]:sub(i, i)
+			screen_s[1][i] = header_tmp[2]:sub(i, i)
+			screen_t[1][i] = header_tmp[3]:sub(i, i)
+		end
 	end
 	function window.get_buttons()
 		return my_buttons
@@ -619,23 +625,33 @@ function create(x,y,width,height,visible,bar)
 				local _ypos=cur_data.y+line-1
 				screen2[_ypos] = screen2[_ypos] or {}
 				local b = screen2[_ypos]
-				screen[line] = screen[line] or {back = "", char = "", text = ""}
-				if #screen[line].char < cur_data.width then set_size(line) end
-				local _line, border_w, border_h = screen[line], nil, nil
-				local ltlength = #_line.text
+				screen_s[line] = screen_s[line] or {}
+				screen_b[line] = screen_b[line] or {}
+				screen_t[line] = screen_t[line] or {}
+				local ltlength = table.maxn(screen_s[line])
+				if ltlength < cur_data.width then set_size(line) end
+				local border_w, border_h = nil, nil
 				for i=pos_start or 1,pos_end or cur_data.width do
 					local _pos=cur_data.x+i-1
 					b[_pos]=b[_pos] or id
 					if b[_pos]==id then
-						global_cache[_ypos]=global_cache[_ypos] or {}
+						global_cache.t[_ypos] = global_cache.t[_ypos] or {}
+						global_cache.b[_ypos] = global_cache.b[_ypos] or {}
+						global_cache.s[_ypos] = global_cache.s[_ypos] or {}
 						if border and (line==cur_data.height or ((i==1 or i==cur_data.width) and line>1)) then
 							local a = not border_w or not border_h
 							border_w, border_h=a and ceiled_w or border_w, a and ceiled_h or border_h
-							global_cache[_ypos][_pos]={t=settings.window_resize_border_text or 1,b=settings.window_resize_border_back or 128,s=(line==border_h and "|") or (i==border_w and "-") or " "}
+							global_cache.t[_ypos][_pos] = settings.window_resize_border_text or 1
+							global_cache.b[_ypos][_pos] = settings.window_resize_border_back or 128
+							global_cache.s[_ypos][_pos] = (line==border_h and "|") or (i==border_w and "-") or " "
 						elseif i <= ltlength then
-							global_cache[_ypos][_pos]={t=(get_color[_line.text:sub(i, i)] or text_color),b=(get_color[_line.back:sub(i, i)] or back_color),s=(_line.char:sub(i, i) or " ")}
+							global_cache.t[_ypos][_pos] = get_color[screen_t[line][i]] or text_color
+							global_cache.b[_ypos][_pos] = get_color[screen_b[line][i]] or back_color
+							global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
 						else
-							global_cache[_ypos][_pos]={t=text_color,b=back_color,s=" "}
+							global_cache.t[_ypos][_pos] = text_color
+							global_cache.b[_ypos][_pos] = back_color
+							global_cache.s[_ypos][_pos] = " "
 						end
 					end
 				end
@@ -644,12 +660,9 @@ function create(x,y,width,height,visible,bar)
 	end
 	local function redraw()
 		if visible then
-			local new_screen={}
 			for i=1,data[state].height do
 				redraw_line(i)
-				new_screen[i]=screen[i]
 			end
-			screen=new_screen
 		end
 	end
 	function window.has_header()
@@ -735,26 +748,31 @@ function create(x,y,width,height,visible,bar)
 		redraw_global_cache(true)
 	end
 	-- term functions
-	local _blit_data = {"", "", "", "", "", "", "", "", ""}
 	local function _blit(sText, sTextColor, sBackgroundColor)
-		if type(sText) ~= "string" then error("bad argument #1 (expected string, got " .. type(sText) .. ")", 2) end
-		if type(sTextColor) ~= "string" then error("bad argument #2 (expected string, got " .. type(sTextColor) .. ")", 2) end
-		if type(sBackgroundColor) ~= "string" then error("bad argument #3 (expected string, got " .. type(sBackgroundColor) .. ")", 2) end
 		local text_len = #sText
 		if #sTextColor ~= text_len or #sBackgroundColor ~= text_len then
 			error("Arguments must be the same length",2)
 		end
+		sTextColor = sTextColor:sub(1, 1)
+		sBackgroundColor = sBackgroundColor:sub(1, 1)
 		if cursor[2] < 1 then return end
 		local cur = cursor[1] - 1
 		local y = cursor[2] + (bar and 1 or 0)
-		screen[y] = screen[y] or {}
-		local a = _blit_data
-		a[1], a[2], a[3] = ((screen[y].back or "") .. ("f"):rep(cur)):sub(1, cur), sBackgroundColor, (screen[y].back or ""):sub(cursor[1] + text_len)
-		a[4], a[5], a[6] = ((screen[y].text or "") .. ("0"):rep(cur)):sub(1, cur), sTextColor, (screen[y].text or ""):sub(cursor[1] + text_len)
-		a[7], a[8], a[9] = ((screen[y].char or "") .. (" "):rep(cur)):sub(1, cur), sText, (screen[y].char or ""):sub(cursor[1] + text_len)
-		screen[y].back = _tconcat(a, "", 1, 3)
-		screen[y].text = _tconcat(a, "", 4, 6)
-		screen[y].char = _tconcat(a, "", 7, 9)
+		screen_s[y] = screen_s[y] or {}
+		screen_b[y] = screen_b[y] or {}
+		screen_t[y] = screen_t[y] or {}
+		for i = 1, cur do
+			screen_s[y][i] = screen_s[y][i] or " "
+			screen_t[y][i] = screen_t[y][i] or "0"
+			screen_b[y][i] = screen_b[y][i] or "f"
+		end
+		local a = 1
+		for i = cur + 1, cursor[1] + text_len - 1 do
+			screen_s[y][i] = sText:sub(a, a)
+			screen_t[y][i] = sTextColor
+			screen_b[y][i] = sBackgroundColor
+			a = a + 1
+		end
 		redraw_line(y, cursor[1], cur + text_len)
 		redraw_global_cache_line(true, data[state].y + y - 1, data[state].x + cur, data[state].x + cur + text_len)
 		cursor[1] = cursor[1] + text_len
@@ -762,17 +780,24 @@ function create(x,y,width,height,visible,bar)
 	end
 	if term.isColor and term.isColor() then
 		function window.blit(sText, sTextColor, sBackgroundColor)
+			if type(sText) ~= "string" then error("bad argument #1 (expected string, got " .. type(sText) .. ")", 2) end
+			if type(sTextColor) ~= "string" then error("bad argument #2 (expected string, got " .. type(sTextColor) .. ")", 2) end
+			if type(sBackgroundColor) ~= "string" then error("bad argument #3 (expected string, got " .. type(sBackgroundColor) .. ")", 2) end
 			_blit(sText, sTextColor, sBackgroundColor)
 		end
 	end
 	function window.clear()
-		screen={bar and screen[1] or nil}
+		screen_s={bar and screen_s[1] or nil}
+		screen_b={bar and screen_b[1] or nil}
+		screen_t={bar and screen_t[1] or nil}
 		redraw()
 		redraw_global_cache(false)
 		set_cursor()
 	end
 	function window.clearLine()
-		screen[cursor[2]+(bar and 1 or 0)]=nil
+		screen_s[cursor[2]+(bar and 1 or 0)]=nil
+		screen_b[cursor[2]+(bar and 1 or 0)]=nil
+		screen_t[cursor[2]+(bar and 1 or 0)]=nil
 		redraw_line()
 		redraw_global_cache_line(true,data[state].y+cursor[2]+(bar and 1 or 0)-1)
 		set_cursor()
@@ -828,14 +853,20 @@ function create(x,y,width,height,visible,bar)
 		if n~=0 then
 			if n>0 then
 				for _=1,n do
-					if screen[1+(bar and 1 or 0)] then
-						table.remove(screen,1+(bar and 1 or 0))
+					if screen_s[1+(bar and 1 or 0)] then
+						table.remove(screen_s,1+(bar and 1 or 0))
+						table.remove(screen_b,1+(bar and 1 or 0))
+						table.remove(screen_t,1+(bar and 1 or 0))
 					end
 				end
 			else
 				for _=n,-1 do
-					screen[data[state].height]=nil
-					table.insert(screen,1+(bar and 1 or 0),{back="",char="",text=""})
+					screen_s[data[state].height]=nil
+					screen_b[data[state].height]=nil
+					screen_t[data[state].height]=nil
+					table.insert(screen_s,1+(bar and 1 or 0),{})
+					table.insert(screen_b,1+(bar and 1 or 0),{})
+					table.insert(screen_t,1+(bar and 1 or 0),{})
 				end
 			end
 			redraw()
