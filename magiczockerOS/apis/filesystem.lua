@@ -1,4 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2020
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
@@ -65,7 +65,7 @@ local function getDrives()
 	return drives
 end
 local function addMissingFolders(path, normalPath,remote,is_remote,server_id)
-	local items = call_func(remote,is_remote,server_id,"list",path)
+	local items = call_func(remote,is_remote,server_id,"isDir",path) and call_func(remote,is_remote,server_id,"list",path) or {}
 	if term then
 		for i = 1, #items do
 			if items[i] == "rom" then
@@ -303,7 +303,8 @@ function create(root_path,is_remote,server_id)
 					file.close = function() send_event(tmp,"open") org_close() end
 				end
 			else
-				error(tmp)
+				-- error(tmp)
+				return false
 			end
 		else
 			return false
