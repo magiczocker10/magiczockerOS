@@ -309,8 +309,10 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 	local s, startx, endx, limit_set, continue, to_draw, cur_data, _line, _line_old
 	for screen=1,goto_limit do
 		s=monitor_order[screen]
-		startx=math.max(startxorg or s.startx,s.startx)
-		endx=math.min(endxorg or s.endx,s.endx)
+		startx = startxorg or s.startx
+		startx = startx < s.startx and s.startx or startx
+		endx = endxorg or s.endx
+		endx = endx > s.endx and s.endx or endx
 		limit_set = return_data or startxorg and endxorg
 		continue = endx>=startx and startx<=s.endx and s.startx<=endx
 		to_draw={-1,{},-1,-1} -- x, text, bcol, tcol
@@ -628,7 +630,7 @@ function create(x,y,width,height,visible,bar)
 				screen_s[line] = screen_s[line] or {}
 				screen_b[line] = screen_b[line] or {}
 				screen_t[line] = screen_t[line] or {}
-				local ltlength = table.maxn(screen_s[line])
+				local ltlength = #screen_s[line]
 				if ltlength < cur_data.width then set_size(line) end
 				local border_w, border_h = nil, nil
 				for i=pos_start or 1,pos_end or cur_data.width do
