@@ -4,12 +4,12 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local w, h = term.getSize()
 local field = 1
-local L1 = " Login "
+local L1 = "Login"
+local mode = 1
 local fields = { -- cursor, height, offset, watermark, text, symbol
 	{1, 2, 0, "Username..", "test"}, -- username
 	{1, 4, 0, "Password..", "", "*"}, -- password
 }
-set_pos(nil, nil, nil, 7)
 local key_maps = {}
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
@@ -62,18 +62,19 @@ local function draw()
 	back_color(32768, 128, 2048)
 	for y = 1, h do
 		term.setCursorPos(1, y)
-		if y == 2 or y == 4 then
+		if y == 2 or y == 4 or y == 6 and mode == 2 then
 			term.write" "
-			set_cursor(y == 2 and 1 or 2)
+			set_cursor(y == 2 and 1 or y == 6 and 3 or 2)
 			term.write" "
-		elseif y == 6 then
-			term.write((" "):rep(w - 8))
+		elseif y == (mode == 2 and 8 or 6) then
+			term.write((" "):rep(w - 3 - #L1))
 			back_color(1, 256, 256)
 			text_color(1, 1, 1)
 			if field < 1 then
-				term.write(term.isColor and term.isColor() and L1 or textutils and type(textutils.complete) == "function" and L1 or ">Login<")
+				local a = " " .. L1 .. " "
+				term.write(term.isColor and term.isColor() and a or textutils and type(textutils.complete) == "function" and a or ">" .. L1 .. "<")
 			else
-				term.write(L1)
+				term.write(" " .. L1 .. " ")
 			end
 			back_color(32768, 128, 2048)
 			term.write(" ")
@@ -88,6 +89,7 @@ local function reset()
 	a[1] = 1
 	a[3] = 0
 	a[5] = ""
+	field = 0
 	set_cursor(2)
 end
 local function login()
@@ -111,25 +113,48 @@ local function login()
 		reset()
 	end
 end
+local function register()
+	local un, pw = fields[1][5], fields[2][5]
+	if not un:find("\\") and pw == fields[2][5] and not fs.exists("/magiczockerOS/users/" .. un) then
+		fs.makeDir("/magiczockerOS/users/" .. un)
+		if #pw > 0 then
+			local file = fs.open("/magiczockerOS/users/" .. un .. "/password.txt", "w")
+			if file then
+				file.write(pw)
+				file.close()
+			end
+		end
+		fields[#fields] = nil
+		mode = 1
+		field = 0
+		L1 = "Login"
+		multishell.setTitle(multishell.getCurrent(), "Login")
+		set_pos(nil, nil, nil, 7)
+	end
+end
 local function events(a, b, c, d)
 	local e = fields[field]
 	if a == "char" and e then
-		if b:match("[a-zA-Z%d-_.]") then
+		if b:match("[a-zA-Z%d-_%.]") then
 			e[5] = e[5]:sub(1, e[1] - 1) .. b .. e[5]:sub(e[1])
 			e[1] = e[1] + 1
 			set_cursor(field)
 			set_blink()
 		end
 	elseif a == "key" then
-		local _key = key_maps[b] or ""
+		local _key = key_maps[b] or b
 		if _key == "backspace" and e and e[1] > 1 and field > 0 then
 			e[5] = e[5]:sub(1, e[1] - 2) .. e[5]:sub(e[1])
 			e[1] = e[1] - 1
 		elseif _key == "tab" then
-			field = field == 2 and 0 or field + 1
+			field = field == #fields and 0 or field + 1
 			draw()
 		elseif (_key == "space" or _key == "enter") and field == 0 then
-			login()
+			if mode == 2 then
+				register()
+			else
+				login()
+			end
 		elseif _key == "left" and e and e[1] > 1 and field > 0 then
 			e[1] = e[1] - 1
 		elseif _key == "right" and e and e[1] <= #e[5] and field > 0 then
@@ -137,17 +162,18 @@ local function events(a, b, c, d)
 		elseif _key == "delete" and e and field > 0 then
 			e[5] = e[5]:sub(1, e[1] - 1) .. e[5]:sub(e[1] + 1)
 		end
-		if _key ~= "tab" then
+		if _key ~= "tab" and field > 0 then
 			set_cursor(field)
 			set_blink()
 		end
 	elseif a == "mouse_click" then
-		if c > 1 and c < w and (d == 2 or d == 4) then
-			field = d == 2 and 1 or 2
+		if c > 1 and c < w and (d == 2 or d == 4 or mode == 2 and d == 6) then
+			field = d == 2 and 1 or d == 6 and 3 or 2
 			fields[field][1] = c - 1 + fields[field][3]
 			set_cursor(field)
-		elseif c > w - 8 and c < w and d == 6 then
-			login()
+		elseif c > w - 3 - #L1 and c < w and d == (mode == 2 and 8 or 6) then
+			field = 0
+			events("key", "space")
 		else
 			field = 0
 		end
@@ -173,6 +199,16 @@ do
 	key_maps[a and 261 or 211] = "delete"
 	key_maps[a and 262 or 205] = "right"
 	key_maps[a and 263 or 203] = "left"
+end
+if #fs.list("/magiczockerOS/users") == 0 then
+	L1 = "Register"
+	multishell.setTitle(multishell.getCurrent(), "Register")
+	mode = 2
+	fields[#fields + 1] = {1, 6, 0, "Repeat Password..", "", "*"}
+	set_pos(nil, nil, nil, 9)
+else
+	multishell.setTitle(multishell.getCurrent(), "Login")
+	set_pos(nil, nil, nil, 7)
 end
 draw()
 while true do
