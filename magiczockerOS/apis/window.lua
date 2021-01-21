@@ -356,7 +356,7 @@ end
 function redraw_global_cache(check_changes)
 	local rd={}
 	for i=1,h do
-		rd[#rd+1]=redraw_global_cache_line(check_changes,i,nil,nil,monitor_mode=="duplicate")
+		rd[#rd+1]=redraw_global_cache_line(check_changes,i,nil,nil,monitor_mode=="duplicate" and #monitor_order > 1)
 	end
 	local monitor_mode_, tmp = monitor_mode, nil
 	for i=2,monitor_mode_=="duplicate" and #monitor_order or 1 do
