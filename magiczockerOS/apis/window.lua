@@ -306,7 +306,7 @@ function redraw_global_cache_line(check_changes,line,startx,endx,return_data)
 	local endxorg=endx
 	local to_repeat={}
 	local goto_limit = return_data and 1 or #monitor_order
-	local s, startx, endx, limit_set, continue, to_draw, cur_data, _line, _line_old
+	local s, startx, endx, limit_set, continue, to_draw, cur_data, _line, _line_old, _slineold, _tlineold, _blineold, _sline, _tline, _bline
 	for screen=1,goto_limit do
 		s=monitor_order[screen]
 		startx = startxorg or s.startx
@@ -478,14 +478,19 @@ function create(x,y,width,height,visible,bar)
 	local screen_s = {}
 	local screen_b = {}
 	local screen_t = {}
-	
+	local last_header
 	local screen2={}
 	local settings={}
 	local window={}
 	local redraw_line
 	local my_blink=true
 	local my_buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
-
+	local colored = term.isColor and term.isColor()
+	local last_header_first
+	local last_header_width
+	local last_header_b
+	local last_header_s
+	local last_header_t
 	-- functions
 	local function set_size(y) -- ToDo
 		local b = data[state].width
@@ -554,9 +559,17 @@ function create(x,y,width,height,visible,bar)
 		end
 	end
 	local function create_header(foreground)
+		if foreground == last_header_first and last_header_width == data[state].width then
+			screen_b[1] = last_header_b
+			screen_s[1] = last_header_s
+			screen_t[1] = last_header_t
+			return nil
+		end
+		last_header_first = foreground
+		last_header_width = data[state].width
 		local b={"","","","","","","","",""}
 		local conf=settings
-		if term.isColor and term.isColor() then
+		if colored then
 			for i = 1, id > 0 and #my_buttons or 1 do
 				local a = my_buttons[i]
 				b[1] = b[1] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_back"] or a[2]] or hex[conf["window_" .. a[1] .. "_button_inactive_back"] or a[3]])
@@ -564,9 +577,9 @@ function create(x,y,width,height,visible,bar)
 				b[3] = b[3] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_text"] or a[4]] or hex[conf["window_" .. a[1] .. "_button_inactive_text"] or a[5]])
 			end
 		end
-		b[4]=(((term.isColor and term.isColor() and " ") or "=") .. title .. ((term.isColor and term.isColor() and " ") or "="):rep(data[state].width)):sub(1,(term.isColor and term.isColor() and data[state].width-(id>0 and #my_buttons or 0) - 1) or data[state].width)
+		b[4]=(((colored and " ") or "=") .. title .. ((colored and " ") or "="):rep(last_header_width)):sub(1,(colored and last_header_width-(id>0 and #my_buttons or 0) - 1) or last_header_width)
 		local __=foreground
-		if term.isColor and term.isColor() then
+		if colored then
 			if __ then
 				b[5]=hex[conf.window_bar_active_back or 128]
 				b[6]=hex[conf.window_bar_active_text or 1]
@@ -581,21 +594,23 @@ function create(x,y,width,height,visible,bar)
 			b[5]=__ and "0" or "f"
 			b[6]=__ and "f" or "0"
 		end
-		local a = term.isColor and term.isColor()
-		b[7]=a and hex[conf.window_resize_button_back or 128] or b[7]
-		b[8]=a and ((foreground and state=="normal" and id>0 and "o") or " ") or b[8]
-		b[9]=a and hex[conf.window_resize_button_text or 256] or b[9]
+		b[7]=colored and hex[conf.window_resize_button_back or 128] or b[7]
+		b[8]=colored and ((foreground and state=="normal" and id>0 and "o") or " ") or b[8]
+		b[9]=colored and hex[conf.window_resize_button_text or 256] or b[9]
 		header_tmp[1] = table.concat({b[1], b[5]:rep(#b[4]), b[7]})
 		header_tmp[2] = table.concat({b[2], b[4], b[8]})
 		header_tmp[3] = table.concat({b[3], b[6]:rep(#b[4]), b[9]})
 		screen_s[1] = {}
 		screen_t[1] = {}
 		screen_b[1] = {}
-		for i = 1, data[state].width do
+		for i = 1, last_header_width do
 			screen_b[1][i] = header_tmp[1]:sub(i, i)
 			screen_s[1][i] = header_tmp[2]:sub(i, i)
 			screen_t[1][i] = header_tmp[3]:sub(i, i)
 		end
+		last_header_b = screen_b[1]
+		last_header_s = screen_s[1]
+		last_header_t = screen_t[1]
 	end
 	function window.get_buttons()
 		return my_buttons
@@ -610,6 +625,7 @@ function create(x,y,width,height,visible,bar)
 	end
 	function window.set_buttons(a, b)
 		my_buttons = a
+		last_header_first = nil
 		create_header(b)
 		redraw_line(1)
 		redraw_global_cache_line(false,data[state].y)
@@ -695,7 +711,11 @@ function create(x,y,width,height,visible,bar)
 	end
 	function window.redraw(foreground,tScreen,nID)
 		screen2=tScreen or {}
+		local id_old = id
 		id=nID or 0
+		if id_old ~= id then
+			last_header_first = nil
+		end
 		if bar then
 			create_header(foreground)
 		end
@@ -717,6 +737,7 @@ function create(x,y,width,height,visible,bar)
 		if data[sState] then
 			state=sState
 			border=false
+			last_header_first = nil
 			create_header(true)
 			redraw()
 			redraw_global_cache(true)
@@ -727,6 +748,7 @@ function create(x,y,width,height,visible,bar)
 			my_blink = false
 		end
 		title=new_title
+		last_header_first = nil
 		create_header(foreground)
 		redraw_line(1)
 		redraw_global_cache_line(false,data[state].y)
@@ -738,6 +760,7 @@ function create(x,y,width,height,visible,bar)
 	function window.settings(new,foreground)
 		settings=new
 		if bar then
+			last_header_first = nil
 			create_header(foreground)
 			redraw_line(1)
 			redraw_global_cache_line(false,data[state].y+(bar and 1 or 0))
@@ -780,7 +803,7 @@ function create(x,y,width,height,visible,bar)
 		cursor[1] = cursor[1] + text_len
 		set_cursor()
 	end
-	if term.isColor and term.isColor() then
+	if colored then
 		function window.blit(sText, sTextColor, sBackgroundColor)
 			if type(sText) ~= "string" then error("bad argument #1 (expected string, got " .. type(sText) .. ")", 2) end
 			if type(sTextColor) ~= "string" then error("bad argument #2 (expected string, got " .. type(sTextColor) .. ")", 2) end
@@ -846,7 +869,7 @@ function create(x,y,width,height,visible,bar)
 	end
 	if term.isColor then
 		function window.isColor()
-			return term.isColor()
+			return colored
 		end
 		window.isColour=window.isColor
 	end
