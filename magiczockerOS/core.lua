@@ -293,7 +293,7 @@ local function load_api(name)
 			local ok, err = run_program(function() return api() end, function(err) return err end)
 			if not ok then
 				if err and err ~= "" then
-					error(err, 0)
+					error_org(err, 0)
 				end
 				return nil
 			end
@@ -306,13 +306,12 @@ local function load_api(name)
 			apis[name] = api_
 			add_to_log("Loaded " .. name .. "!")
 			return true
-		end
-		if err and err ~= "" then
-			error(err, 0)
+		elseif err and err ~= "" then
+			error_org(err, 0)
 		end
 		return nil
 	end
-	error("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
+	error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
 end
 local function gUD(id) -- get_user_data
 	return users[id] or {}
@@ -321,6 +320,7 @@ local function draw_windows()
 	if term and term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
+	local ud = gUD(cur_user)
 	screen = {}
 	local a = ggv()
 	sgv(false)
@@ -328,7 +328,7 @@ local function draw_windows()
 	for i = 1, #system_window_order do
 		temp_window = system_windows[system_window_order[i]].window
 		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
-		user_win = system_window_order[i] == "taskbar" and gUD(cur_user).windows or ""
+		user_win = system_window_order[i] == "taskbar" and ud.windows or ""
 		for j = 1, #user_win do
 			temp_window = user_win[j].window
 			if temp_window.get_visible() then
@@ -343,9 +343,8 @@ local function draw_windows()
 	end
 	sgv(a)
 	apis.window.redraw_global_cache(true)
-	local tmp = gUD(cur_user)
-	if tmp.windows and #tmp.windows > 0 and tmp.windows[1].window.get_visible() then
-		tmp.windows[1].window.restore_cursor()
+	if #(ud.windows or "") > 0 and ud.windows[1].window.get_visible() then
+		ud.windows[1].window.restore_cursor()
 	elseif term and term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
@@ -722,7 +721,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if type(n) == "number" and type(title) == "string" then
 						title = title:gsub("\t", "")
 						for j = 1, #user_data.windows do
-							if user_data.windows[j].id == n and not user_data.windows[j].is_system then
+							if user_data.windows[j].id == n and (user_data.name == "" or not user_data.windows[j].is_system) then
 								user_data.windows[j].label.name = title
 								user_data.windows[j].window.set_title(title, j == 1)
 								_queue(system_windows.taskbar.id .. "", "", "window_change")
@@ -1923,14 +1922,14 @@ function events(...)
 		for i = 1, #system_window_order do
 			temp_window = system_windows[system_window_order[i]]
 			if temp_window.window.get_visible() then
-				local _status = coroutine.status(temp_window.coroutine)
 				local continue = system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible() or
 				system_window_order[i] == "desktop" and not user_data.windows[1] or
 				system_window_order[i] ~= "desktop"
-				if continue and (_status == "normal" or _status == "suspended") then
+				if continue then
 					resume_system("1" .. system_window_order[i], temp_window.coroutine, _unpack(e))
-				elseif continue and events_to_break[e[1]] and system_window_order[i] ~= "desktop" and system_window_order[i] ~= "taskbar" then
-					break
+					if events_to_break[e[1]] and system_window_order[i] ~= "desktop" and system_window_order[i] ~= "taskbar" then
+						break
+					end
 				end
 			end
 			if system_window_order[i] == "taskbar" and #user_data.windows > 0 then
