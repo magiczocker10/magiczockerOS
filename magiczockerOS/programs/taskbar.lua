@@ -267,6 +267,7 @@ function events(a, b, c)
 					local v = u_data_old.windows[i]
 					if v.is_system and (procs["search"] == v or procs["startmenu"] == v or procs["calendar"] == v) then
 						v.window.set_visible(false)
+						v.window.drawable(true)
 						u_data.windows[#u_data.windows + 1] = v
 						table.remove(u_data_old.windows, i)
 						v.env.set_user(b)

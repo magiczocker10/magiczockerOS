@@ -702,8 +702,6 @@ function create(x, y, width, height, visible, bar)
 	-- term functions
 	local function _blit(sText, sTextColor, sBackgroundColor)
 		local text_len = #sText
-		sTextColor = sTextColor:sub(1, 1)
-		sBackgroundColor = sBackgroundColor:sub(1, 1)
 		if cursor[2] < 1 then return end
 		local cur = cursor[1] - 1
 		local y = cursor[2] + (bar and 1 or 0)
@@ -718,8 +716,8 @@ function create(x, y, width, height, visible, bar)
 		local a = 1
 		for i = cur + 1, cursor[1] + text_len - 1 do
 			screen_s[y][i] = sText:sub(a, a)
-			screen_t[y][i] = sTextColor
-			screen_b[y][i] = sBackgroundColor
+			screen_t[y][i] = sTextColor:sub(a, a)
+			screen_b[y][i] = sBackgroundColor:sub(a, a)
 			a = a + 1
 		end
 		redraw_line(y, cursor[1], cur + text_len)
@@ -878,7 +876,8 @@ function create(x, y, width, height, visible, bar)
 		local text_type = type(sText)
 		if text_type ~= "string" and text_type ~= "number" then error("bad argument #1 (expected string or number, got " .. text_type .. ")", 2) end
 		sText = sText .. ""
-		_blit(sText, hex[text_color], hex[back_color])
+		local text_len = #sText
+		_blit(sText, hex[text_color]:rep(text_len), hex[back_color]:rep(text_len))
 	end
 	return window
 end
