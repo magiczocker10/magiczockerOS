@@ -3,7 +3,7 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local monitor_order = term and {{name = "computer", offset = 0}} or {}
-local term = term or {isColor = function() return true end, setBackgroundColor = function() end, setTextColor = function() end}
+local term = term or {isColor = function() return true end}
 local w, h = term.getSize and term.getSize() or 51, 19
 local total_size = {0, 0}
 local monitor_mode = "normal"
@@ -26,7 +26,6 @@ local global_visible = true
 local com_term = term
 local peri_call = nil
 local peri_type = nil
-local peri_names = nil
 local _tconcat = table.concat
 local header_tmp = {"", "", ""}
 -- both variables for get_nearest_scale
@@ -102,9 +101,10 @@ end
 function set_peripheral(object)
 	peri_call = object and object.call or nil
 	peri_type = object and object.getType or nil
-	peri_names = object and object.getNames or nil
 	if not peri_call then
 		error("Method \"call\" is missing.")
+	elseif not peri_type then
+		error("Method \"type\" is missing.")
 	end
 end
 function set_global_visible(status)
@@ -128,9 +128,9 @@ local function get_nearest_scale(mode, device, length)
 	local _mode = mode == "width" and 1 or 2
 	peri_call(device, "setTextScale", 0.5)
 	_size[1], _size[2] = peri_call(device, "getSize")
-	local a = pixel_size[_mode] / (_size[_mode] or 1)
+	local a = pixel_size[_mode] / (_size[_mode] or 1) * 2
 	for i = 5, 0.5, -.5 do
-		if length <= pixel_size[_mode] / (a * (i + i)) then
+		if length <= pixel_size[_mode] / (a * i) then
 			return i
 		end
 	end
@@ -194,28 +194,24 @@ function set_devices(mode, ...)
 	monitor_mode = validate_modes[mode] and mode or "normal"
 	local list = monitor_mode == "normal" and _computer_only or {...}
 	local to_clear = {}
-		for i = 1, type(monitor_order) == "table" and #monitor_order or 0 do
-			to_clear[monitor_order[i].name] = true
-		end
+	for i = 1, type(monitor_order) == "table" and #monitor_order or 0 do
+		to_clear[monitor_order[i].name] = true
+	end
 	monitor_order = {}
 	local processed = {}
 	local pd = process_data
 	pd.last_backcolor = pd.last_backcolor or {}
 	pd.last_textcolor = pd.last_textcolor or {}
 	for i = 1, #list do
-		if not processed[list[i]] then
-			processed[list[i]] = true
-			if peri_names and peri_type and peri_type(list[i]) == "monitor" then
-				pd.last_backcolor[list[i]] = -1
-				pd.last_textcolor[list[i]] = -1
-				if peri_type and peri_type(list[i]) == "monitor" then
-					peri_call(list[i], "setBackgroundColor", 32768)
-					peri_call(list[i], "clear")
-				end
-				to_clear[list[i]] = nil
-				monitor_order[#monitor_order + 1] = {name = list[i]}
-			end
+		if not processed[list[i]] and peri_type(list[i]) == "monitor" then
+			pd.last_backcolor[list[i]] = -1
+			pd.last_textcolor[list[i]] = -1
+			peri_call(list[i], "setBackgroundColor", 32768)
+			peri_call(list[i], "clear")
+			to_clear[list[i]] = nil
+			monitor_order[#monitor_order + 1] = {name = list[i]}
 		end
+		processed[list[i]] = true
 	end
 	for k in next, to_clear do
 		if peri_call then
@@ -356,9 +352,9 @@ function get_global_cache(b, c) -- Returns the screen / the specified window in 
 	return _tconcat(d, "\n")
 end
 local native_conv = {} -- for term.nativePaletteColor
-	for i = 0, 15 do
-		native_conv[2 ^ i] = i + 1
-	end
+for i = 0, 15 do
+	native_conv[2 ^ i] = i + 1
+end
 local cp = {
 	nil,
 	{.618, .320, .062, .163, .775, .062, .163, .320, .516}, -- achromatomaly *
@@ -393,7 +389,7 @@ function reload_color_palette(settings)
 				temp_color[1] = c and 255 - temp_color[1] or temp_color[1]
 				temp_color[2] = c and 255 - temp_color[2] or temp_color[2]
 				temp_color[3] = c and 255 - temp_color[3] or temp_color[3]
-				for j = 1, monitor_mode == "normal" and 1 or #monitor_order do
+				for j = 1, monitor_mode == "extend" and #monitor_order or 1 do
 					set_term(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
 				end
 			end
@@ -443,12 +439,6 @@ function create(x, y, width, height, visible, bar)
 	local last_header_s
 	local last_header_t
 	-- functions
-	local function set_size(y) -- ToDo
-		local b = data[state].width
-		screen_s[y] = screen_s[y] or {}
-		screen_t[y] = screen_t[y] or {}
-		screen_b[y] = screen_b[y] or {}
-	end
 	local function set_cursor()
 		if not global_visible then return nil end
 		local success = false
@@ -530,7 +520,7 @@ function create(x, y, width, height, visible, bar)
 				b[5] = hex[conf.window_bar_inactive_back or 128]
 				b[6] = hex[conf.window_bar_inactive_text or 1]
 			end
-		elseif textutils and type(textutils.complete) == "function" then
+		elseif textutils and textutils.complete then
 			b[5] = "7"
 			b[6] = __ and "0" or "8"
 		else
@@ -589,7 +579,6 @@ function create(x, y, width, height, visible, bar)
 				screen_b[line] = screen_b[line] or {}
 				screen_t[line] = screen_t[line] or {}
 				local ltlength = #screen_s[line]
-				if ltlength < cur_data.width then set_size(line) end
 				local border_w, border_h = nil, nil
 				for i = pos_start or 1, pos_end or cur_data.width do
 					local _pos = cur_data.x + i - 1
@@ -604,14 +593,11 @@ function create(x, y, width, height, visible, bar)
 							global_cache.t[_ypos][_pos] = settings.window_resize_border_text or 1
 							global_cache.b[_ypos][_pos] = settings.window_resize_border_back or 128
 							global_cache.s[_ypos][_pos] = line == border_h and "|" or i == border_w and "-" or " "
-						elseif i <= ltlength then
-							global_cache.t[_ypos][_pos] = get_color[screen_t[line][i]] or text_color
-							global_cache.b[_ypos][_pos] = get_color[screen_b[line][i]] or back_color
-							global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
 						else
-							global_cache.t[_ypos][_pos] = text_color
-							global_cache.b[_ypos][_pos] = back_color
-							global_cache.s[_ypos][_pos] = " "
+							local a = screen_s[line][i]
+							global_cache.t[_ypos][_pos] = a and get_color[screen_t[line][i]] or text_color
+							global_cache.b[_ypos][_pos] = a and get_color[screen_b[line][i]] or back_color
+							global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
 						end
 					end
 				end
@@ -619,10 +605,8 @@ function create(x, y, width, height, visible, bar)
 		end
 	end
 	local function redraw()
-		if visible then
-			for i = 1, data[state].height do
-				redraw_line(i)
-			end
+		for i = 1, visible and data[state].height or 0 do
+			redraw_line(i)
 		end
 	end
 	function window.has_header()
@@ -718,9 +702,6 @@ function create(x, y, width, height, visible, bar)
 	-- term functions
 	local function _blit(sText, sTextColor, sBackgroundColor)
 		local text_len = #sText
-		if #sTextColor ~= text_len or #sBackgroundColor ~= text_len then
-			error("Arguments must be the same length", 2)
-		end
 		sTextColor = sTextColor:sub(1, 1)
 		sBackgroundColor = sBackgroundColor:sub(1, 1)
 		if cursor[2] < 1 then return end
@@ -751,6 +732,10 @@ function create(x, y, width, height, visible, bar)
 			expect(1, sText, "string")
 			expect(2, sTextColor, "string")
 			expect(3, sBackgroundColor, "string")
+			local text_len = #sText
+			if #sTextColor ~= text_len or #sBackgroundColor ~= text_len then
+				error("Arguments must be the same length", 2)
+			end
 			_blit(sText, sTextColor, sBackgroundColor)
 		end
 	end
@@ -891,10 +876,9 @@ function create(x, y, width, height, visible, bar)
 	end
 	function window.write(sText)
 		local text_type = type(sText)
-		if text_type ~= "string" and text_type ~= "number" then error("bad argument #1 (expected string, got " .. text_type .. ")", 2) end
+		if text_type ~= "string" and text_type ~= "number" then error("bad argument #1 (expected string or number, got " .. text_type .. ")", 2) end
 		sText = sText .. ""
-		local text_len = #sText
-		_blit(sText, hex[text_color]:rep(text_len), hex[back_color]:rep(text_len))
+		_blit(sText, hex[text_color], hex[back_color])
 	end
 	return window
 end
