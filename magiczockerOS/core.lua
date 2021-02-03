@@ -122,6 +122,7 @@ local function fallback_serialise(data, processed)
 			to_return = to_return .. (#to_return == 0 and "" or ",") .. "[" .. _k .. "]=" .. tostring(serialised)
 		end
 	end
+	processed[data] = nil
 	return "{" .. to_return .. "}"
 end
 local last_qe = 0

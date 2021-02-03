@@ -675,10 +675,12 @@ function create(x, y, width, height, visible, bar)
 			my_blink = false
 		end
 		title = new_title
-		last_header_first = nil
-		create_header(foreground)
-		redraw_line(1)
-		redraw_global_cache_line(false, data[state].y)
+		if bar then
+			last_header_first = nil
+			create_header(foreground)
+			redraw_line(1)
+			redraw_global_cache_line(false, data[state].y)
+		end
 		set_cursor()
 	end
 	function window.set_visible(bVisible)

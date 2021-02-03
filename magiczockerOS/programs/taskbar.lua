@@ -249,7 +249,10 @@ local function toggle(a)
 	local b = not procs[a] or procs[a].is_dead
 	set_vis(a == "startmenu" and "sm" or a == "calendar" and "ca" or "se")
 	if not b then
+		local c = user_data()
+		local d = c.desktop
 		switch_visible(procs[a].id, not procs[a].window.get_visible())
+		c.desktop = d
 	end
 end
 -- start
