@@ -96,7 +96,7 @@ function get_devices(system,whitelist,...) -- whitelist: true/false
 		end
 	end
 	if p then
-		to_return[1] = term and "computer" or nil
+		to_return[1] = system and term and "computer" or nil
 		local list = p.getNames()
 		for i = 1, #list do
 			local tmp = p.getType(list[i]) or ""
@@ -178,7 +178,7 @@ function create(is_system)
 	peri.call = function(side, _type, arg1, ...)
 		local tmp = get_type(side) or ""
 		if is_system or tmp ~= "monitor" then
-			if side == "computer" then
+			if is_system and side == "computer" then
 				if term[_type] then
 					return term[_type](arg1, ...)
 				end
