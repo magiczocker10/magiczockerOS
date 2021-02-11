@@ -7,7 +7,7 @@ and on some [OpenComputers](https://github.com/MightyPirates/OpenComputers) vers
 Also the OS can highly be customizable through the build-in settings.
 
 **How to install:**
-1. Download and extract the ZIP-File from the [releases-section](https://github.com/magiczocker10/magiczockerOS/releases) of this repository.
+1. Download and extract the ZIP-File from the [releases-section](https://github.com/magiczocker10/magiczockerOS/releases) of this repository to the root-directoy of your computer `computer/<id>/`.
 2. Create "/magiczockerOS/CC" and "/magiczockerOS/CCTweaked"
 3. Download [io.lua](https://raw.githubusercontent.com/dan200/ComputerCraft/master/src/main/resources/assets/computercraft/lua/rom/apis/io.lua) to "/magiczockerOS/CC/io.lua"
 * This step is only required, if there is no "/rom/apis/io.lua" existing.
