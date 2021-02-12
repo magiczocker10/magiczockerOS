@@ -953,6 +953,12 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end
 		end
+		env.os.unloadAPI = function(name)
+			name = name or ""
+			if type(env[name]) == "table" and name ~= "_G" and name ~= "_ENV" then
+				env[name] = nil
+			end
+		end
 		env.os.loadAPI = function(path)
 			path = apis.filesystem.get_path(path)
 			local name = path
@@ -1019,12 +1025,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 						setfenv(env.io[k], env)
 					end
 				end
-			end
-		end
-		if type(os.unloadAPI) == "function" then
-			env.os.unloadAPI = (env.loadstring or env.load)(string.dump(os.unloadAPI), nil, nil, env)
-			if setfenv then
-				setfenv(env.os.unloadAPI, env)
 			end
 		end
 		-- load apis to env
