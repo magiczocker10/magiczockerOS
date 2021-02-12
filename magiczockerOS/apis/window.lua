@@ -513,13 +513,8 @@ function create(x, y, width, height, visible, bar)
 		b[4] = ((colored and " " or "=") .. title .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (id > 0 and #my_buttons or 0) - 1 or last_header_width)
 		local __ = foreground
 		if colored then
-			if __ then
-				b[5] = hex[conf.window_bar_active_back or 128]
-				b[6] = hex[conf.window_bar_active_text or 1]
-			else
-				b[5] = hex[conf.window_bar_inactive_back or 128]
-				b[6] = hex[conf.window_bar_inactive_text or 1]
-			end
+			b[5] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_back"] or 128]
+			b[6] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_text"] or 1]
 		elseif textutils and textutils.complete then
 			b[5] = "7"
 			b[6] = __ and "0" or "8"
@@ -565,40 +560,33 @@ function create(x, y, width, height, visible, bar)
 		set_cursor()
 	end
 	function redraw_line(line, pos_start, pos_end)
-		if visible and can_draw then
-			local cur_data = data[state]
+		line = line or cursor[2] + (bar and 1 or 0)
+		local cur_data = data[state]
+		if visible and can_draw and line > 0 and line <= cur_data.height then
 			pos_start = pos_start and pos_end and (pos_start < 1 and 1 or pos_start) or nil
 			pos_end = pos_start and pos_end and (pos_end > cur_data.width and cur_data.width or pos_end) or nil
-			line = line or cursor[2] + (bar and 1 or 0)
 			local ceiled_w, ceiled_h = border and math.ceil(cur_data.width * 0.5), border and math.ceil(cur_data.height * 0.5)
-			if line > 0 and line <= cur_data.height then
-				local _ypos = cur_data.y + line - 1
-				screen2[_ypos] = screen2[_ypos] or {}
-				local b = screen2[_ypos]
-				screen_s[line] = screen_s[line] or {}
-				screen_b[line] = screen_b[line] or {}
-				screen_t[line] = screen_t[line] or {}
-				local ltlength = #screen_s[line]
-				local border_w, border_h = nil, nil
-				for i = pos_start or 1, pos_end or cur_data.width do
-					local _pos = cur_data.x + i - 1
-					b[_pos] = b[_pos] or id
-					if b[_pos] == id then
-						global_cache.t[_ypos] = global_cache.t[_ypos] or {}
-						global_cache.b[_ypos] = global_cache.b[_ypos] or {}
-						global_cache.s[_ypos] = global_cache.s[_ypos] or {}
-						if border and (line == cur_data.height or (i == 1 or i == cur_data.width) and line > 1) then
-							local a = not border_w or not border_h
-							border_w, border_h = a and ceiled_w or border_w, a and ceiled_h or border_h
-							global_cache.t[_ypos][_pos] = settings.window_resize_border_text or 1
-							global_cache.b[_ypos][_pos] = settings.window_resize_border_back or 128
-							global_cache.s[_ypos][_pos] = line == border_h and "|" or i == border_w and "-" or " "
-						else
-							local a = screen_s[line][i]
-							global_cache.t[_ypos][_pos] = a and get_color[screen_t[line][i]] or text_color
-							global_cache.b[_ypos][_pos] = a and get_color[screen_b[line][i]] or back_color
-							global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
-						end
+			local _ypos = cur_data.y + line - 1
+			screen2[_ypos] = screen2[_ypos] or {}
+			local b = screen2[_ypos]
+			screen_s[line] = screen_s[line] or {}
+			screen_b[line] = screen_b[line] or {}
+			screen_t[line] = screen_t[line] or {}
+			for i = pos_start or 1, pos_end or cur_data.width do
+				local _pos = cur_data.x + i - 1
+				b[_pos] = b[_pos] or id
+				if b[_pos] == id then
+					global_cache.t[_ypos] = global_cache.t[_ypos] or {}
+					global_cache.b[_ypos] = global_cache.b[_ypos] or {}
+					global_cache.s[_ypos] = global_cache.s[_ypos] or {}
+					if border and (line == cur_data.height or (i == 1 or i == cur_data.width) and line > 1) then
+						global_cache.t[_ypos][_pos] = settings.window_resize_border_text or 1
+						global_cache.b[_ypos][_pos] = settings.window_resize_border_back or 128
+						global_cache.s[_ypos][_pos] = line == ceiled_h and "|" or i == ceiled_w and "-" or " "
+					else
+						global_cache.t[_ypos][_pos] = get_color[screen_t[line][i] or ""] or text_color
+						global_cache.b[_ypos][_pos] = get_color[screen_b[line][i] or ""] or back_color
+						global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
 					end
 				end
 			end
