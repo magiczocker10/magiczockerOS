@@ -64,6 +64,7 @@ end
 local function draw()
 	local _width, _f, _c = (" "):rep(w), math.floor(borderh), math.ceil(borderh)
 	term.setBackgroundColor(8)
+	offset = -iconsw
 	for y = 1, h do
 		term.setCursorPos(1, y)
 		if y < _f or y > h - _c then
