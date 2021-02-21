@@ -100,14 +100,14 @@ function get_devices(system,whitelist,...) -- whitelist: true/false
 		local list = p.getNames()
 		for i = 1, #list do
 			local tmp = p.getType(list[i]) or ""
-			if (system or tmp ~= "monitor") and whitelist == (to_filter[tmp] or false) then
+			if system or whitelist == (to_filter[tmp] or false) then
 				to_return[#to_return + 1] = list[i]
 			end
 		end
 	elseif component then
 		for k,v in next, component.list() do
 			local tmp = translate[v] or v
-			if (system or tmp ~= "monitor") and whitelist == (to_filter[tmp] or false) then
+			if system or whitelist == (to_filter[tmp] or false) then
 				to_return[#to_return + 1] = k
 			end
 		end
@@ -131,7 +131,10 @@ function create(is_system)
 	end
 	local peri = {}
 	peri.find = function(stype, func)
-		local list=get_devices(is_system,true,stype)
+		if type(stype) ~= "string" then
+			error("Wrong type at parameter #1!")
+		end
+		local list=get_devices(is_system,true,"monitor", stype)
 		local to_return={}
 		if func then
 			for i=1,#list do
@@ -144,7 +147,7 @@ function create(is_system)
 		return unpack(to_return)
 	end
 	peri.getNames=function()
-		return get_devices(true,false,not is_system and "monitor" or nil)
+		return get_devices(is_system,false,"monitor")
 	end
 	peri.isPresent=function(side)
 		local tmp=get_type(side)
