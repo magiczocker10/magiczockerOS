@@ -3,8 +3,9 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local monitor_order = term and {{name = "computer", offset = 0}} or {}
-local term = term or {isColor = function() return true end}
-local w, h = term.getSize and term.getSize() or 51, 19
+local term_org = term
+local term = term_org
+local w, h = term and term.getSize and term.getSize() or 51, 19
 local total_size = {0, 0}
 local monitor_mode = "normal"
 local peri = apis.peripheral.create(true)
@@ -101,6 +102,11 @@ end
 function set_peripheral(object)
 	peri_call = object and object.call or nil
 	peri_type = object and object.getType or nil
+	if not term_org then
+		term = peri.wrap(peri.find("monitor"))
+		w, h = term.getSize and term.getSize() or 51, 19
+		colored = com_term and com_term.isColor and com_term.isColor()
+	end
 	if not peri_call then
 		error("Method \"call\" is missing.")
 	elseif not peri_type then

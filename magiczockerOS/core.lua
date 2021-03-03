@@ -93,6 +93,7 @@ local term = term or nil
 local textutils = textutils or {}
 local peripheral = peripheral or nil
 local math = math or nil
+local uptime = os.clock or os.time or function() return 0 end
 if term then
 	w, h = term.getSize()
 end
@@ -271,9 +272,18 @@ local function add_to_log(a)
 	if not fs or not boot_logger_enabled then
 		return nil
 	end
-	local file = fs.open("/magiczockerOS/log.txt", "a")
+	local org_content = ""
+	local file = fs.open("/magiczockerOS/log.txt", "r")
 	if file then
-		file.write((os.time and os.time() or "unknown") .. " - " .. a .. "\n")
+		org_content = file.readAll()
+		file.close()
+	end
+	file = fs.open("/magiczockerOS/log.txt", "w")
+	if file then
+		if #org_content > 0 then
+			file.write(org_content)
+		end
+		file.write((uptime() or "unknown") .. " - " .. a .. "\n")
 		file.close()
 	end
 end
@@ -1097,6 +1107,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 		env.term.clear()
 		env.term.setCursorPos(1, 1)
+		error(message)
 		env.print(message)
 		env.print("Press any key to continue")
 		local _running = true
@@ -1438,6 +1449,7 @@ end
 function events(...)
 	local e = {...}
 	local timer
+	local device = e[2]
 	if e[1] == "timer_health" then
 		timer = get_timer()
 		if timer then
@@ -1450,38 +1462,26 @@ function events(...)
 		e[1] = "key"
 		e[2] = e[4]
 	elseif e[1] == "touch" then
-		if monitor_devices[e[2]] then
-			e[1] = "monitor_touch"
-		else
-			e[1] = "mouse_click"
-			e[2] = e[5] + 1
-		end
+		e[1] = "mouse_click"
+		e[2] = e[5] + 1
 	elseif e[1] == "drag" then
-		if monitor_devices[e[2]] then
-			e[1] = "monitor_touch"
-		else
-			e[1] = "mouse_drag"
-			e[2] = e[5] + 1
-		end
+		e[1] = "mouse_drag"
+		e[2] = e[5] + 1
 	elseif e[1] == "scroll" then
-		if monitor_devices[e[2]] then
-			e[1] = "monitor_scroll"
-		else
-			e[1] = "mouse_scroll"
-			e[2] = e[5] * -1
-		end
+		e[1] = "mouse_scroll"
+		e[2] = e[5] * -1
 	elseif e[1] == "screen_resized" then
 		--e[1] = "monitor_resize"
 	end
 	local user_data = gUD(cur_user)
-	if monitor_devices.computer and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
+	if (monitor_devices.computer or computer) and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
 		e[2] = e[2] == 1 and 2 or e[2] == 2 and 1 or e[2]
 	end
-	if monitor_devices.computer and (e[1] == "mouse_click" or e[1] == "mouse_drag") and (system_settings.monitor_mode or "normal") == "extend" then
-		e[3] = e[3] + monitor_order[monitor_devices.computer].offset
+	if computer and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_scroll") then
+		e[3] = e[3] + monitor_order[monitor_devices[device]].offset
 	end
 	if supported_mouse_events[e[1]] then
-		if not monitor_devices.computer and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
+		if not (monitor_devices.computer or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
 			e[1] = nil
 		else
 			total_size[1], total_size[2] = apis.window.get_size()
@@ -1491,7 +1491,7 @@ function events(...)
 		local tmp = qe[e[2]]
 		qe[e[2]] = nil
 		events(_unpack(queued_events[tmp]))
-	elseif (e[1] == "mouse_drag" and monitor_devices.computer or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
+	elseif (e[1] == "mouse_drag" and (monitor_devices.computer or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
@@ -1589,13 +1589,14 @@ function events(...)
 	elseif e[1] == "monitor_touch" or e[1] == "monitor_scroll" then
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
 			local is_scroll = e[1] == "monitor_scroll"
+			local a = uptime()
 			_queue(
-					is_scroll and "mouse_scroll" or os.clock() - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor",
+					is_scroll and "mouse_scroll" or a - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor",
 					is_scroll and e[5] * -1 or user_data.settings and user_data.settings.mouse_left_handed and 2 or 1,
 					e[3] + monitor_order[monitor_devices[e[2]]].offset,
 					e[4]
 				)
-			monitor_last_clicked = is_scroll and monitor_last_clicked or os.clock()
+			monitor_last_clicked = is_scroll and monitor_last_clicked or a
 		end
 	elseif e[1] == "double_click" then
 		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
@@ -1737,12 +1738,12 @@ function events(...)
 				resume_system("14taskbar", system_windows.taskbar.coroutine, "window_change")
 			end
 			if e[1] == "mouse_click" and e[4] == win_y and cur_window.window.has_header() then
-				if os.clock and last_click.x == e[3] and last_click.y == e[4] and os.clock() - last_click.time < (user_data.settings.mouse_double_click_speed or 0.2) then
+				if last_click.x == e[3] and last_click.y == e[4] and uptime() - last_click.time < (user_data.settings.mouse_double_click_speed or 0.2) then
 					_queue("double_click", e[2], e[3], e[4])
 				end
 				last_click.x = e[3]
 				last_click.y = e[4]
-				last_click.time = os.clock and os.clock() or 0
+				last_click.time = uptime()
 				if id > 0 and e[3] == win_x + win_w - 1 and temp_window.get_state() == "normal" then -- resize
 					resize_mode = not resize_mode
 					temp_window.toggle_border(resize_mode)
@@ -1885,7 +1886,6 @@ function events(...)
 			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e, 3))
 		end
 	elseif e[1] == "term_resize" then
-		local wold, hold = w, h
 		if term_org and term_org.getSize then
 			w, h = term_org.getSize()
 		else
