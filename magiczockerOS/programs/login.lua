@@ -26,10 +26,10 @@ local function draw_field(blink, data)
 	local a = data[5] or ""
 	if #a == 0 then
 		a = data[4] or ""
-		text_color(32738, data[4] and 256 or 32768, data[4] and 256 or 32768)
+		text_color(32768, data[4] and 256 or 32768, data[4] and 256 or 32768)
 	else
 		a = data[6] and (data[6]):rep(#a) or a
-		text_color(32738, 32768, 32768)
+		text_color(32768, 32768, 32768)
 	end
 	term.write((a .. ((not term.isColor or not term.isColor()) and "_" or " "):rep(w)):sub(1 + data[3], w - 2 + data[3]))
 	back_color(32768, 128, 2048)

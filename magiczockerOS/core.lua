@@ -1464,6 +1464,9 @@ function events(...)
 	elseif e[1] == "touch" then
 		e[1] = "mouse_click"
 		e[2] = e[5] + 1
+	elseif e[1] == "drop" then
+		e[1] = "mouse_up"
+		e[2] = e[5] + 1
 	elseif e[1] == "drag" then
 		e[1] = "mouse_drag"
 		e[2] = e[5] + 1
