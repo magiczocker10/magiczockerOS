@@ -4,7 +4,7 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local monitor_order = term and {{name = "computer", offset = 0}} or {}
 local term_org = term
-local term = term_org
+local term = term or peri.wrap(peri.find("monitor"))
 local w, h = term and term.getSize and term.getSize() or 51, 19
 local total_size = {0, 0}
 local monitor_mode = "normal"
@@ -24,7 +24,6 @@ local process_data = {
 local global_cache
 local global_cache_old
 local global_visible = true
-local com_term = term
 local peri_call = nil
 local peri_type = nil
 local _tconcat = table.concat
@@ -40,7 +39,7 @@ for i = 1, 16 do
 	hex[tmp] = ("0123456789abcdef"):sub(i, i)
 	get_color[hex[tmp]] = tmp
 end
-local colored = com_term and com_term.isColor and com_term.isColor()
+local colored = term and term.isColor and term.isColor()
 local last_palette = {mode = 1, inverted = false, original = false}
 local color_palette = {
 	new = {
@@ -105,7 +104,7 @@ function set_peripheral(object)
 	if not term_org then
 		term = peri.wrap(peri.find("monitor"))
 		w, h = term.getSize and term.getSize() or 51, 19
-		colored = com_term and com_term.isColor and com_term.isColor()
+		colored = term and term.isColor and term.isColor()
 	end
 	if not peri_call then
 		error("Method \"call\" is missing.")
