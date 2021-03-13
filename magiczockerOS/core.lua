@@ -53,7 +53,7 @@ local coro_yield = coroutine.yield
 local coro_status = coroutine.status
 local last_window
 local monitor_resized
-local w, h = 51, 19
+local w, h = 0, 0
 local change_user = {active = false}
 local key_timer
 local last_number = 0
@@ -81,22 +81,18 @@ local key_maps = {}
 local last_click = {x = 0, y = 0, time = 0}
 local screen = {}
 local system_windows = {
-	contextmenu = {x = 1, y = 1, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true},
-	desktop = {need_resize = true, fs = true, x = 1, y = 2, w = w, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
-	taskbar = {need_resize = true, x = 1, y = 1, w = w, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
+	contextmenu = {w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true},
+	desktop = {need_resize = true, fs = true, y = 2, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
+	taskbar = {need_resize = true, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
 	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false},
 }
 local system_window_order = {"osk", "contextmenu", "taskbar", "desktop"} -- osk needs to be the first entry
 local fs = fs or nil
-local term_org = term
-local term = term or nil
+local term
 local textutils = textutils or {}
 local peripheral = peripheral or nil
 local math = math or nil
 local uptime = os.clock or os.time or function() return 0 end
-if term then
-	w, h = term.getSize()
-end
 -- functions
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
@@ -328,7 +324,7 @@ local function gUD(id) -- get_user_data
 	return users[id] or {}
 end
 local function draw_windows()
-	if term and term.setCursorBlink then
+	if term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
 	local ud = gUD(cur_user)
@@ -356,7 +352,7 @@ local function draw_windows()
 	apis.window.redraw_global_cache(true)
 	if #(ud.windows or "") > 0 and ud.windows[1].window.get_visible() then
 		ud.windows[1].window.restore_cursor()
-	elseif term and term.setCursorBlink then
+	elseif term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
 end
@@ -1172,7 +1168,7 @@ local function create_system_windows(i)
 	system_windows[temp].contextmenu_data = nil
 	system_windows[temp].id = i * -1
 	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
-	system_windows[temp].window = apis.window.create(system_windows[temp].x, system_windows[temp].y, system_windows[temp].w, system_windows[temp].h, system_windows[temp].visible, temp == "osk")
+	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk")
 	if temp == "osk" then
 		system_windows[temp].window.set_title("On-Screen Keyboard", true)
 	end
@@ -1225,7 +1221,6 @@ local function create_system_windows(i)
 				return var
 			end,
 		},
-		keys = keys,
 		table = {
 			insert = table.insert, -- taskbar
 			remove = table.remove, -- taskbar
@@ -1390,32 +1385,19 @@ load_api("window")
 ggv = apis.window.get_global_visible
 sgv = apis.window.set_global_visible
 apis.window.set_peripheral(apis.peripheral.create(true))
-if not term then
-	-- term = {isColor = function() return true end}
-	term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "monitor")[1])
-end
+term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "computer")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
+w, h = term.getSize()
 setup_monitors(_unpack(system_settings.devices or {}))
 sgv(false)
 load_bios()
 do
-	local contextm = 0
 	for i = #system_window_order, 1, -1 do
 		if not fs.exists(system_windows[system_window_order[i]].path) then
 			table.remove(system_window_order, i)
 		end
 	end
-	for i = 1, #system_window_order do
-		if system_window_order[i] == "contextmenu" then
-			contextm = i
-		end
-	end
-	if contextm > 0 then
-		create_system_windows(contextm)
-	end
 	for i = #system_window_order, 1, -1 do
-		if i ~= contextm then
-			create_system_windows(i)
-		end
+		create_system_windows(i)
 	end
 end
 resize_system_windows()
@@ -1889,14 +1871,9 @@ function events(...)
 			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e, 3))
 		end
 	elseif e[1] == "term_resize" then
-		if term_org and term_org.getSize then
-			w, h = term_org.getSize()
-		else
-			w, h = nil, nil
-		end
-		if not w then
-			w, h = 51, 19
-		end
+		w, h = term.getSize()
+		setup_monitors(_unpack(system_settings.devices or {}))
+		draw_windows()
 	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
 		if monitor_resized and monitor_resized[e[2]] then
 			monitor_resized[e[2]] = nil
