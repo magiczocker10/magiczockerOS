@@ -2,14 +2,8 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local monitor_order = term and {{name = "computer", offset = 0}} or {}
-local term_org = term
-local term = term or peri.wrap(peri.find("monitor"))
-local w, h = term and term.getSize and term.getSize() or 51, 19
-local total_size = {0, 0}
-local monitor_mode = "normal"
-local peri = apis.peripheral.create(true)
-local _computer_only = component and {} or {"computer"}
+local peri, _computer_only, _tconcat, monitor_order, total_size, monitor_mode, h, term = apis.peripheral.create(true), component and {} or {"term"}, table.concat, {}, {0, 0}, "normal"
+local global_cache, global_cache_old, peri_call, peri_type, colored
 local validate_modes = {
 	["normal"] = true,
 	["extend"] = true,
@@ -21,12 +15,7 @@ local process_data = {
 	last_cursor = nil,
 	last_screen = nil,
 }
-local global_cache
-local global_cache_old
 local global_visible = true
-local peri_call = nil
-local peri_type = nil
-local _tconcat = table.concat
 local header_tmp = {"", "", ""}
 -- both variables for get_nearest_scale
 local _size = {0, 0}
@@ -39,7 +28,6 @@ for i = 1, 16 do
 	hex[tmp] = ("0123456789abcdef"):sub(i, i)
 	get_color[hex[tmp]] = tmp
 end
-local colored = term and term.isColor and term.isColor()
 local last_palette = {mode = 1, inverted = false, original = false}
 local color_palette = {
 	new = {
@@ -101,11 +89,7 @@ end
 function set_peripheral(object)
 	peri_call = object and object.call or nil
 	peri_type = object and object.getType or nil
-	if not term_org then
-		term = peri.wrap(peri.find("monitor"))
-		w, h = term.getSize and term.getSize() or 51, 19
-		colored = term and term.isColor and term.isColor()
-	end
+	term = peri.wrap(peri.find("term") or peri.find("monitor"))
 	if not peri_call then
 		error("Method \"call\" is missing.")
 	elseif not peri_type then
@@ -143,7 +127,8 @@ local function get_nearest_scale(mode, device, length)
 end
 local function calculate_device_offset()
 	local cur_offset, total_width, mon_len = 0, 0, #monitor_order
-	w, h = nil, nil
+	local w = nil
+	h = nil
 	for i = 1, mon_len do
 		peri_call(monitor_order[i].name, "setTextScale", 0.5)
 		_size[1], _size[2] = peri_call(monitor_order[i].name, "getSize")
@@ -152,7 +137,7 @@ local function calculate_device_offset()
 	end
 	for i = 1, mon_len do
 		local mo = monitor_order[i]
-		if mo.name ~= "computer" then
+		if mo.name ~= "term" then
 			local _w, _h = get_nearest_scale("width", mo.name, w), get_nearest_scale("height", mo.name, h)
 			peri_call(mo.name, "setTextScale", 5) -- Force the event "monitor_resize" to fire
 			local a = _w > _h and _h or _w
@@ -196,6 +181,7 @@ function get_size()
 	return total_size[1], total_size[2]
 end
 function set_devices(mode, ...)
+	local bw = false
 	monitor_mode = validate_modes[mode] and mode or "normal"
 	local list = monitor_mode == "normal" and _computer_only or {...}
 	local to_clear = {}
@@ -214,17 +200,19 @@ function set_devices(mode, ...)
 			peri_call(list[i], "setBackgroundColor", 32768)
 			peri_call(list[i], "clear")
 			to_clear[list[i]] = nil
+			bw = not peri_call(list[i], "isColor") or bw
 			monitor_order[#monitor_order + 1] = {name = list[i]}
 		end
 		processed[list[i]] = true
 	end
+	colored = not bw
 	for k in next, to_clear do
 		if peri_call then
 			peri_call(k, "setBackgroundColor", 32768)
 			peri_call(k, "clear")
 		end
 	end
-	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "computer"} or nil
+	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "term"} or nil
 	calculate_device_offset()
 	clear_cache()
 end

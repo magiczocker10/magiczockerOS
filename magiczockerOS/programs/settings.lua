@@ -1083,7 +1083,7 @@ generate_list()
 load_sidemenu()
 redraw()
 -- events
-local function events(...)
+function events(...)
 	local e = {...}
 	if e[1] == "char" and view == 1 then
 		cur_textfield.value = cur_textfield.value:sub(1, cur_textfield.cursor - 1) .. e[2] .. cur_textfield.value:sub(cur_textfield.cursor)

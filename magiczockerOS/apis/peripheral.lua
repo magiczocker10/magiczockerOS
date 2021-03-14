@@ -11,7 +11,7 @@ local translate = {
 	screen = "monitor",
 }
 function get_type(side)
-	if side == "computer" then
+	if side == "term" then
 		return "monitor"
 	elseif p then
 		return p.getType(side)
@@ -67,7 +67,7 @@ local function get_mon_device(name)
 end
 function get_device(name)
 	local to_return = {}
-	if term and name == "computer" then
+	if term and name == "term" then
 		for k, v in next, term do
 			to_return[k] = function(...) return v(...) end
 		end
@@ -95,7 +95,7 @@ function get_devices(system, whitelist, ...) -- whitelist: true/false
 		end
 	end
 	if p then
-		to_return[1] = system and term and whitelist == (to_filter.computer or false) and "computer" or nil
+		to_return[1] = system and term and whitelist == (to_filter.term or false) and "term" or nil
 		local list = p.getNames()
 		for i = 1, #list do
 			local tmp = p.getType(list[i]) or ""
@@ -180,7 +180,7 @@ function create(is_system)
 	peri.call = function(side, _type, arg1, ...)
 		local tmp = get_type(side) or ""
 		if is_system or tmp ~= "monitor" then
-			if is_system and side == "computer" then
+			if is_system and side == "term" then
 				if term[_type] then
 					return term[_type](arg1, ...)
 				end

@@ -494,7 +494,7 @@ local function load_system_settings()
 	end
 	local a = system_settings
 	a.monitor_mode = a.monitor_mode or "normal"
-	a.devices = a.devices or {"computer"}
+	a.devices = a.devices or {"term"}
 end
 local function update_windows(user)
 	local user = user or cur_user
@@ -1385,7 +1385,7 @@ load_api("window")
 ggv = apis.window.get_global_visible
 sgv = apis.window.set_global_visible
 apis.window.set_peripheral(apis.peripheral.create(true))
-term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "computer")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
+term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "term")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
 w, h = term.getSize()
 setup_monitors(_unpack(system_settings.devices or {}))
 sgv(false)
@@ -1459,14 +1459,14 @@ function events(...)
 		--e[1] = "monitor_resize"
 	end
 	local user_data = gUD(cur_user)
-	if (monitor_devices.computer or computer) and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
+	if (monitor_devices.term or computer) and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
 		e[2] = e[2] == 1 and 2 or e[2] == 2 and 1 or e[2]
 	end
 	if computer and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_scroll") then
 		e[3] = e[3] + monitor_order[monitor_devices[device]].offset
 	end
 	if supported_mouse_events[e[1]] then
-		if not (monitor_devices.computer or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
+		if not (monitor_devices.term or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
 			e[1] = nil
 		else
 			total_size[1], total_size[2] = apis.window.get_size()
@@ -1476,7 +1476,7 @@ function events(...)
 		local tmp = qe[e[2]]
 		qe[e[2]] = nil
 		events(_unpack(queued_events[tmp]))
-	elseif (e[1] == "mouse_drag" and (monitor_devices.computer or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
+	elseif (e[1] == "mouse_drag" and (monitor_devices.term or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
