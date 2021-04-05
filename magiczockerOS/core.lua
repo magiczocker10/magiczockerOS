@@ -1443,8 +1443,13 @@ function events(...)
 		e[1] = nil
 	end
 	if e[1] == "key_down" then
-		e[1] = "key"
-		e[2] = e[4]
+		if e[3] < 32 or e[3] > 126 then -- outside ASCII range, give scancode
+			e[1] = "key"
+			e[2] = e[4]
+		else
+			e[1] = "char"
+			e[2] = string.char(e[3])
+		end
 	elseif e[1] == "touch" then
 		e[1] = "mouse_click"
 		e[2] = e[5] + 1
