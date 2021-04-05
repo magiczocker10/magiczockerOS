@@ -364,7 +364,7 @@ local function load_key_mapping()
 			categories[i].entries[1].entries={}
 			local _temp = categories[i].entries[1].entries
 			for k, v in next, fs.list("/magiczockerOS/key_mappings/") do
-				if v:sub(-4) == ".map" and v ~= "base.map" then
+				if k ~= "n" and v:sub(-4) == ".map" and v ~= "base.map" then
 					_temp[#_temp + 1] = v:sub(1, -5)
 					if _temp[#_temp] == (tmp or "") then
 						settings.osk_key_mapping = #_temp
