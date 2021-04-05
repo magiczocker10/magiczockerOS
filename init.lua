@@ -63,19 +63,9 @@ if component then
 			return component.invoke(drive, "isDirectory", path)
 		end,
 		list = function(path)
-			local drive, path = prepare_path(path)
-			if not drive then
-				local files = {}
-				for a in component.list("filesystem") do
-					files[#files + 1] = a
-				end
-				for a in component.list("disk_drive") do
-					files[#files + 1] = component.invoke(a, "media")
-				end
-				return files
-			else
-				return component.invoke(drive, "list", path)
-			end
+			local drive, path2 = prepare_path(path)
+			drive = drive or get_file_system("/init.lua")
+			return component.invoke(drive, "list", path2 or "/")
 		end,
 		makeDir = function(path)
 			local drive, path = prepare_path(path)

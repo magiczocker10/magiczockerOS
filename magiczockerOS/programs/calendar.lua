@@ -60,13 +60,13 @@ local function draw(a, b)
 			if y == 2 then
 				line = " " .. (cursor[2] == 1 and "-" or " ") .. " " .. (year == 1970 and month == 1 and " " or "<") .. (" "):rep(math.floor((17 - #tmp) * 0.5)) .. tmp .. (" "):rep(math.ceil((17 - #tmp) * 0.5)) .. "> " .. (cursor[2] == 1 and "-" or " ") .. " "
 			elseif y == 4 then
-				line = "    Mo,Tu,We,Th,Fr,Sa,Su "
+				line = "    Mo.Tu.We.Th.Fr.Sa.Su "
 			elseif y > 4 and y < endline then
 				line = " " .. ("0" .. (tmp2 == 0 and get_week(31, 12, year - 1) or tmp2)):sub(-2) .. " "
 				tmp2 = tmp2 + 1
 				for i = 1, 7 do
 					local num = (y - 5) * 7 + i - offset + 1
-					line = line .. ((cur_date.day or 0) == num and (cur_date.month or 0) == month and (cur_date.year or 0) == year and "##" or (num > 0 and num <= months[month][2] and (" " .. num):sub(-2) or "  ")) .. (num < months[month][2] and i < 7 and ";" or " ")
+					line = line .. ((cur_date.day or 0) == num and (cur_date.month or 0) == month and (cur_date.year or 0) == year and "##" or (num > 0 and num <= months[month][2] and (" " .. num):sub(-2) or "  ")) .. (num < months[month][2] and i < 7 and "|" or " ")
 					endline = num >= months[month][2] and y or 11
 				end
 			else
