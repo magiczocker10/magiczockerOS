@@ -46,6 +46,8 @@ local error_org = error
 local ggv, sgv
 
 -- variables
+local computer = computer
+local component = component
 local events
 local coro_create = coroutine.create
 local coro_resume = coroutine.resume

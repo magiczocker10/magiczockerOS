@@ -2,8 +2,8 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local peri, _computer_only, _tconcat, monitor_order, total_size, monitor_mode, h, term = apis.peripheral.create(true), component and {} or {"term"}, table.concat, {}, {0, 0}, "normal"
-local global_cache, global_cache_old, peri_call, peri_type, colored
+local peri, _computer_only, _tconcat, monitor_order, total_size, monitor_mode, global_visible, header_tmp, _size, pixel_size, cdo_args, get_color, hex = apis.peripheral.create(true), component and {} or {"term"}, table.concat, {}, {0, 0}, "normal", true, {"", "", ""}, {0, 0}, {6, 9}, {0, 0}, {}, {}
+local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
 local validate_modes = {
 	["normal"] = true,
 	["extend"] = true,
@@ -15,21 +15,12 @@ local process_data = {
 	last_cursor = nil,
 	last_screen = nil,
 }
-local global_visible = true
-local header_tmp = {"", "", ""}
--- both variables for get_nearest_scale
-local _size = {0, 0}
-local pixel_size = {6, 9}
-local cdo_args = {0, 0}
-local get_color = {}
-local hex = {}
 for i = 1, 16 do
 	local tmp = 2 ^ (i - 1)
 	hex[tmp] = ("0123456789abcdef"):sub(i, i)
 	get_color[hex[tmp]] = tmp
 end
-local last_palette = {mode = 1, inverted = false, original = false}
-local color_palette = {
+local last_palette, color_palette = {mode = 1, inverted = false, original = false}, {
 	new = {
 		{240, 240, 240}, -- white
 		{242, 178, 51}, -- orange
@@ -105,8 +96,7 @@ function get_global_visible()
 	return global_visible
 end
 function clear_cache()
-	global_cache = {t = {}, b = {}, s = {}}
-	global_cache_old = {t = {}, b = {}, s = {}}
+	global_cache, global_cache_old = {t = {}, b = {}, s = {}}, {t = {}, b = {}, s = {}}
 end
 local function set_term(device, mode, ...)
 	for i = monitor_mode == "duplicate" and 1 or device or 1, monitor_mode == "duplicate" and #monitor_order or device or 1 do
@@ -152,17 +142,12 @@ local function calculate_device_offset()
 			end
 		end
 		_size = {peri_call(mo.name, "getSize")}
-		mo.height = _size[2]
-		mo.startx = cur_offset + 1
-		mo.endx = cur_offset + _size[1]
-		mo.offset = cur_offset
+		mo.height, mo.startx, mo.endx, mo.offset = _size[2], cur_offset + 1, cur_offset + _size[1], cur_offset
 		cur_offset = monitor_mode == "extend" and cur_offset + _size[1] or 0
 		total_width = total_width + _size[1]
 		if monitor_mode ~= "extend" and i == 1 then
-			w = _size[1]
-			h = _size[2]
-			total_size[1] = w
-			total_size[2] = h
+			w, h = _size[1], _size[2]
+			total_size[1], total_size[2] = w, h
 		end
 		h = monitor_mode == "extend" and h > _size[2] and _size[2] or h
 	end
@@ -181,22 +166,17 @@ function get_size()
 	return total_size[1], total_size[2]
 end
 function set_devices(mode, ...)
-	local bw = false
 	monitor_mode = validate_modes[mode] and mode or "normal"
-	local list = monitor_mode == "normal" and _computer_only or {...}
-	local to_clear = {}
+	local bw, list, to_clear = false, monitor_mode == "normal" and _computer_only or {...}, {}
 	for i = 1, type(monitor_order) == "table" and #monitor_order or 0 do
 		to_clear[monitor_order[i].name] = true
 	end
 	monitor_order = {}
-	local processed = {}
-	local pd = process_data
-	pd.last_backcolor = pd.last_backcolor or {}
-	pd.last_textcolor = pd.last_textcolor or {}
+	local processed, pd = {}, process_data
+	pd.last_backcolor, pd.last_textcolor = pd.last_backcolor or {}, pd.last_textcolor or {}
 	for i = 1, #list do
 		if not processed[list[i]] and peri_type(list[i]) == "monitor" then
-			pd.last_backcolor[list[i]] = -1
-			pd.last_textcolor[list[i]] = -1
+			pd.last_backcolor[list[i]], pd.last_textcolor[list[i]] = -1, -1
 			peri_call(list[i], "setBackgroundColor", 32768)
 			peri_call(list[i], "clear")
 			to_clear[list[i]] = nil
@@ -219,9 +199,7 @@ end
 local function can_added(data, content, text, back, x)
 	if #data[2] == 0 or data[1] == x - #data[2] and back == data[3] and (content == " " or data[4] == -1 or text == data[4]) then
 		if #data[2] == 0 then
-			data[1] = x
-			data[3] = back
-			data[4] = -1
+			data[1], data[3], data[4] = x, back, -1
 		end
 		data[4] = data[4] == -1 and content ~= " " and text or data[4]
 		data[2][#data[2] + 1] = content
@@ -259,23 +237,14 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 	local s, startx, endx, limit_set, continue, to_draw, cur_data, _slineold, _tlineold, _blineold, _sline, _tline, _bline
 	for screen = 1, goto_limit do
 		s = monitor_order[screen]
-		startx = startxorg or s.startx
-		startx = startx < s.startx and s.startx or startx
-		endx = endxorg or s.endx
-		endx = endx > s.endx and s.endx or endx
+		startx, endx = startxorg or s.startx, endxorg or s.endx
+		startx, endx = startx < s.startx and s.startx or startx, endx > s.endx and s.endx or endx
 		limit_set = return_data or startxorg and endxorg
 		continue = endx >= startx and startx <= s.endx and s.startx <= endx
-		to_draw = {-1, {}, -1, -1} -- x, text, bcol, tcol
-		cur_data = {0, -1, -1} -- x, backc, textc
-		_sline = global_cache.s[line]
-		_bline = global_cache.b[line]
-		_tline = global_cache.t[line]
-		global_cache_old.s[line] = global_cache_old.s[line] or {}
-		global_cache_old.b[line] = global_cache_old.b[line] or {}
-		global_cache_old.t[line] = global_cache_old.t[line] or {}
-		_slineold = global_cache_old.s[line]
-		_blineold = global_cache_old.b[line]
-		_tlineold = global_cache_old.t[line]
+		to_draw, cur_data = {-1, {}, -1, -1}, {0, -1, -1} -- x, text, bcol, tcol; x, backc, textc
+		_sline, _bline, _tline = global_cache.s[line], global_cache.b[line], global_cache.t[line]
+		global_cache_old.s[line], global_cache_old.b[line], global_cache_old.t[line] = global_cache_old.s[line] or {}, global_cache_old.b[line] or {}, global_cache_old.t[line] or {}
+		_slineold, _blineold, _tlineold = global_cache_old.s[line], global_cache_old.b[line], global_cache_old.t[line]
 		startx, endx = not continue and 1 or startx, not continue and 0 or endx
 		local tmp
 		for i = startx, endx do
@@ -369,19 +338,23 @@ function reload_color_palette(settings)
 			last_palette = {mode = settings.color_mode or 1, inverted = settings.invert_colors, original = settings.original_colors}
 			local a = settings.original_colors and "original" or "new"
 			for i = 1, 16 do
-				local temp_color = {color_palette[a][i][1], color_palette[a][i][2], color_palette[a][i][3]}
-				local b = cp[settings.color_mode]
-				local red = round(temp_color[1] * b[1] + temp_color[2] * b[2] + temp_color[3] * b[3])
-				local green = round(temp_color[1] * b[4] + temp_color[2] * b[5] + temp_color[3] * b[6])
-				local blue = round(temp_color[1] * b[7] + temp_color[2] * b[8] + temp_color[3] * b[9])
-				local c = settings.color_mode and settings.color_mode > 1
-				temp_color[1] = c and (red > 255 and 255 or red) or temp_color[1]
-				temp_color[2] = c and (green > 255 and 255 or green) or temp_color[2]
-				temp_color[3] = c and (blue > 255 and 255 or blue) or temp_color[3]
+				local temp_color, b, c = {
+					color_palette[a][i][1],
+					color_palette[a][i][2],
+					color_palette[a][i][3],
+				}, cp[settings.color_mode], settings.color_mode and settings.color_mode > 1
+				local red, green, blue = round(temp_color[1] * b[1] + temp_color[2] * b[2] + temp_color[3] * b[3]), round(temp_color[1] * b[4] + temp_color[2] * b[5] + temp_color[3] * b[6]), round(temp_color[1] * b[7] + temp_color[2] * b[8] + temp_color[3] * b[9])
+				temp_color = {
+					c and (red > 255 and 255 or red) or temp_color[1],
+					c and (green > 255 and 255 or green) or temp_color[2],
+					c and (blue > 255 and 255 or blue) or temp_color[3],
+				}
 				c = settings.invert_colors
-				temp_color[1] = c and 255 - temp_color[1] or temp_color[1]
-				temp_color[2] = c and 255 - temp_color[2] or temp_color[2]
-				temp_color[3] = c and 255 - temp_color[3] or temp_color[3]
+				temp_color = {
+					c and 255 - temp_color[1] or temp_color[1],
+					c and 255 - temp_color[2] or temp_color[2],
+					c and 255 - temp_color[3] or temp_color[3],
+				}
 				for j = 1, monitor_mode == "extend" and #monitor_order or 1 do
 					set_term(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
 				end
@@ -395,14 +368,11 @@ function create(x, y, width, height, visible, bar)
 	expect(3, width, "number")
 	expect(4, height, "number")
 	if visible ~= nil then expect(5, visible, "boolean") else visible = true end
-	-- variables
-	local back_color, blink, can_draw, id, state, text_color, border, title = 32768, false, true, 0, "normal", 1, false, ""
-	-- tables
-	local color_codes = {}
+	local back_color, blink, can_draw, id, state, text_color, border, title, color_codes, screen_s, screen_b, screen_t, screen2, settings, window, my_blink, my_buttons, cursor = 32768, false, true, 0, "normal", 1, false, "", {}, {}, {}, {}, {}, {}, {}, true, {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}, {1, 1}
+	local redraw_line, last_header_first, last_header_width, last_header_b, last_header_s, last_header_t
 	for k, v in next, color_palette.new do
 		color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
 	end
-	local cursor = {1, 1}
 	local data = {
 		maximized = {
 			height = total_size[2] - 1,
@@ -417,25 +387,9 @@ function create(x, y, width, height, visible, bar)
 			y = y,
 		},
 	}
-	local screen_s = {}
-	local screen_b = {}
-	local screen_t = {}
-	local screen2 = {}
-	local settings = {}
-	local window = {}
-	local redraw_line
-	local my_blink = true
-	local my_buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
-	local last_header_first
-	local last_header_width
-	local last_header_b
-	local last_header_s
-	local last_header_t
-	-- functions
 	local function set_cursor()
 		if not global_visible then return nil end
-		local success = false
-		local _data = data[state]
+		local success, _data = false, data[state]
 		local _x, _y = _data.x + cursor[1] - 1, _data.y + cursor[2] - (bar and 0 or 1)
 		success = success or (not border or border and cursor[1] > 1 and cursor[1] < _data.width and cursor[2] > 0 and cursor[2] < _data.height) and id == 0 or screen2[_y] and screen2[_y][_x] == id
 		if success then
@@ -462,8 +416,7 @@ function create(x, y, width, height, visible, bar)
 						end
 					elseif not my_blink then
 						if b[cursor[1]] then
-							process_data.last_backcolor[i] = get_color[b[cursor[1]]]
-							process_data.last_textcolor[i] = get_color[t[cursor[1]]]
+							process_data.last_backcolor[i], process_data.last_textcolor[i] = get_color[b[cursor[1]]], get_color[t[cursor[1]]]
 							set_term(i, "setBackgroundColor", get_color[b[cursor[1]]])
 							set_term(i, "setTextColor", get_color[t[cursor[1]]])
 							set_term(i, "setCursorPos", _x - monitor_order[i].offset, _y)
@@ -486,52 +439,37 @@ function create(x, y, width, height, visible, bar)
 	end
 	local function create_header(foreground)
 		if foreground == last_header_first and last_header_width == data[state].width then
-			screen_b[1] = last_header_b
-			screen_s[1] = last_header_s
-			screen_t[1] = last_header_t
+			screen_b[1], screen_s[1], screen_t[1] = last_header_b, last_header_s, last_header_t
 			return nil
 		end
-		last_header_first = foreground
-		last_header_width = data[state].width
-		local b = {"", "", "", "", "", "", "", "", ""}
-		local conf = settings
+		last_header_first, last_header_width = foreground, data[state].width
+		local b, conf = {"", "", "", "", "", "", "", "", ""}, settings
 		if colored then
 			for i = 1, id > 0 and #my_buttons or 1 do
 				local a = my_buttons[i]
-				b[1] = b[1] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_back"] or a[2]] or hex[conf["window_" .. a[1] .. "_button_inactive_back"] or a[3]])
-				b[2] = b[2] .. "o"
-				b[3] = b[3] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_text"] or a[4]] or hex[conf["window_" .. a[1] .. "_button_inactive_text"] or a[5]])
+				b[1], b[2], b[3] = b[1] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_back"] or a[2]] or hex[conf["window_" .. a[1] .. "_button_inactive_back"] or a[3]]), b[2] .. "o", b[3] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_text"] or a[4]] or hex[conf["window_" .. a[1] .. "_button_inactive_text"] or a[5]])
 			end
 		end
 		b[4] = ((colored and " " or "=") .. title .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (id > 0 and #my_buttons or 0) - 1 or last_header_width)
 		local __ = foreground
 		if colored then
-			b[5] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_back"] or 128]
-			b[6] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_text"] or 1]
+			b[5], b[6] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_back"] or 128], hex[conf["window_bar_" .. (__ and "" or "in") .. "active_text"] or 1]
 		elseif textutils and textutils.complete then
-			b[5] = "7"
-			b[6] = __ and "0" or "8"
+			b[5], b[6] = "7",  __ and "0" or "8"
 		else
-			b[5] = __ and "0" or "f"
-			b[6] = __ and "f" or "0"
+			b[5], b[6] = __ and "0" or "f", __ and "f" or "0"
 		end
-		b[7] = colored and hex[conf.window_resize_button_back or 128] or b[7]
-		b[8] = colored and (foreground and state == "normal" and id > 0 and "o" or " ") or b[8]
-		b[9] = colored and hex[conf.window_resize_button_text or 256] or b[9]
-		header_tmp[1] = _tconcat({b[1], b[5]:rep(#b[4]), b[7]})
-		header_tmp[2] = _tconcat({b[2], b[4], b[8]})
-		header_tmp[3] = _tconcat({b[3], b[6]:rep(#b[4]), b[9]})
-		screen_s[1] = {}
-		screen_t[1] = {}
-		screen_b[1] = {}
+		b[7], b[8], b[9] = colored and hex[conf.window_resize_button_back or 128] or b[7], colored and (foreground and state == "normal" and id > 0 and "o" or " ") or b[8], colored and hex[conf.window_resize_button_text or 256] or b[9]
+		header_tmp = {
+			_tconcat({b[1], b[5]:rep(#b[4]), b[7]}),
+			_tconcat({b[2], b[4], b[8]}),
+			_tconcat({b[3], b[6]:rep(#b[4]), b[9]}),
+		}
+		screen_s[1], screen_t[1], screen_b[1] = {}, {}, {}
 		for i = 1, last_header_width do
-			screen_b[1][i] = header_tmp[1]:sub(i, i)
-			screen_s[1][i] = header_tmp[2]:sub(i, i)
-			screen_t[1][i] = header_tmp[3]:sub(i, i)
+			screen_b[1][i], screen_s[1][i], screen_t[1][i] = header_tmp[1]:sub(i, i), header_tmp[2]:sub(i, i), header_tmp[3]:sub(i, i)
 		end
-		last_header_b = screen_b[1]
-		last_header_s = screen_s[1]
-		last_header_t = screen_t[1]
+		last_header_b, last_header_s, last_header_t = screen_b[1], screen_s[1], screen_t[1]
 	end
 	function window.get_buttons()
 		return my_buttons
@@ -562,24 +500,16 @@ function create(x, y, width, height, visible, bar)
 			local _ypos = cur_data.y + line - 1
 			screen2[_ypos] = screen2[_ypos] or {}
 			local b = screen2[_ypos]
-			screen_s[line] = screen_s[line] or {}
-			screen_b[line] = screen_b[line] or {}
-			screen_t[line] = screen_t[line] or {}
+			screen_s[line], screen_b[line], screen_t[line] = screen_s[line] or {}, screen_b[line] or {}, screen_t[line] or {}
 			for i = pos_start or 1, pos_end or cur_data.width do
 				local _pos = cur_data.x + i - 1
 				b[_pos] = b[_pos] or id
 				if b[_pos] == id then
-					global_cache.t[_ypos] = global_cache.t[_ypos] or {}
-					global_cache.b[_ypos] = global_cache.b[_ypos] or {}
-					global_cache.s[_ypos] = global_cache.s[_ypos] or {}
+					global_cache.t[_ypos], global_cache.b[_ypos], global_cache.s[_ypos] = global_cache.t[_ypos] or {}, global_cache.b[_ypos] or {}, global_cache.s[_ypos] or {}
 					if border and (line == cur_data.height or (i == 1 or i == cur_data.width) and line > 1) then
-						global_cache.t[_ypos][_pos] = settings.window_resize_border_text or 1
-						global_cache.b[_ypos][_pos] = settings.window_resize_border_back or 128
-						global_cache.s[_ypos][_pos] = line == ceiled_h and "|" or i == ceiled_w and "-" or " "
+						global_cache.t[_ypos][_pos], global_cache.b[_ypos][_pos], global_cache.s[_ypos][_pos] = settings.window_resize_border_text or 1, settings.window_resize_border_back or 128, line == ceiled_h and "|" or i == ceiled_w and "-" or " "
 					else
-						global_cache.t[_ypos][_pos] = get_color[screen_t[line][i] or ""] or text_color
-						global_cache.b[_ypos][_pos] = get_color[screen_b[line][i] or ""] or back_color
-						global_cache.s[_ypos][_pos] = screen_s[line][i] or " "
+						global_cache.t[_ypos][_pos], global_cache.b[_ypos][_pos], global_cache.s[_ypos][_pos] = get_color[screen_t[line][i] or ""] or text_color, get_color[screen_b[line][i] or ""] or back_color, screen_s[line][i] or " "
 					end
 				end
 			end
@@ -633,19 +563,14 @@ function create(x, y, width, height, visible, bar)
 	end
 	function window.reposition(nX, nY, nWidth, nHeight, sstate)
 		local _data = sstate and data[sstate] or data[state]
-		_data.x = nX
-		_data.y = nY
-		_data.width = nWidth
-		_data.height = nHeight
+		_data.x, _data.y, _data.width, _data.height = nX, nY, nWidth, nHeight
 	end
 	function window.restore_cursor()
 		set_cursor()
 	end
 	function window.set_state(sState)
 		if data[sState] then
-			state = sState
-			border = false
-			last_header_first = nil
+			state, border, last_header_first = sState, false, nil
 			create_header(true)
 			redraw()
 			redraw_global_cache(true)
@@ -688,19 +613,13 @@ function create(x, y, width, height, visible, bar)
 		if cursor[2] < 1 then return end
 		local cur = cursor[1] - 1
 		local y = cursor[2] + (bar and 1 or 0)
-		screen_s[y] = screen_s[y] or {}
-		screen_b[y] = screen_b[y] or {}
-		screen_t[y] = screen_t[y] or {}
+		screen_s[y], screen_b[y], screen_t[y] = screen_s[y] or {}, screen_b[y] or {}, screen_t[y] or {}
 		for i = #screen_s[y] + 1, cur do
-			screen_s[y][i] = screen_s[y][i] or " "
-			screen_t[y][i] = screen_t[y][i] or "0"
-			screen_b[y][i] = screen_b[y][i] or "f"
+			screen_s[y][i], screen_t[y][i], screen_b[y][i] = screen_s[y][i] or " ", screen_t[y][i] or "0", screen_b[y][i] or "f"
 		end
 		local a = 1
 		for i = cur + 1, cursor[1] + text_len - 1 do
-			screen_s[y][i] = sText:sub(a, a)
-			screen_t[y][i] = sTextColor:sub(a, a)
-			screen_b[y][i] = sBackgroundColor:sub(a, a)
+			screen_s[y][i], screen_t[y][i], screen_b[y][i] = sText:sub(a, a), sTextColor:sub(a, a), sBackgroundColor:sub(a, a)
 			a = a + 1
 		end
 		redraw_line(y, cursor[1], cur + text_len)
@@ -721,17 +640,13 @@ function create(x, y, width, height, visible, bar)
 		end
 	end
 	function window.clear()
-		screen_s = {bar and screen_s[1] or nil}
-		screen_b = {bar and screen_b[1] or nil}
-		screen_t = {bar and screen_t[1] or nil}
+		screen_s, screen_b, screen_t = {bar and screen_s[1] or nil}, {bar and screen_b[1] or nil}, {bar and screen_t[1] or nil}
 		redraw()
 		redraw_global_cache(false)
 		set_cursor()
 	end
 	function window.clearLine()
-		screen_s[cursor[2] + (bar and 1 or 0)] = nil
-		screen_b[cursor[2] + (bar and 1 or 0)] = nil
-		screen_t[cursor[2] + (bar and 1 or 0)] = nil
+		screen_s[cursor[2] + (bar and 1 or 0)], screen_b[cursor[2] + (bar and 1 or 0)], screen_t[cursor[2] + (bar and 1 or 0)] = nil, nil, nil
 		redraw_line()
 		redraw_global_cache_line(true, data[state].y + cursor[2] + (bar and 1 or 0) - 1)
 		set_cursor()
@@ -794,9 +709,7 @@ function create(x, y, width, height, visible, bar)
 				end
 			else
 				for _ = n, -1 do
-					screen_s[data[state].height] = nil
-					screen_b[data[state].height] = nil
-					screen_t[data[state].height] = nil
+					screen_s[data[state].height], screen_b[data[state].height], screen_t[data[state].height] = nil, nil, nil
 					table.insert(screen_s, 1 + (bar and 1 or 0), {})
 					table.insert(screen_b, 1 + (bar and 1 or 0), {})
 					table.insert(screen_t, 1 + (bar and 1 or 0), {})
@@ -844,7 +757,7 @@ function create(x, y, width, height, visible, bar)
 			end
 			local new_color = {}
 			if type(r) == "number" and not g and not b then
-				new_color = {colours.unpackRGB(r)}
+				new_color = {colors.unpack(r)}
 			else
 				expect(2, r, "number")
 				expect(3, g, "number")

@@ -2,20 +2,15 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
+local term = term
 local data = user_data()
 if not data.server then
 	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
 end
 local w, h = term.getSize()
-local user = user or ""
-local results = {}
-local results_scroll
-local key_maps = {}
-local entry_selected
-local settings = user_data().settings or {}
-local reposed = false
+local user, results, key_maps, settings, reposed, last_pos = user or "", {}, {}, user_data().settings or {}, false, {0, 0, 0, 0}
+local results_scroll, entry_selected
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
-local last_pos = {0, 0, 0, 0}
 local field = {
 	allowed_pattern = "[a-zA-Z0-9-/%.+_%(%)%s]",
 	cursor = 1,

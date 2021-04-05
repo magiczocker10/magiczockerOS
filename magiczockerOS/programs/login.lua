@@ -2,16 +2,13 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
+local term, fs = term, fs
 local w, h = term.getSize()
-local field = 1
-local L1 = "Login"
-local mode = 1
-local fields = { -- cursor, height, offset, watermark, text, symbol
+local field, L1, mode, key_maps, fields, a = 1, "Login", 1, {}, {
+	-- cursor, height, offset, watermark, text, symbol
 	{1, 2, 0, "Username..", "test"}, -- username
 	{1, 4, 0, "Password..", "", "*"}, -- password
-}
-local key_maps = {}
-local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+}, term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -20,7 +17,7 @@ local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
 end
-local function draw_field(blink, data)
+local function draw_field(data)
 	term.setCursorPos(2, data[2])
 	back_color(1, 1, 1)
 	local a = data[5] or ""
@@ -28,7 +25,7 @@ local function draw_field(blink, data)
 		a = data[4] or ""
 		text_color(32768, data[4] and 256 or 32768, data[4] and 256 or 32768)
 	else
-		a = data[6] and (data[6]):rep(#a) or a
+		a = data[6] and data[6]:rep(#a) or a
 		text_color(32768, 32768, 32768)
 	end
 	term.write((a .. ((not term.isColor or not term.isColor()) and "_" or " "):rep(w)):sub(1 + data[3], w - 2 + data[3]))
@@ -44,7 +41,7 @@ local function set_cursor(field, blink)
 		data[3] = data[1] - w + 2
 	end
 	data[3] = data[3] < 0 and 0 or data[3]
-	draw_field(blink, data)
+	draw_field(data)
 end
 local function set_blink()
 	if field > 0 then
@@ -86,10 +83,7 @@ local function draw()
 end
 local function reset()
 	local a = fields[2]
-	a[1] = 1
-	a[3] = 0
-	a[5] = ""
-	field = 0
+	a[1], a[3], a[5], field = 1, 0, "", 0
 	set_cursor(2)
 end
 local function login()

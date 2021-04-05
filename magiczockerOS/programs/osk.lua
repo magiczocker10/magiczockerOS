@@ -2,11 +2,9 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
+local term, fs = term, fs
 local codes, current_settings, layout, posY
-local window_width, glfw, mode = 0, (_HOSTver or 0) >= 1132, 1
-local view = {{}, {}}
-local arrows = {}
-local file = fs.open("/magiczockerOS/key_mappings/data.lua", "r")
+local window_width, glfw, mode, view, arrows, file = 0, (_HOSTver or 0) >= 1132, 1, {{}, {}}, {}, fs.open("/magiczockerOS/key_mappings/data.lua", "r")
 local codes_ = file.readAll()
 file.close()
 codes = loadstring(codes_)()
@@ -17,25 +15,21 @@ local function load_lines()
 		local word = line:match("[^%s]+")
 		if codes[word] then
 			layout[posY][#layout[posY] + 1] = codes[word]
-			view[1][posY] = view[1][posY] .. codes[word][1] .. " "
-			view[2][posY] = view[2][posY] .. codes[word][2] .. " "
+			view[1][posY], view[2][posY] = view[1][posY] .. codes[word][1] .. " ", view[2][posY] .. codes[word][2] .. " "
 			if word == "UP" or word == "DOWN" or word == "LEFT" or word == "RIGHT" then
 				arrows[glfw and codes[word][3] or codes[word][4]] = true
 			end
 		elseif word == "##" then
 		elseif word == "NEWLINE" then
 			posY = posY + 1
-			layout[posY] = {}
-			view[1][posY] = ""
-			view[2][posY] = ""
+			layout[posY], view[1][posY], view[2][posY] = {}, "", ""
 		elseif word == "NEWLINE_BASE" then
 			posY = posY + 1
 		elseif word == "PLACEHOLDER" then
 			local count = tonumber(line:sub(line:find("%s"), #line))
 			local tmp = count > 1 and (" "):rep(count - 1) or ""
 			layout[posY][#layout[posY] + 1] = {tmp, tmp, 0, 0}
-			view[1][posY] = view[1][posY] .. tmp .. " "
-			view[2][posY] = view[2][posY] .. tmp .. " "
+			view[1][posY], view[2][posY] = view[1][posY] .. tmp .. " ", view[2][posY] .. tmp .. " "
 		else
 			error("Line " .. file_line .. ": " .. word)
 		end

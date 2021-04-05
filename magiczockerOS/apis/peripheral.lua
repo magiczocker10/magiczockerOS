@@ -3,13 +3,8 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
-local p = peripheral
-local modem = {}
-local cached = {}
-local translate = {
-	monitor = "screen",
-	screen = "monitor",
-}
+local component, term = component, term
+local p, modem, cached, translate, color_link, cur_name, w, h = peripheral, {}, {}, {monitor = "screen", screen = "monitor"}, {}, "", 51, 19
 function get_type(side)
 	if side == "term" then
 		return "monitor"
@@ -22,12 +17,9 @@ function get_type(side)
 		return nil
 	end
 end
-local color_link = {}
 for i = 0, 15 do
 	color_link[2 ^ i] = i
 end
-local cur_name = ""
-local w, h = 51, 19
 local function get_mon_device(name)
 	local name, x, y, cur_colors = name, 1, 1, {15, 0}
 	local gpu = name and component.list("gpu")()

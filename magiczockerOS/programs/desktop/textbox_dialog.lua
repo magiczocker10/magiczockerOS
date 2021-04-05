@@ -2,19 +2,10 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local running = true
-local w,h = term.getSize()
-local button_text = other[2]
-local empty = (" "):rep(w)
-local key_maps = {}
-local settings = get_settings()
+local term = term
+local w, h = term.getSize()
+local running, button_text, empty, key_maps, settings, user_input, user_input_cursor, textline_width, textline_offset = true, other[2], (" "):rep(w), {}, get_settings(), "", 1, w - 2, 0
 local btmp1, btmp2 = "#" .. button_text .. "#", " " .. button_text .. " "
-
--- Textfield variables
-local user_input = ""
-local user_input_cursor = 1
-local textline_width = w - 2
-local textline_offset = 0
 
 multishell.setTitle(multishell.getCurrent(), mode:sub(1, 1):upper() .. mode:sub(2) .. (#file > 0 and " " .. file or ""))
 do
@@ -27,9 +18,9 @@ do
 		end
 	end
 end
-local data=user_data()
+local data = user_data()
 if not data.server then
-	fs.set_root_path("/magiczockerOS/users/"..data.name.."/files/")
+	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
 end
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local function back_color(...)
@@ -85,7 +76,7 @@ local function draw()
 	term.setCursorPos(1, 3)
 	term.write(empty)
 	term.setCursorPos(1, 4)
-	term.write(empty:sub(1,-#button_text-4))
+	term.write(empty:sub(1, -#button_text - 4))
 	back_color(1, 128, settings.dialog_button_background or 32)
 	text_color(32768, 1, settings.dialog_button_text or 1)
 	write_text(btmp1, btmp2, btmp2, btmp2)
@@ -144,15 +135,15 @@ while running do
 		if mode == "rename" then
 			fs.move("/desktop/" .. file, "/desktop/" .. user_input)
 		else
-			local file=fs.open("/desktop/" .. user_input, "w")
+			local file = fs.open("/desktop/" .. user_input, "w")
 			if file then
 				file.write("")
 				file.close()
 			end
 		end
-		running=false
+		running = false
 	elseif e == "term_resize" then
-		w,h = term.getSize()
+		w, h = term.getSize()
 		empty = (" "):rep(w)
 		draw()
 	elseif e == "refresh_settings" then
@@ -160,4 +151,4 @@ while running do
 		draw()
 	end
 end
-done=true
+done = true

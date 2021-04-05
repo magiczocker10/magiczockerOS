@@ -1,3 +1,7 @@
+-- magiczockerOS - Copyright by Julian Kriete 2016-2021
+--
+-- My ComputerCraft-Forum account:
+-- http://www.computercraft.info/forums2/index.php?showuser=57180
 return { -- character, character shift, GLFW keycode, LWJGL keycode, LWJGL shift keycode
 ['SPACE'] = {"---SPACE---", "---SPACE---", 32, 57},
 ['APOSTROPHE'] = {"'", '"', 39, 40}, -- '

@@ -2,20 +2,13 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
+local term, fs = term, fs
 local w, h, iconsw, iconsh, borderw, borderh, pages
-local folder = "/desktop"
-local items = fs.exists(folder) and fs.list(folder) or {}
-local offset = 0
-local selected = 0
-local last_click = {0, 0, os.clock()}
-local iconw, iconh = 10, 4
-local page = 1
-local icon = {
+local folder, offset, selected, last_click, iconw, iconh, page, col, col_, icon = "/desktop", 0, 0, {0, 0, os.clock()}, 10, 4, 1, {}, 3, {
 	file = {">_  ", "prog", "    "},
 	folder = {"  ", "    ", "Fldr"},
 }
-local col = {}
-local col_ = 3
+local items = fs.exists(folder) and fs.list(folder) or {}
 for i = 0, 15 do
 	col[i] = (i + 8) % 16
 end

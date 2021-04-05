@@ -38,9 +38,7 @@ local function set_my_vis(a)
 end
 local function draw()
 	for y = 1, #menu[mode] do
-		local a = menu[mode][y][1]
-		local b = settings.startmenu_items_align
-		local c = cursor == y and bw < 3 and "-" or " "
+		local a, b, c = menu[mode][y][1], settings.startmenu_items_align, cursor == y and bw < 3 and "-" or " "
 		local d = (width - #a) * 0.5
 		term.setCursorPos(1, y)
 		term.write(c .. (a == "" and ("-"):rep(width - 2) or b == 2 and (" "):rep(math.floor(d) - 1) .. a .. (" "):rep(math.ceil(d) - 1) or b == 3 and (" "):rep(width - #a - 2) .. a or a .. (" "):rep(width - #a - 2)) .. c)
