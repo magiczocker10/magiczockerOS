@@ -3,33 +3,6 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 if component then
-	-- fix GPU palette colors so they aren't grayscale
-	do
-		local palette = {
-			{240, 240, 240}, -- white
-			{242, 178, 51}, -- orange
-			{229, 127, 216}, -- magenta
-			{153, 178, 242}, -- lightBlue
-			{222, 222, 108}, -- yellow
-			{127, 204, 25}, -- lime
-			{242, 178, 204}, -- pink
-			{76, 76, 76}, -- gray
-			{153, 153, 153}, -- lightGray
-			{76, 153, 178}, -- cyan
-			{178, 102, 229}, -- purple
-			{51, 102, 204}, -- blue
-			{127, 102, 76}, -- brown
-			{87, 166, 78}, -- green
-			{204, 76, 76}, -- red
-			{17, 17, 17}, -- black
-    }
-		local gpu = component.list("gpu")()
-		for i=1, #palette, 1 do
-			local col = palette[i]
-			-- bit shifting, without the bit shifting
-			component.invoke(gpu, "setPaletteColor", i - 1, col[1] * 256 * 256 + col[2] * 256 + col[3])
-		end
-	end
 	os.queueEvent=computer.pushSignal
 	-- https://oc.cil.li/topic/1793-how-to-mount-filesystem-component-without-openos/?do=findComment&comment=8263
 	for k,v in next,component.list("filesystem",true) do
