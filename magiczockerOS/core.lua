@@ -1390,6 +1390,7 @@ apis.window.set_peripheral(apis.peripheral.create(true))
 term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "term")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
 w, h = term.getSize()
 setup_monitors(_unpack(system_settings.devices or {}))
+apis.window.reload_color_palette({color_mode = 1})
 sgv(false)
 load_bios()
 do
@@ -1443,6 +1444,9 @@ function events(...)
 		e[1] = nil
 	end
 	if e[1] == "key_down" then
+		if e[3] > 31 and e[3] < 127 then
+			events("char", string.char(e[3]))
+		end
 		e[1] = "key"
 		e[2] = e[4]
 	elseif e[1] == "touch" then

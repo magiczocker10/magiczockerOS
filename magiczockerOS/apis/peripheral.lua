@@ -48,7 +48,11 @@ local function get_mon_device(name)
 		getSize = function() set_col() return component.invoke(gpu, "getResolution") end,
 		isColor = function() set_col() return true end, -- return component.invoke(gpu,"maxDepth")>1 and true or false
 		setBackgroundColor = function(color) if color_link[color] then color = color_link[color] set_col("back", color) cur_colors[1] = color end end,
-		setPaletteColor = function(a, b) if color_link[a] then component.invoke(gpu, "setPaletteColor", a, b) end end,
+		setPaletteColor = function(a, r, g, b)
+			if color_link[a] then
+				component.invoke(gpu, "setPaletteColor", color_link[a], r * 255 * 256 * 256 + g * 255 * 256 + b * 255)
+			end
+		end,
 		setTextColor = function(color) if color_link[color] then color = color_link[color] set_col("text", color) cur_colors[2] = color end end,
 		write = function(txt) if txt then set_col(true) component.invoke(gpu, "set", x, y, txt) x = x + #txt end end,
 	}
