@@ -20,7 +20,7 @@ for i = 1, 16 do
 	hex[tmp] = ("0123456789abcdef"):sub(i, i)
 	get_color[hex[tmp]] = tmp
 end
-local last_palette, color_palette = {mode = 1, inverted = false, original = false}, {
+local last_palette, color_palette = {mode = 0, inverted = false, original = false}, {
 	new = {
 		{240, 240, 240}, -- white
 		{242, 178, 51}, -- orange
