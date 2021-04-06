@@ -318,7 +318,7 @@ for i = 0, 15 do
 	native_conv[2 ^ i] = i + 1
 end
 local cp = {
-	nil,
+	{0, 0, 0, 0, 0, 0, 0, 0, 0}, -- normal
 	{.618, .320, .062, .163, .775, .062, .163, .320, .516}, -- achromatomaly *
 	{.299, .587, .114, .299, .587, .114, .299, .587, .114}, -- achromatopsia / gray | https://de.wikipedia.org/wiki/YUV-Farbmodell
 	{.8, .2, 0, .258, .742, 0, 0, .142, .858}, -- deuteranomaly *
@@ -334,7 +334,7 @@ local function round(a)
 end
 function reload_color_palette(settings)
 	if colored and term.setPaletteColor then
-		if cp[settings.color_mode] and (settings.color_mode or 1) ~= last_palette.mode or (settings.invert_colors or false) ~= last_palette.inverted or (settings.original_colors or false) ~= last_palette.original then
+		if cp[settings.color_mode] and ((settings.color_mode or 1) ~= last_palette.mode or (settings.invert_colors or false) ~= last_palette.inverted or (settings.original_colors or false) ~= last_palette.original) then
 			last_palette = {mode = settings.color_mode or 1, inverted = settings.invert_colors, original = settings.original_colors}
 			local a = settings.original_colors and "original" or "new"
 			for i = 1, 16 do
@@ -757,7 +757,7 @@ function create(x, y, width, height, visible, bar)
 			end
 			local new_color = {}
 			if type(r) == "number" and not g and not b then
-				new_color = {colors.unpack(r)}
+				new_color = {colors.unpackRGB(r)}
 			else
 				expect(2, r, "number")
 				expect(3, g, "number")
