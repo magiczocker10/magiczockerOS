@@ -755,7 +755,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					save_user_settings(user_)
 				end,
 				shutdown = is_system_program and os.shutdown or function() my_window.kill() end,
-				version = function() return "magiczockerOS 4.0 Preview 4" end,
+				version = function() return "magiczockerOS 4.0" end,
 				queueEvent = function(...)
 					_queue(id .. "", user_, ...)
 				end,
