@@ -64,7 +64,7 @@ local resize_mode = false
 local running = true
 local refresh_startbutton
 local cursorblink_timer
-local _HOSTver = tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
+local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
 -- tables
 local drag_old = {0, 0}
 local bios_to_reload = {"loadfile", "write", "print", "printError", "read"}
