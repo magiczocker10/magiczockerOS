@@ -165,6 +165,10 @@ local categories = {
 			{title = "Text", value = "search_text", type = "color"},
 			{title = "Seperator-Text", value = "search_seperator_text", type = "color"},
 			{title = "Searchfield Text", value = "search_field_text", type = "color"},
+			{title = "Taskbar Button Back (Active)", value = "search_button_active_back", type = "color"},
+			{title = "Taskbar Button Text (Active)", value = "search_button_active_text", type = "color"},
+			{title = "Taskbar Button Back (Inactive)", value = "search_button_inactive_back", type = "color"},
+			{title = "Taskbar Button Text (Inactive)", value = "search_button_inactive_text", type = "color"},
 		},
 	},
 	{
@@ -190,12 +194,12 @@ local categories = {
 		},
 	},
 	{
-		active = not is_online(),
+		active = not user_data().server,
 		title = "User",
 		entries = {},
 	},
 	{
-		active = not is_online() and not filter_login,
+		active = not filter_login and not user_data().server,
 		title = "Users",
 		entries = {},
 	},

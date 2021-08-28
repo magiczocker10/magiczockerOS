@@ -306,6 +306,9 @@ function events(a, b, c)
 			toggle("startmenu")
 			draw_start()
 			set_items()
+		elseif search and user ~= "" and c > w - 3 then -- open/close search
+			toggle("search")
+			draw_search()
 		elseif calendar and user ~= "" and c >= w - (user == "" and -1 or 2) - #time + (search and 0 or 3) and c < w - (user == "" and -1 or 2) + (search and 0 or 3) then -- open/close calendar
 			if get_proc_vis("startmenu") then
 				toggle("startmenu")
@@ -314,9 +317,6 @@ function events(a, b, c)
 			toggle("calendar")
 			draw_clock()
 			set_items()
-		elseif search and user ~= "" and c > w - 3 then -- open/close search
-			toggle("search")
-			draw_search()
 		elseif b == 1 or b == 3 then -- taskbar entries
 			if b == 1 then -- left
 				switch_visible(window_pos[c - 3 + offset])

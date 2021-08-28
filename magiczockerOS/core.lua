@@ -802,9 +802,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				setup_monitors(...)
 				update_windows(user_)
 			end or nil,
-			is_online = is_system_program and function()
-				return user_data.server ~= nil
-			end or nil,
 			create_window = is_system_program and function(path, root, env, ...)
 				create_user_window(user_, root, env, path, ...)
 			end,
@@ -1349,7 +1346,7 @@ end
 local function check_click_outside(id)
 	local a = false
 	if id ~= (system_windows.osk.id or "") and id ~= (system_windows.taskbar.id or "") then
-		local  tmp = nil
+		local tmp = nil
 		for i = 1, #system_window_order do
 			tmp = system_windows[system_window_order[i]]
 			if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
