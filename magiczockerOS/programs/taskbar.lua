@@ -16,13 +16,14 @@ local function text_color(...)
 	if b then term.setTextColor(b) end
 end
 local function get_time()
-	if settings.clock_visible and (os.time or os.date) then
+	if get_setting(settings, "clock_visible") and (os.time or os.date) then
+		local c_f = get_setting(settings, "clock_format")
 		if os.date then
-			return os.date(" %" .. (settings.clock_format and "H" or "I") .. ":%M" .. (settings.clock_format and "" or " %p") .. " ")
+			return os.date(" %" .. (c_f and "H" or "I") .. ":%M" .. (c_f and "" or " %p") .. " ")
 		else
 			local a = nil
 			local b = os.time()
-			if not settings.clock_format then
+			if not c_f then
 				a = b > 11 and "PM" or "AM"
 				if b >= 13 then
 					b = b - 12
@@ -41,7 +42,7 @@ local function get_proc_vis(a)
 	return procs[a] and not procs[a].is_dead and procs[a].window.get_visible() or false
 end
 local function create_proc(a, b)
-	if not (not procs[a] or procs[a].is_dead) then
+	if procs[a] and not procs[a].is_dead then
 		return nil
 	end
 	local f = apis.window.get_global_visible()
@@ -70,11 +71,11 @@ end
 local function draw_start()
 	term.setCursorPos(1, 1)
 	if get_proc_vis("startmenu") then
-		back_color(32768, 256, settings.startmenu_button_active_back or 256)
-		text_color(1, 1, settings.startmenu_button_active_text or 1)
+		back_color(32768, 256, get_setting(settings, "startmenu_button_active_back"))
+		text_color(1, 1, get_setting(settings, "startmenu_button_active_text"))
 	else
-		back_color(1, 128, settings.startmenu_button_inactive_back or 128)
-		text_color(32768, 1, settings.startmenu_button_inactive_text or 1)
+		back_color(1, 128, get_setting(settings, "startmenu_button_inactive_back"))
+		text_color(32768, 1, get_setting(settings, "startmenu_button_inactive_text"))
 	end
 	term.write(not term.isColor and (get_proc_vis("startmenu") and "-m-" or "_m_") or " m ")
 end
@@ -82,11 +83,11 @@ local function draw_search()
 	if user ~= "" and search then
 		term.setCursorPos(w - 2, 1)
 		if get_proc_vis("search") then
-			back_color(32768, 256, settings.search_button_active_back or 256)
-			text_color(1, 1, settings.search_button_active_text or 1)
+			back_color(32768, 256, get_setting(settings, "search_button_active_back"))
+			text_color(1, 1, get_setting(settings, "search_button_active_text"))
 		else
-			back_color(1, 128, settings.search_button_inactive_back or 128)
-			text_color(32768, 1, settings.search_button_inactive_text or 1)
+			back_color(1, 128, get_setting(settings, "search_button_inactive_back"))
+			text_color(32768, 1, get_setting(settings, "search_button_inactive_text"))
 		end
 		term.write(not term.isColor and (get_proc_vis("search") and "-S-" or "_S_") or " S ")
 	end
@@ -111,11 +112,11 @@ local function draw_items()
 		end
 	end
 	if c then
-		back_color(1, 128, settings.taskbar_items_inactive_back or 128)
-		text_color(32768, 1, settings.taskbar_items_inactive_text or 1)
+		back_color(1, 128, get_setting(settings, "taskbar_items_inactive_back"))
+		text_color(32768, 1, get_setting(settings, "taskbar_items_inactive_text"))
 		term.write(a:sub(1, a:find("\t") - 1))
-		back_color(32768, 256, settings.taskbar_items_active_back or 256)
-		text_color(1, 1, settings.taskbar_items_active_text or 1)
+		back_color(32768, 256, get_setting(settings, "taskbar_items_active_back"))
+		text_color(1, 1, get_setting(settings, "taskbar_items_active_text"))
 		local found = a:find("\t")
 		local last = found
 		while found do
@@ -125,16 +126,16 @@ local function draw_items()
 				last = found
 			end
 		end
-		back_color(1, 128, settings.taskbar_items_inactive_back or 128)
-		text_color(32768, 1, settings.taskbar_items_inactive_text or 1)
+		back_color(1, 128, get_setting(settings, "taskbar_items_inactive_back"))
+		text_color(32768, 1, get_setting(settings, "taskbar_items_inactive_text"))
 		term.write(a:sub(last + 1, #a))
 	else
-		back_color(1, 128, settings.taskbar_items_inactive_back or 128)
-		text_color(32768, 1, settings.taskbar_items_inactive_text or 1)
+		back_color(1, 128, get_setting(settings, "taskbar_items_inactive_back"))
+		text_color(32768, 1, get_setting(settings, "taskbar_items_inactive_text"))
 		term.write(a)
 	end
 	if ({term.getCursorPos()})[1] < w - (user == "" and -1 or 2) - #time then
-		back_color(1, 128, settings.taskbar_back or 128)
+		back_color(1, 128, get_setting(settings, "taskbar_back"))
 		local e = w - (user == "" and -1 or 2) - #time - ({term.getCursorPos()})[1]
 		local f = (" "):rep(e)
 		term.write(not term.isColor and ("_"):rep(e) or f)
@@ -181,13 +182,13 @@ local function set_items()
 end
 local function draw_clock()
 	time = get_time()
-	if settings.clock_visible then
+	if get_setting(settings, "clock_visible") then
 		if get_proc_vis("calendar") then
-			back_color(32768, 256, settings.clock_back_active or 256)
-			text_color(1, 32768, settings.clock_text_active or 1)
+			back_color(32768, 256, get_setting(settings, "clock_back_active"))
+			text_color(1, 32768, get_setting(settings, "clock_text_active"))
 		else
-			back_color(1, 128, settings.clock_back_inactive or 128)
-			text_color(32768, 1, settings.clock_text_inactive or 1)
+			back_color(1, 128, get_setting(settings, "clock_back_inactive"))
+			text_color(32768, 1, get_setting(settings, "clock_text_inactive"))
 		end
 		term.setCursorPos(w + 1 - #time - ((not search or user == "") and 0 or 3), 1)
 		term.write(time)
@@ -260,9 +261,6 @@ function events(a, b, c)
 			user = u_data.name
 		else
 			settings = u_data.settings or {}
-			if settings.clock_visible == nil then
-				settings.clock_visible = true
-			end
 		end
 		draw_clock()
 		draw_start()

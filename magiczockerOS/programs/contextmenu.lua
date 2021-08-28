@@ -61,11 +61,11 @@ local function correct_scroll()
 	end
 end
 local function draw()
-	back_color(1, 128, settings.context_menu_background or 128)
-	text_color(32768, 1, settings.context_menu_text or 1)
+	back_color(1, 128, get_setting(settings, "context_menu_background"))
+	text_color(32768, 1, get_setting(settings, "context_menu_text"))
 	local is_bw = not term.isColor or not term.isColor()
 	local to_add = (" "):rep(my_size[1])
-	local align = math.max(1, math.min(3, settings.context_menu_items_align or 1))
+	local align = math.max(1, math.min(3, get_setting(settings, "context_menu_items_align")))
 	for i = 1, my_size[2] do
 		term.setCursorPos(1, i)
 		local tmp = scrollable and (i == 1 and "^^^" or i == my_size[2] and "vvv") or items[i + scroll].txt

@@ -4,12 +4,15 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, fs = term, fs
 local w, h, iconsw, iconsh, borderw, borderh, pages
-local folder, offset, selected, last_click, iconw, iconh, page, col, col_, icon = "/desktop", 0, 0, {0, 0, os.clock()}, 10, 4, 1, {}, 3, {
+local settings = user_data().settings or {}
+local folder, offset, selected, last_click, iconw, iconh, page, col, col_, icon = "/desktop", 0, 0, {0, 0, os.clock()}, 10, 4, 1, {}, -1, {
 	file = {">_  ", "prog", "    "},
 	folder = {"  ", "    ", "Fldr"},
 }
 local items = fs.exists(folder) and fs.list(folder) or {}
+local color_conv = {}
 for i = 0, 15 do
+	color_conv[2 ^ i] = i
 	col[i] = (i + 8) % 16
 end
 local function invert()
@@ -56,7 +59,8 @@ local function draw_icon(id, line, x)
 end
 local function draw()
 	local _width, _f, _c = (" "):rep(w), math.floor(borderh), math.ceil(borderh)
-	term.setBackgroundColor(8)
+	term.setBackgroundColor(get_setting(settings, "desktop_back"))
+	term.setTextColor(1)
 	offset = -iconsw
 	for y = 1, h do
 		term.setCursorPos(1, y)
@@ -88,7 +92,7 @@ local function draw()
 		term.setBackgroundColor(1)
 		term.setTextColor(32768)
 		term.write(x == page and "#" or " ")
-		term.setBackgroundColor(8)
+		term.setBackgroundColor(get_setting(settings, "desktop_back"))
 		if x < pages then
 			term.write(" ")
 		end
@@ -96,6 +100,7 @@ local function draw()
 	term.write((" "):rep(math.ceil((w - (pages * 2 - 1)) * 0.5)))
 	term.setCursorPos(1, h + 2)
 	term.write(_width)
+	term.setTextColor(1)
 end
 local function events(e, _, x, y)
 	if e == "user" then
@@ -139,8 +144,13 @@ local function events(e, _, x, y)
 		borderw, borderh = (w - ((iconw + 1) * iconsw - 1)) * 0.5, (h - ((iconh + 1) * iconsh - 1)) * 0.5
 		pages = math.ceil(#items / (iconsw * iconsh))
 		draw()
+	elseif e == "refresh_settings" then
+		settings = user_data().settings or {}
+		col_ = color_conv[get_setting(settings, "desktop_back")]
+		draw()
 	end
 end
+col_ = color_conv[get_setting(nil, "desktop_back")]
 events("term_resize")
 while true do
 	events(coroutine.yield())

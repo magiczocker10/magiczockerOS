@@ -3,7 +3,7 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, fs = term, fs
-local codes, current_settings, layout, posY
+local codes, settings, layout, posY
 local window_width, glfw, mode, view, arrows, file = 0, (_HOSTver or 0) >= 1132, 1, {{}, {}}, {}, fs.open("/magiczockerOS/key_mappings/data.lua", "r")
 local codes_ = file.readAll()
 file.close()
@@ -37,7 +37,7 @@ local function load_lines()
 end
 local function loadKeys()
 	posY, layout, view = 2, {{}, {}}, {{"", ""}, {"", ""}}
-	file = fs.open("/magiczockerOS/key_mappings/" .. (current_settings.osk_key_mapping or "qwerty") .. ".map", "r")
+	file = fs.open("/magiczockerOS/key_mappings/" .. (settings.osk_key_mapping or "qwerty") .. ".map", "r")
 	load_lines()
 	file.close()
 	posY = 1
@@ -55,9 +55,9 @@ local function text_color(...)
 	if b then term.setTextColor(b) end
 end
 local function set_color()
-	local b = current_settings.window_bar_active_back or 128
+	local b = get_setting(settings, "window_bar_active_back")
 	back_color(32768, 32768, b)
-	text_color(1, 1, b == 1 and 32768 or current_settings.window_bar_active_text or 1)
+	text_color(1, 1, b == 1 and 32768 or get_setting(settings, "window_bar_active_text"))
 end
 local function draw()
 	window_width = 0
@@ -100,7 +100,7 @@ local function events(e, _, x, y)
 			end
 		end
 	elseif e == "refresh_settings" then
-		current_settings = user_data().settings or {}
+		settings = user_data().settings or {}
 		loadKeys()
 		set_color()
 		draw()

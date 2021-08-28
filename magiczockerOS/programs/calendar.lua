@@ -199,10 +199,10 @@ local function events(e, d, x, y)
 	elseif e == "refresh_settings" then
 		settings = user_data().settings or {}
 		if term.setBackgroundColor then
-			term.setBackgroundColor(settings.calendar_back or 256)
+			term.setBackgroundColor(get_setting(settings, "calendar_back"))
 		end
 		if term.setTextColor then
-			term.setTextColor(settings.calendar_text or 1)
+			term.setTextColor(get_setting(settings, "calendar_text"))
 		end
 		draw()
 	end
@@ -216,10 +216,10 @@ do
 	key_maps[a and 265 or 200] = "up"
 end
 if term.setBackgroundColor then
-	term.setBackgroundColor(settings.calendar_back or 256)
+	term.setBackgroundColor(get_setting(settings, "calendar_back"))
 end
 if term.setTextColor then
-	term.setTextColor(settings.calendar_text or 1)
+	term.setTextColor(get_setting(settings, "calendar_text"))
 end
 draw()
 while true do

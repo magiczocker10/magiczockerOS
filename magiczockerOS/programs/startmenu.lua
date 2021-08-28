@@ -38,7 +38,7 @@ local function set_my_vis(a)
 end
 local function draw()
 	for y = 1, #menu[mode] do
-		local a, b, c = menu[mode][y][1], settings.startmenu_items_align, cursor == y and bw < 3 and "-" or " "
+		local a, b, c = menu[mode][y][1], get_setting(settings, "startmenu_items_align"), cursor == y and bw < 3 and "-" or " "
 		local d = (width - #a) * 0.5
 		term.setCursorPos(1, y)
 		term.write(c .. (a == "" and ("-"):rep(width - 2) or b == 2 and (" "):rep(math.floor(d) - 1) .. a .. (" "):rep(math.ceil(d) - 1) or b == 3 and (" "):rep(width - #a - 2) .. a or a .. (" "):rep(width - #a - 2)) .. c)
@@ -82,8 +82,8 @@ end
 local function events(a, b, _, c)
 	if a == "refresh_settings" then
 		settings = user_data().settings or {}
-		back_color(32768, 256, settings.startmenu_back or 256)
-		text_color(1, 1, settings.startmenu_text or 1)
+		back_color(32768, 256, get_setting(settings, "startmenu_back"))
+		text_color(1, 1, get_setting(settings, "startmenu_text"))
 		draw()
 	elseif a == "mouse_click" and b == 1 then
 		menu[mode][c][2]()
@@ -130,8 +130,8 @@ if os.reboot then
 	create(true, true, "Reboot", function() os.reboot() end)
 end
 create(true, true, "Shutdown", function() os.shutdown() end)
-back_color(32768, 256, settings.startmenu_back or 256)
-text_color(1, 1, settings.startmenu_text or 1)
+back_color(32768, 256, get_setting(settings, "startmenu_back"))
+text_color(1, 1, get_setting(settings, "startmenu_text"))
 events("user")
 while true do
 	events(coroutine.yield())

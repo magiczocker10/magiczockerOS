@@ -87,8 +87,8 @@ local function draw_field(block_pos)
 		term.setCursorPos(2, 2)
 	end
 	local a = data.text or ""
-	back_color(32768, 128, settings.search_back or 128)
-	text_color(1, 1, settings.search_field_text or 1)
+	back_color(32768, 128, get_setting(settings, "search_back"))
+	text_color(1, 1, get_setting(settings, "search_field_text"))
 	if #a == 0 then
 		a = data.watermark or ""
 	end
@@ -125,14 +125,14 @@ local function scroll_to_result(dir)
 	results_scroll = results_scroll < 0 and 0 or results_scroll
 end
 local function set_blink()
-	text_color(1, 1, settings.search_field_text or 1)
+	text_color(1, 1, get_setting(settings, "search_field_text"))
 	term.setCursorPos(1 + field.cursor - field.offset, 2)
 	term.setCursorBlink(true)
 end
 local function draw()
 	term.setCursorBlink(false)
 	local empty = (" "):rep(w)
-	back_color(32768, 128, settings.search_back or 128)
+	back_color(32768, 128, get_setting(settings, "search_back"))
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
@@ -140,7 +140,7 @@ local function draw()
 	set_cursor(true)
 	term.write" "
 	term.setCursorPos(1, 3)
-	text_color(1, 256, settings.search_seperator_text or 256)
+	text_color(1, 256, get_setting(settings, "search_seperator_text"))
 	term.write(#results == 0 and empty or empty:gsub(" ", "_"))
 	for i = 4, h do
 		term.setCursorPos(1, i)
@@ -153,7 +153,7 @@ local function draw()
 			if temp.type == "empty_line" then
 				a = empty
 			else
-				text_color(1, selected and 1 or 256, settings.search_text or 1)
+				text_color(1, selected and 1 or 256, get_setting(settings, "search_text"))
 				a = (" " .. temp.text .. empty):sub(1, w)
 			end
 			if selected then

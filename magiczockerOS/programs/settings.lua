@@ -57,29 +57,30 @@ local categories = {
 		active = not filter_calendar,
 		title = "Calendar",
 		entries = {
-			{title = "Background", type = "color", value = "calendar_back", default = 256},
-			{title = "Text", type = "color", value = "calendar_text", default = 1},
+			{title = "Background", type = "color", value = "calendar_back"},
+			{title = "Text", type = "color", value = "calendar_text"},
+			{title = "Text Highlight", type = "color", value = "calendar_text_highlight"},
 		}
 	},
 	{
 		active = os.time ~= nil,
 		title = "Clock",
 		entries = {
-			{title = "24h", type = "boolean", value = "clock_format", default = false},
-			{title = "Background Active", type = "color", value = "clock_back_active", default = 256},
-			{title = "Text Active", type = "color", value = "clock_text_active", default = 1},
-			{title = "Background Inactive", type = "color", value = "clock_back_inactive", default = 128},
-			{title = "Text Inactive", type = "color", value = "clock_text_inactive", default = 1},
-			{title = "Visible", type = "boolean", value = "clock_visible", default = true},
+			{title = "24h", type = "boolean", value = "clock_format"},
+			{title = "Background Active", type = "color", value = "clock_back_active"},
+			{title = "Text Active", type = "color", value = "clock_text_active"},
+			{title = "Background Inactive", type = "color", value = "clock_back_inactive"},
+			{title = "Text Inactive", type = "color", value = "clock_text_inactive"},
+			{title = "Visible", type = "boolean", value = "clock_visible"},
 		},
 	},
 	{
 		active = not ((filter_colors or not term.setPaletteColor) and true or false),
 		title = "Color Filters",
 		entries = {
-			{title = "Color Mode", type = "drop-down", value = "color_mode", default = 1, entries = {"Off", "Achromatomaly", "Achromatopsia / Gray", "Deuteranomaly", "Deuteranopia", "Protanomaly", "Protanopia", "Sepia", "Tritanomaly", "Tritanopia"}},
-			{title = "Invert: ", type = "boolean", value = "invert_colors", default = false},
-			{title = "Original: ", type = "boolean", value = "original_colors", default = false},
+			{title = "Color Mode", type = "drop-down", value = "color_mode", entries = {"Off", "Achromatomaly", "Achromatopsia / Gray", "Deuteranomaly", "Deuteranopia", "Protanomaly", "Protanopia", "Sepia", "Tritanomaly", "Tritanopia"}},
+			{title = "Invert: ", type = "boolean", value = "invert_colors"},
+			{title = "Original: ", type = "boolean", value = "original_colors"},
 		},
 	},
 	{
@@ -96,41 +97,41 @@ local categories = {
 		active = not filter_contextmenu,
 		title = "Context-Menu",
 		entries = {
-			{title = "Background", type = "color", value = "context_menu_background", default = 128},
-			{title = "Text", type = "color", value = "context_menu_text", default = 1},
-			{title = "Items Align", type = "drop-down", value = "context_menu_items_align", default = 1, entries = {"left", "middle", "right"}},
+			{title = "Background", type = "color", value = "context_menu_background"},
+			{title = "Text", type = "color", value = "context_menu_text"},
+			{title = "Items Align", type = "drop-down", value = "context_menu_items_align", entries = {"left", "middle", "right"}},
 		},
 	},
 	{
 		active = not filter_desktop,
 		title = "Desktop",
 		entries = {
-			{title = "Background", value = "desktop_back", default = 2, type = "color"},
+			{title = "Background", value = "desktop_back", type = "color"},
 		},
 	},
 	{
 		active = not filter_desktop,
 		title = "Desktop-Dialogs",
 		entries = {
-			{title = "Bar-Background", value = "dialog_bar_background", default = 1, type = "color"},
-			{title = "Bar-Textcolor", value = "dialog_bar_text", default = 32768, type = "color"},
-			{title = "Background", value = "dialog_background", default = 16, type = "color"},
-			{title = "Button-Background", value = "dialog_button_background", default = 32, type = "color"},
-			{title = "Button-Textcolor", value = "dialog_button_text", default = 1, type = "color"},
+			{title = "Bar-Background", value = "dialog_bar_background", type = "color"},
+			{title = "Bar-Textcolor", value = "dialog_bar_text", type = "color"},
+			{title = "Background", value = "dialog_background", type = "color"},
+			{title = "Button-Background", value = "dialog_button_background", type = "color"},
+			{title = "Button-Textcolor", value = "dialog_button_text", type = "color"},
 		},
 	},
 	{
 		active = not filter_osk,
 		title = "Key-Mapping",
 		entries = {
-			{title = "Mapping", type = "drop-down", value = "osk_key_mapping", default = 1, entries = {}},
+			{title = "Mapping", type = "drop-down", value = "osk_key_mapping", entries = {}},
 		},
 	},
 	{
 		active = set_monitor_settings and peripheral and term and term.isColor and term.isColor(),
 		title = "Monitor (Global Settings)",
 		entries = {
-			{title = "Mode", system_setting = true, type = "drop-down", value = "monitor_mode", default = 1, entries = {"normal", "duplicate", "extend"}},
+			{title = "Mode", system_setting = true, type = "drop-down", value = "monitor_mode", entries = {"normal", "duplicate", "extend"}},
 			{title = "Manage Screens", system_setting = true, default = "", type = "label", display_text = "Manage >", changeable = true, on_click = function()
 				view = 2
 				if view == 2 then
@@ -151,41 +152,41 @@ local categories = {
 	{
 		title = "Mouse",
 		entries = {
-			{title = "Double-click speed", value = "mouse_double_click_speed", default = 0.2, steps = 0.1, type = "number"},
-			{title = "Inactive window scroll", value = "mouse_inactive_window_scroll", default = true, type = "boolean"},
-			{title = "Left-handed", value = "mouse_left_handed", default = false, type = "boolean"},
+			{title = "Double-click speed", value = "mouse_double_click_speed", steps = 0.1, type = "number"},
+			{title = "Inactive window scroll", value = "mouse_inactive_window_scroll", type = "boolean"},
+			{title = "Left-handed", value = "mouse_left_handed", type = "boolean"},
 		},
 	},
 	{
 		active = not filter_search,
 		title = "Search",
 		entries = {
-			{title = "Background", value = "search_back", default = 128, type = "color"},
-			{title = "Text", value = "search_text", default = 1, type = "color"},
-			{title = "Seperator-Text", value = "search_seperator_text", default = 256, type = "color"},
-			{title = "Searchfield Text", value = "search_field_text", default = 1, type = "color"},
+			{title = "Background", value = "search_back", type = "color"},
+			{title = "Text", value = "search_text", type = "color"},
+			{title = "Seperator-Text", value = "search_seperator_text", type = "color"},
+			{title = "Searchfield Text", value = "search_field_text", type = "color"},
 		},
 	},
 	{
 		title = "Startmenu",
 		entries = {
-			{title = "Background", value = "startmenu_back", default = 256, type = "color"},
-			{title = "Text", value = "startmenu_text", default = 1, type = "color"},
-			{title = "Button Active Background", value = "startmenu_button_active_back", default = 256, type = "color"},
-			{title = "Button Active Text", value = "startmenu_button_active_text", default = 1, type = "color"},
-			{title = "Button Inactive Background", value = "startmenu_button_inactive_back", default = 128, type = "color"},
-			{title = "Button Inactive Text", value = "startmenu_button_inactive_text", default = 1, type = "color"},
-			{title = "Items Align", type = "drop-down", value = "startmenu_items_align", default = 1, entries = {"left", "middle", "right"}},
+			{title = "Background", value = "startmenu_back", type = "color"},
+			{title = "Text", value = "startmenu_text", type = "color"},
+			{title = "Button Active Background", value = "startmenu_button_active_back", type = "color"},
+			{title = "Button Active Text", value = "startmenu_button_active_text", type = "color"},
+			{title = "Button Inactive Background", value = "startmenu_button_inactive_back", type = "color"},
+			{title = "Button Inactive Text", value = "startmenu_button_inactive_text", type = "color"},
+			{title = "Items Align", type = "drop-down", value = "startmenu_items_align", entries = {"left", "middle", "right"}},
 		},
 	},
 	{
 		title = "Taskbar",
 		entries = {
-			{title = "Background", value = "taskbar_back", default = 128, type = "color"},
-			{title = "Items Active Background", value = "taskbar_items_active_back", default = 256, type = "color"},
-			{title = "Items Active Text", value = "taskbar_items_active_text", default = 1, type = "color"},
-			{title = "Items Inactive Background", value = "taskbar_items_inactive_back", default = 128, type = "color"},
-			{title = "Items Inactive Text", value = "taskbar_items_inactive_text", default = 1, type = "color"},
+			{title = "Background", value = "taskbar_back", type = "color"},
+			{title = "Items Active Background", value = "taskbar_items_active_back", type = "color"},
+			{title = "Items Active Text", value = "taskbar_items_active_text", type = "color"},
+			{title = "Items Inactive Background", value = "taskbar_items_inactive_back", type = "color"},
+			{title = "Items Inactive Text", value = "taskbar_items_inactive_text", type = "color"},
 		},
 	},
 	{
@@ -201,31 +202,31 @@ local categories = {
 	{
 		title = "Window (Active)",
 		entries = {
-			{title = "Bar Background", value = "window_bar_active_back", default = 128, type = "color"},
-			{title = "Bar Text", value = "window_bar_active_text", default = 1, type = "color"},
-			{title = "Close Button Background", value = "window_close_button_active_back", default = 128, type = "color"},
-			{title = "Close Button Text", value = "window_close_button_active_text", default = 2048, type = "color"},
-			{title = "Maximize Button Background", value = "window_maximize_button_active_back", default = 128, type = "color"},
-			{title = "Maximize Button Text", value = "window_maximize_button_active_text", default = 8, type = "color"},
-			{title = "Minimize Button Background", value = "window_minimize_button_active_back", default = 128, type = "color"},
-			{title = "Minimize Button Text", value = "window_minimize_button_active_text", default = 512, type = "color"},
-			{title = "Resize Border Background", value = "window_resize_border_back", default = 128, type = "color"},
-			{title = "Resize Border Text", value = "window_resize_border_text", default = 128, type = "color"},
-			{title = "Resize Button Background", value = "window_resize_button_back", default = 128, type = "color"},
-			{title = "Resize Button Text", value = "window_resize_button_text", default = 256, type = "color"},
+			{title = "Bar Background", value = "window_bar_active_back", type = "color"},
+			{title = "Bar Text", value = "window_bar_active_text", type = "color"},
+			{title = "Close Button Background", value = "window_close_button_active_back", type = "color"},
+			{title = "Close Button Text", value = "window_close_button_active_text", type = "color"},
+			{title = "Maximize Button Background", value = "window_maximize_button_active_back", type = "color"},
+			{title = "Maximize Button Text", value = "window_maximize_button_active_text", type = "color"},
+			{title = "Minimize Button Background", value = "window_minimize_button_active_back", type = "color"},
+			{title = "Minimize Button Text", value = "window_minimize_button_active_text", type = "color"},
+			{title = "Resize Border Background", value = "window_resize_border_back", type = "color"},
+			{title = "Resize Border Text", value = "window_resize_border_text", type = "color"},
+			{title = "Resize Button Background", value = "window_resize_button_back", type = "color"},
+			{title = "Resize Button Text", value = "window_resize_button_text", type = "color"},
 		},
 	},
 	{
 		title = "Window (Inactive)",
 		entries = {
-			{title = "Bar Background", value = "window_bar_inactive_back", default = 128, type = "color"},
-			{title = "Bar Text", value = "window_bar_inactive_text", default = 1, type = "color"},
-			{title = "Close Button Background", value = "window_close_button_inactive_back", default = 128, type = "color"},
-			{title = "Close Button Text", value = "window_close_button_inactive_text", default = 256, type = "color"},
-			{title = "Maximize Button Background", value = "window_maximize_button_inactive_back", default = 128, type = "color"},
-			{title = "Maximize Button Text", value = "window_maximize_button_inactive_text", default = 256, type = "color"},
-			{title = "Minimize Button Background", value = "window_minimize_button_inactive_back", default = 128, type = "color"},
-			{title = "Minimize Button Text", value = "window_minimize_button_inactive_text", default = 256, type = "color"},
+			{title = "Bar Background", value = "window_bar_inactive_back", type = "color"},
+			{title = "Bar Text", value = "window_bar_inactive_text", type = "color"},
+			{title = "Close Button Background", value = "window_close_button_inactive_back", type = "color"},
+			{title = "Close Button Text", value = "window_close_button_inactive_text", type = "color"},
+			{title = "Maximize Button Background", value = "window_maximize_button_inactive_back", type = "color"},
+			{title = "Maximize Button Text", value = "window_maximize_button_inactive_text", type = "color"},
+			{title = "Minimize Button Background", value = "window_minimize_button_inactive_back", type = "color"},
+			{title = "Minimize Button Text", value = "window_minimize_button_inactive_text", type = "color"},
 		},
 	},
 	{
@@ -364,7 +365,7 @@ local function load_key_mapping()
 			categories[i].entries[1].entries={}
 			local _temp = categories[i].entries[1].entries
 			for k, v in next, fs.list("/magiczockerOS/key_mappings/") do
-				if k ~= "n" and v:sub(-4) == ".map" and v ~= "base.map" then
+				if v:sub(-4) == ".map" and v ~= "base.map" then
 					_temp[#_temp + 1] = v:sub(1, -5)
 					if _temp[#_temp] == (tmp or "") then
 						settings.osk_key_mapping = #_temp
@@ -995,6 +996,13 @@ local function save_system_settings(not_set)
 		end
 	end
 end
+local function load_default_settings()
+	for i = 1, #categories do
+		for _, v in next, categories[i].entries do
+			v.default = get_setting(nil, v.value) or v.default
+		end
+	end
+end
 local function load_system_settings()
 	sys_set = nil
 	if fs.exists("/magiczockerOS/settings.json") then
@@ -1057,12 +1065,6 @@ local function scroll_field_cursor(dir)
 	end
 end
 -- start
-if not filter_calendar then
-	local tmp = categories[1].entries
-	tmp[#tmp+1] = {title = "Calendar Background", type = "color", value = "calendar_back", default = 256}
-	tmp[#tmp+1] = {title = "Calendar Text", type = "color", value = "calendar_text", default = 1}
-	tmp[#tmp+1] = {title = "Calendar Text Highlight", type = "color", value = "calendar_text_highlight", default = 128}
-end
 do
 	local a = _HOSTver >= 1132
 	key_maps[a and 45 or 12] = "minus"
@@ -1077,6 +1079,7 @@ do
 	key_maps[a and 334 or 13] = "add"
 	key_maps[a and -1 or 78] = "add"
 end
+load_default_settings()
 load_settings()
 load_system_settings()
 generate_list()
