@@ -3,9 +3,10 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
-local cursor, key_maps, menu, mode, width = 1, {}, {{}, {}}, nil, 1
+local cursor, key_maps, menu, mode, width, cur_settings = 1, {}, {{}, {}}, nil, 1, {}
 local settings = user_data().settings or {}
 local term, textutils = term, textutils
+local cs = cur_settings
 local function create(a, b, c, d)
 	if term.isColor and term.isColor() or a then
 		if b then
@@ -24,6 +25,11 @@ local function text_color(...)
 	local b = ({...})[bw]
 	if b then term.setTextColor(b) end
 end
+local function update_cached_settings()
+	cs.sb = get_setting(settings, "startmenu_back")
+	cs.sia = get_setting(settings, "startmenu_items_align")
+	cs.st = get_setting(settings, "startmenu_text")
+end
 local function set_my_vis(a)
 	if my_win.window.get_visible() == a then return nil end
 	my_win.window.set_visible(a)
@@ -38,7 +44,7 @@ local function set_my_vis(a)
 end
 local function draw()
 	for y = 1, #menu[mode] do
-		local a, b, c = menu[mode][y][1], get_setting(settings, "startmenu_items_align"), cursor == y and bw < 3 and "-" or " "
+		local a, b, c = menu[mode][y][1], cs.sia, cursor == y and bw < 3 and "-" or " "
 		local d = (width - #a) * 0.5
 		term.setCursorPos(1, y)
 		term.write(c .. (a == "" and ("-"):rep(width - 2) or b == 2 and (" "):rep(math.floor(d) - 1) .. a .. (" "):rep(math.ceil(d) - 1) or b == 3 and (" "):rep(width - #a - 2) .. a or a .. (" "):rep(width - #a - 2)) .. c)
@@ -82,8 +88,9 @@ end
 local function events(a, b, _, c)
 	if a == "refresh_settings" then
 		settings = user_data().settings or {}
-		back_color(32768, 256, get_setting(settings, "startmenu_back"))
-		text_color(1, 1, get_setting(settings, "startmenu_text"))
+		update_cached_settings()
+		back_color(32768, 256, cs.sb)
+		text_color(1, 1, cs.st)
 		draw()
 	elseif a == "mouse_click" and b == 1 then
 		menu[mode][c][2]()
@@ -113,6 +120,7 @@ end
 create(true, false, "CraftOS", function() close_os() end)
 if fs.exists("/magiczockerOS/programs/settings.lua") then
 	create(true, false, "Settings", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings.lua", true) end)
+	create(true, false, "Settings Old", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings-.lua", true) end)
 end
 create(true, false, "Shell", function() set_my_vis(false) create_window() end)
 create(true, false, "Show Desktop", function() show_desktop() end)
@@ -130,8 +138,9 @@ if os.reboot then
 	create(true, true, "Reboot", function() os.reboot() end)
 end
 create(true, true, "Shutdown", function() os.shutdown() end)
-back_color(32768, 256, get_setting(settings, "startmenu_back"))
-text_color(1, 1, get_setting(settings, "startmenu_text"))
+update_cached_settings()
+back_color(32768, 256, cs.sb)
+text_color(1, 1, cs.st)
 events("user")
 while true do
 	events(coroutine.yield())

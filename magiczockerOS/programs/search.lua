@@ -8,9 +8,10 @@ if not data.server then
 	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
 end
 local w, h = term.getSize()
-local user, results, key_maps, settings, reposed, last_pos = user or "", {}, {}, user_data().settings or {}, false, {0, 0, 0, 0}
+local user, results, key_maps, settings, reposed, last_pos, cur_settings = user or "", {}, {}, nil, false, {0, 0, 0, 0}, {}
 local results_scroll, entry_selected
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local cs = cur_settings
 local field = {
 	allowed_pattern = "[a-zA-Z0-9-/%.+_%(%)%s]",
 	cursor = 1,
@@ -29,6 +30,12 @@ local function text_color(...)
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b)
+end
+local function update_cached_settings()
+	cs.sb = get_setting(settings, "search_back")
+	cs.sft = get_setting(settings, "search_field_text")
+	cs.sst = get_setting(settings, "search_seperator_text")
+	cs.st = get_setting(settings, "search_text")
 end
 local function set_position(a)
 	local wt, ht = get_total_size()
@@ -87,8 +94,8 @@ local function draw_field(block_pos)
 		term.setCursorPos(2, 2)
 	end
 	local a = data.text or ""
-	back_color(32768, 128, get_setting(settings, "search_back"))
-	text_color(1, 1, get_setting(settings, "search_field_text"))
+	back_color(32768, 128, cs.sb)
+	text_color(1, 1, cs.sft)
 	if #a == 0 then
 		a = data.watermark or ""
 	end
@@ -125,14 +132,14 @@ local function scroll_to_result(dir)
 	results_scroll = results_scroll < 0 and 0 or results_scroll
 end
 local function set_blink()
-	text_color(1, 1, get_setting(settings, "search_field_text"))
+	text_color(1, 1, cs.sft)
 	term.setCursorPos(1 + field.cursor - field.offset, 2)
 	term.setCursorBlink(true)
 end
 local function draw()
 	term.setCursorBlink(false)
 	local empty = (" "):rep(w)
-	back_color(32768, 128, get_setting(settings, "search_back"))
+	back_color(32768, 128, cs.sb)
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
@@ -140,7 +147,7 @@ local function draw()
 	set_cursor(true)
 	term.write" "
 	term.setCursorPos(1, 3)
-	text_color(1, 256, get_setting(settings, "search_seperator_text"))
+	text_color(1, 256, cs.sst)
 	term.write(#results == 0 and empty or empty:gsub(" ", "_"))
 	for i = 4, h do
 		term.setCursorPos(1, i)
@@ -153,7 +160,7 @@ local function draw()
 			if temp.type == "empty_line" then
 				a = empty
 			else
-				text_color(1, selected and 1 or 256, get_setting(settings, "search_text"))
+				text_color(1, selected and 1 or 256, cs.st)
 				a = (" " .. temp.text .. empty):sub(1, w)
 			end
 			if selected then
@@ -167,21 +174,7 @@ local function draw()
 	end
 	set_blink()
 end
-do
-	local a = _HOSTver >= 1132
-	key_maps[a and 257 or 28] = "enter"
-	key_maps[a and 259 or 14] = "backspace"
-	key_maps[a and 261 or 211] = "delete"
-	key_maps[a and 262 or 205] = "right"
-	key_maps[a and 263 or 203] = "left"
-	key_maps[a and 264 or 208] = "down"
-	key_maps[a and 265 or 200] = "up"
-end
-prepare_list()
-set_position()
-draw()
-while true do
-	local e, d, x, y = coroutine.yield()
+local function events(e, d, x, y)
 	if e == "char" or e == "paste" then
 		local b = {}
 		d = d:gsub("\\", "/")
@@ -265,6 +258,23 @@ while true do
 		draw()
 	elseif e == "refresh_settings" then
 		settings = user_data().settings or {}
+		update_cached_settings()
 		draw()
 	end
+end
+do
+	local a = _HOSTver >= 1132
+	key_maps[a and 257 or 28] = "enter"
+	key_maps[a and 259 or 14] = "backspace"
+	key_maps[a and 261 or 211] = "delete"
+	key_maps[a and 262 or 205] = "right"
+	key_maps[a and 263 or 203] = "left"
+	key_maps[a and 264 or 208] = "down"
+	key_maps[a and 265 or 200] = "up"
+end
+prepare_list()
+set_position()
+events("refresh_settings")
+while true do
+	events(coroutine.yield())
 end

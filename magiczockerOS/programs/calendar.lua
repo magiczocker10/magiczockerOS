@@ -6,9 +6,14 @@
 local w, h = 25, 1
 local cur_date = os.date and os.date("*t") or {} -- day hour min month sec wday yday year
 local cursor = {1, 1}
-local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps = 3, cur_date.month or 1, cur_date.year or 2021, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}
-local settings = user_data().settings or {}
+local view, month, year, offset, months, width, month_keys, year_keys, leap_year, key_maps, cur_settings = 3, cur_date.month or 1, cur_date.year or 2021, 0, {{"Jan", 31, 31}, {"Feb", 28, 59}, {"Mar", 31, 90}, {"Apr", 30, 120}, {"May", 31, 151}, {"Jun", 30, 181}, {"Jul", 31, 212}, {"Aug", 31, 243}, {"Sep", 30, 273}, {"Oct", 31, 304}, {"Nov", 30, 334}, {"Dec", 31, 365}}, (" "):rep(w), {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}, { [1700] = 4, [1800] = 2, [1900] = 0, [2000] = 6 }, false, {}, {}
+local settings
+local cs = cur_settings
 local term = term
+local function update_cached_settings()
+	cs.cb = get_setting(settings, "calendar_back")
+	cs.ct = get_setting(settings, "calendar_text")
+end
 local function get_week_day(a, b, c) -- Source: http://mathforum.org/dr.math/faq/faq.calendar.html
 	local year2 = tonumber(tostring(c):sub(-2))
 	leap_year = c % 4 == 0 and not (c % 100 == 0 and c % 400 > 0)
@@ -198,11 +203,12 @@ local function events(e, d, x, y)
 		draw()
 	elseif e == "refresh_settings" then
 		settings = user_data().settings or {}
+		update_cached_settings()
 		if term.setBackgroundColor then
-			term.setBackgroundColor(get_setting(settings, "calendar_back"))
+			term.setBackgroundColor(cs.cb)
 		end
 		if term.setTextColor then
-			term.setTextColor(get_setting(settings, "calendar_text"))
+			term.setTextColor(cs.ct)
 		end
 		draw()
 	end
@@ -215,13 +221,7 @@ do
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"
 end
-if term.setBackgroundColor then
-	term.setBackgroundColor(get_setting(settings, "calendar_back"))
-end
-if term.setTextColor then
-	term.setTextColor(get_setting(settings, "calendar_text"))
-end
-draw()
+events("refresh_settings")
 while true do
 	events(coroutine.yield())
 end

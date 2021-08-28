@@ -4,8 +4,9 @@
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, fs = term, fs
 local codes, settings, layout, posY
-local window_width, glfw, mode, view, arrows, file = 0, (_HOSTver or 0) >= 1132, 1, {{}, {}}, {}, fs.open("/magiczockerOS/key_mappings/data.lua", "r")
+local window_width, glfw, mode, view, arrows, file, cur_settings = 0, (_HOSTver or 0) >= 1132, 1, {{}, {}}, {}, fs.open("/magiczockerOS/key_mappings/data.lua", "r"), {}
 local codes_ = file.readAll()
+local cs = cur_settings
 file.close()
 codes = loadstring(codes_)()
 local function load_lines()
@@ -54,10 +55,14 @@ local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
 end
+local function update_cached_settings()
+	cs.wbab = get_setting(settings, "window_bar_active_back")
+	cs.wbat = get_setting(settings, "window_bar_active_text")
+end
 local function set_color()
-	local b = get_setting(settings, "window_bar_active_back")
+	local b = cs.wbab
 	back_color(32768, 32768, b)
-	text_color(1, 1, b == 1 and 32768 or get_setting(settings, "window_bar_active_text"))
+	text_color(1, 1, b == 1 and 32768 or cs.wbat)
 end
 local function draw()
 	window_width = 0
@@ -101,6 +106,7 @@ local function events(e, _, x, y)
 		end
 	elseif e == "refresh_settings" then
 		settings = user_data().settings or {}
+		update_cached_settings()
 		loadKeys()
 		set_color()
 		draw()

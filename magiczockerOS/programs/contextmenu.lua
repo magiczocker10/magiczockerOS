@@ -3,9 +3,10 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term = term
-local max_height, max_width, my_size, key_maps, settings, my_pos, scrollable = 15, 20, {0, 0}, {}, user_data().settings or {}, {0, 0}, false
+local max_height, max_width, my_size, key_maps, settings, my_pos, scrollable, cur_settings = 15, 20, {0, 0}, {}, user_data().settings or {}, {0, 0}, false, {}
 local cursor, items, scroll, caller, parents, cur_raw
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+local cs = cur_settings
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -13,6 +14,11 @@ end
 local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
+end
+local function update_cached_settings()
+	cs.cmb = get_setting(settings, "context_menu_background")
+	cs.cmia = get_setting(settings, "context_menu_items_align")
+	cs.cmt = get_setting(settings, "context_menu_text")
 end
 local function process_data(x, y)
 	local maxw, maxh = get_total_size()
@@ -61,11 +67,11 @@ local function correct_scroll()
 	end
 end
 local function draw()
-	back_color(1, 128, get_setting(settings, "context_menu_background"))
-	text_color(32768, 1, get_setting(settings, "context_menu_text"))
+	back_color(1, 128, cs.cmb)
+	text_color(32768, 1, cs.cmt)
 	local is_bw = not term.isColor or not term.isColor()
 	local to_add = (" "):rep(my_size[1])
-	local align = math.max(1, math.min(3, get_setting(settings, "context_menu_items_align")))
+	local align = math.max(1, math.min(3, cs.cmia))
 	for i = 1, my_size[2] do
 		term.setCursorPos(1, i)
 		local tmp = scrollable and (i == 1 and "^^^" or i == my_size[2] and "vvv") or items[i + scroll].txt
@@ -137,6 +143,7 @@ do
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"
 end
+update_cached_settings()
 while true do
 	local a, b, c, d, e = coroutine.yield()
 	if a == "set_data" then
@@ -171,6 +178,7 @@ while true do
 		end
 	elseif a == "refresh_settings" then
 		settings = user_data().settings or {}
+		update_cached_settings()
 		draw()
 	end
 end

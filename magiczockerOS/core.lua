@@ -65,6 +65,7 @@ local running = true
 local refresh_startbutton
 local cursorblink_timer
 local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
+local default_settings = {}
 -- tables
 local drag_old = {0, 0}
 local bios_to_reload = {"loadfile", "write", "print", "printError", "read"}
@@ -663,6 +664,22 @@ local function switch_user()
 		term.setCursorBlink(false)
 	end
 end
+local function get_default_settings()
+	if not fs.exists("/magiczockerOS/default_settings.json") then
+		error("Default settings not existing!")
+	end
+	local file = fs.open("/magiczockerOS/default_settings.json", "r")
+	local a = file.readAll()
+	file.close()
+	return unserialise(a)
+end
+local function get_setting(source, name)
+	local s = source and source[name]
+	if not s and type(s) == "nil" then
+		return default_settings[name]
+	end
+	return s
+end
 local function create_user_window(sUser, os_root, uenv, path, ...)
 	local args = {...}
 	local message = ""
@@ -778,6 +795,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				until param == timer
 			end,
 			textutils = textutils,
+			get_setting = is_system_program and get_setting or nil,
 			unserialise = is_system_program and unserialise or nil,
 			set_monitor_settings = is_system_program and function(mode, ...)
 				system_settings.monitor_mode = mode or "normal"
@@ -951,7 +969,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			for i = 1, #bios_to_reload do
 				tmp = bios_to_reload[i]
 				if _G[tmp] then
-					env[tmp] = (env.loadstring or env.load)(overrides[tmp] or string.dump(_G[tmp]), nil, nil, env)
+					env[tmp] = (env.loadstring or env.load)(overrides[tmp] or string.dump(_G[tmp]), "Bios - " .. tmp, nil, env)
 					if overrides[tmp] then
 						env[tmp] = env[tmp]()
 					end
@@ -1200,6 +1218,7 @@ local function create_system_windows(i)
 		term = system_windows[temp].window,
 		user = cur_user,
 		user_data = function() return gUD(cur_user) end,
+		get_setting = get_setting,
 		dofile = dofile, -- osk
 		loadstring = loadstring,
 		coroutine = {
@@ -1380,6 +1399,7 @@ textutils.serialize = textutils.serialize or fallback_serialise
 textutils.serialise = textutils.serialize
 textutils.unserialize = textutils.unserialize or unserialise
 textutils.unserialise = textutils.unserialize
+default_settings = get_default_settings()
 load_system_settings()
 load_api("filesystem")
 load_api("peripheral")
@@ -1465,7 +1485,7 @@ function events(...)
 		--e[1] = "monitor_resize"
 	end
 	local user_data = gUD(cur_user)
-	if (monitor_devices.term or computer) and user_data.settings and user_data.settings.mouse_left_handed and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
+	if (monitor_devices.term or computer) and get_setting(user_data.settings, "mouse_left_handed") and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
 		e[2] = e[2] == 1 and 2 or e[2] == 2 and 1 or e[2]
 	end
 	if computer and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_scroll") then
@@ -1541,11 +1561,11 @@ function events(...)
 					local org_w = win_x + win_w - 1
 					win_x = win_x + e[3] - click.x
 					win_w = win_w - e[3] + click.x
-					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
 					if win_w < 10 then
 						win_w = 10
 						win_x = org_w - win_w + 1
 					end
+					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
 					click.x = win_x
 				end
 				if click.y == win_y + win_h - 1 then -- border bottom
@@ -1583,7 +1603,7 @@ function events(...)
 			local a = uptime()
 			_queue(
 					is_scroll and "mouse_scroll" or a - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor",
-					is_scroll and e[5] * -1 or user_data.settings and user_data.settings.mouse_left_handed and 2 or 1,
+					is_scroll and e[5] * -1 or get_setting(user_data.settings, "mouse_left_handed") and 2 or 1,
 					e[3] + monitor_order[monitor_devices[e[2]]].offset,
 					e[4]
 				)
@@ -1729,7 +1749,7 @@ function events(...)
 				resume_system("14taskbar", system_windows.taskbar.coroutine, "window_change")
 			end
 			if e[1] == "mouse_click" and e[4] == win_y and cur_window.window.has_header() then
-				if last_click.x == e[3] and last_click.y == e[4] and uptime() - last_click.time < (user_data.settings.mouse_double_click_speed or 0.2) then
+				if last_click.x == e[3] and last_click.y == e[4] and uptime() - last_click.time < get_setting(user_data.settings, "mouse_double_click_speed") then
 					_queue("double_click", e[2], e[3], e[4])
 				end
 				last_click.x = e[3]
@@ -1770,7 +1790,7 @@ function events(...)
 			elseif e[1] == "mouse_click" and resize_mode and e[3] > win_x and e[3] < win_x + win_w - 1 and e[4] > win_y and e[4] < win_y + win_h - 1 then
 				resize_mode = false
 				temp_window.toggle_border(false)
-			elseif e[1] == "mouse_scroll" and (id < 0 or id == 1 or user_data.settings.mouse_inactive_window_scroll ~= false) then
+			elseif e[1] == "mouse_scroll" and (id < 0 or id == 1 or get_setting(user_data.settings, "mouse_inactive_window_scroll") ~= false) then
 				resume_user(cur_window.coroutine, e[1], e[2], e[3] - win_x + 1, e[4] - win_y + (cur_window.window.has_header() and 0 or 1))
 			elseif e[1] == "mouse_click" and check_click_outside(id) then
 				need_redraw = true
