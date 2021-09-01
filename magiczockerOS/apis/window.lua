@@ -286,33 +286,6 @@ function redraw_global_cache(check_changes)
 		end
 	end
 end
-function get_global_cache(b, c) -- Returns the screen / the specified window in the nft-format.
-	local d, e, f = {}, {(" "):rep(total_size[1])}, {b = 32768}
-	local old_col, g, h
-	for i = c and 2 or 1, c or total_size[2] do
-		old_col = {nil, nil} -- back, text
-		d[#d + 1] = {}
-		g, h = global_cache_old[i] or f, d[#d]
-		d[#d] = g and d[#d] or e
-		for j = 1, b or total_size[1] do
-			if g[j] then
-				if (g[j].b or g[j].back) ~= old_col[1] then
-					h[#h + 1] = ("30"):char()
-					old_col[1] = g[j].b or g[j].back
-					h[#h + 1] = old_col[1]
-				end
-				if (g[j].t or g[j].text or old_col[2]) ~= old_col[2] then
-					h[#h + 1] = ("31"):char()
-					old_col[2] = g[j].t or g[j].text
-					h[#h + 1] = old_col[2]
-				end
-			end
-			h[#h + 1] = g[j] and (g[j].s or g[j].char) or " "
-		end
-		d[#d] = h and _tconcat(h) or d[#d]
-	end
-	return _tconcat(d, "\n")
-end
 local native_conv = {} -- for term.nativePaletteColor
 for i = 0, 15 do
 	native_conv[2 ^ i] = i + 1
@@ -362,14 +335,15 @@ function reload_color_palette(settings)
 		end
 	end
 end
-function create(x, y, width, height, visible, bar)
+function create(x, y, width, height, visible, bar, user)
 	expect(1, x, "number")
 	expect(2, y, "number")
 	expect(3, width, "number")
 	expect(4, height, "number")
 	if visible ~= nil then expect(5, visible, "boolean") else visible = true end
-	local back_color, blink, can_draw, id, state, text_color, border, title, color_codes, screen_s, screen_b, screen_t, screen2, settings, window, my_blink, my_buttons, cursor = 32768, false, true, 0, "normal", 1, false, "", {}, {}, {}, {}, {}, {}, {}, true, {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}, {1, 1}
+	local back_color, blink, can_draw, id, state, text_color, border, color_codes, screen_s, screen_b, screen_t, screen2, window, my_blink, cursor, settings = 32768, false, true, 0, "normal", 1, false, {}, {}, {}, {}, {}, {}, true, {1, 1}, {}
 	local redraw_line, last_header_first, last_header_width, last_header_b, last_header_s, last_header_t
+	local user = user or {}
 	for k, v in next, color_palette.new do
 		color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
 	end
@@ -428,9 +402,6 @@ function create(x, y, width, height, visible, bar)
 			end
 		end
 	end
-	function window.get_screen()
-		return get_global_cache(data[state].width, data[state].height - (bar and 1 or 0))
-	end
 	function window.toggle_cursor_blink()
 		if blink or my_blink then
 			my_blink = not my_blink
@@ -443,14 +414,14 @@ function create(x, y, width, height, visible, bar)
 			return nil
 		end
 		last_header_first, last_header_width = foreground, data[state].width
-		local b, conf = {"", "", "", "", "", "", "", "", ""}, settings
+		local b, conf = {"", "", "", "", "", "", "", "", ""}, settings or {}
 		if colored then
-			for i = 1, id > 0 and #my_buttons or 1 do
-				local a = my_buttons[i]
+			for i = 1, id > 0 and #user.buttons or 1 do
+				local a = user.buttons[i]
 				b[1], b[2], b[3] = b[1] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_back"] or a[2]] or hex[conf["window_" .. a[1] .. "_button_inactive_back"] or a[3]]), b[2] .. "o", b[3] .. (foreground and hex[conf["window_" .. a[1] .. "_button_active_text"] or a[4]] or hex[conf["window_" .. a[1] .. "_button_inactive_text"] or a[5]])
 			end
 		end
-		b[4] = ((colored and " " or "=") .. title .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (id > 0 and #my_buttons or 0) - 1 or last_header_width)
+		b[4] = ((colored and " " or "=") .. user.label.name .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (id > 0 and #user.buttons or 0) - 1 or last_header_width)
 		local __ = foreground
 		if colored then
 			b[5], b[6] = hex[conf["window_bar_" .. (__ and "" or "in") .. "active_back"] or 128], hex[conf["window_bar_" .. (__ and "" or "in") .. "active_text"] or 1]
@@ -470,25 +441,6 @@ function create(x, y, width, height, visible, bar)
 			screen_b[1][i], screen_s[1][i], screen_t[1][i] = header_tmp[1]:sub(i, i), header_tmp[2]:sub(i, i), header_tmp[3]:sub(i, i)
 		end
 		last_header_b, last_header_s, last_header_t = screen_b[1], screen_s[1], screen_t[1]
-	end
-	function window.get_buttons()
-		return my_buttons
-	end
-	function window.get_button(a)
-		for i = 1, #my_buttons do
-			if my_buttons[i][1] == a then
-				return my_buttons[i]
-			end
-		end
-		return nil
-	end
-	function window.set_buttons(a, b)
-		my_buttons = a
-		last_header_first = nil
-		create_header(b)
-		redraw_line(1)
-		redraw_global_cache_line(false, data[state].y)
-		set_cursor()
 	end
 	function redraw_line(line, pos_start, pos_end)
 		line = line or cursor[2] + (bar and 1 or 0)
@@ -542,9 +494,6 @@ function create(x, y, width, height, visible, bar)
 	function window.get_state()
 		return state
 	end
-	function window.get_title()
-		return title
-	end
 	function window.get_visible()
 		return visible
 	end
@@ -576,31 +525,13 @@ function create(x, y, width, height, visible, bar)
 			redraw_global_cache(true)
 		end
 	end
-	function window.set_title(new_title, foreground)
-		if not foreground then
-			my_blink = false
-		end
-		title = new_title
-		if bar then
-			last_header_first = nil
-			create_header(foreground)
-			redraw_line(1)
-			redraw_global_cache_line(false, data[state].y)
-		end
-		set_cursor()
+	function window.force_header_update(set)
+		last_header_first = ""
+		settings = set
+		window.set_state(window.get_state())
 	end
 	function window.set_visible(bVisible)
 		visible = bVisible
-	end
-	function window.settings(new, foreground)
-		settings = new
-		if bar then
-			last_header_first = nil
-			create_header(foreground)
-			redraw_line(1)
-			redraw_global_cache_line(false, data[state].y + (bar and 1 or 0))
-			set_cursor()
-		end
 	end
 	function window.toggle_border(bVisible)
 		border = bVisible

@@ -524,13 +524,13 @@ local function update_windows(user)
 	end
 	for i = 1, #data.windows do
 		tmp = data.windows[i]
-		tmp.window.settings(data.settings, i == 1)
+		tmp.window.force_header_update(data.settings)
 		if tmp.is_system then
 			resume_user(tmp.coroutine, "refresh_settings")
 		end
 	end
 	if system_windows.osk.window then
-		system_windows.osk.window.settings(data.settings, true)
+		system_windows.osk.window.force_header_update(data.settings)
 	end
 	sgv(vis_old)
 	apis.window.clear_cache()
@@ -627,19 +627,6 @@ local function get_os_commands(win)
 				end
 			end,
 		},
-		get_screen_image = function(a, b)
-			if (a or 0) > 0 then
-				local c = gUD((win.id < 0 or win.is_system) and (b or cur_user) or user_)
-				for i = 1, #c.windows do
-					if c.windows[i].id == a then
-						return c.windows[i].window.get_screen()
-					end
-				end
-			elseif not a and (win.id < 0 or win.is_system or user_ == cur_user) then
-				return apis.window.get_global_cache()
-			end
-			return nil
-		end,
 	}
 end
 local function switch_user()
@@ -680,6 +667,13 @@ local function get_setting(source, name)
 	end
 	return s
 end
+local function get_button(window, btn)
+	for i = 1, #window.buttons do
+		if window.buttons[i][1] == btn then
+			return window.buttons[i]
+		end
+	end
+end
 local function create_user_window(sUser, os_root, uenv, path, ...)
 	local args = {...}
 	local message = ""
@@ -697,8 +691,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	if is_remote and is_system_program then
 		is_remote = nil
 	end
+	my_window.is_top = function() return my_window.id == user_data.windows[1].id or false end -- Used for window.lua
 	my_window.user = user_
-	my_window.window = apis.window.create(2, 3, 25, 10, true, true)
+	my_window.buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
+	my_window.window = apis.window.create(2, 3, 25, 10, true, true, my_window)
 	my_window.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
 	user_data.desktop = {}
 	local uenv = uenv or {}
@@ -749,7 +745,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 						for j = 1, #user_data.windows do
 							if user_data.windows[j].id == n and (user_data.name == "" or not user_data.windows[j].is_system) then
 								user_data.windows[j].label.name = title
-								user_data.windows[j].window.set_title(title, j == 1)
+								user_data.windows[j].window.force_header_update(user_data.settings) -- Update header
 								_queue(system_windows.taskbar.id .. "", "", "window_change")
 								break
 							end
@@ -917,7 +913,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					name = name:sub(1, -5)
 				end
 				my_window.label.name = name
-				my_window.window.set_title(name:gsub("\t", ""), user_data.windows[1] == my_window)
+				my_window.window.force_header_update(user_data.settings)
 				resume_system("27taskbar", system_windows.taskbar.coroutine, "window_change")
 			end
 			local file = env.fs.open(path, "r")
@@ -936,7 +932,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
 					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
 						my_window.label.name = title_old
-						my_window.window.set_title(title_old, user_data.windows[1] == my_window)
+						my_window.window.force_header_update(user_data.settings)
 						resume_system("26taskbar", system_windows.taskbar.coroutine, "window_change")
 					end
 					if not ok then
@@ -1072,8 +1068,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
 		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
 		my_window.label = user_data.labels[#user_data.labels]
-		my_window.window.settings(user_data.settings, true)
-		my_window.window.set_title(name, true)
+		my_window.title = name
+		my_window.window.force_header_update(user_data.settings)
 	end
 	my_window.filesystem.set_remote(get_remote(id, user_, env))
 	local file = is_system_program and fs.open(path, "r") or path and env.fs.open(path, "r")
@@ -1185,9 +1181,11 @@ local function create_system_windows(i)
 	system_windows[temp].contextmenu_data = nil
 	system_windows[temp].id = i * -1
 	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
-	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk")
+	system_windows[temp].buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
+	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk", system_windows[temp])
 	if temp == "osk" then
-		system_windows[temp].window.set_title("On-Screen Keyboard", true)
+		system_windows[temp].label = {name = "On-Screen Keyboard"}
+		system_windows[temp].window.force_header_update(gUD(cur_user).settings) -- Update header
 	end
 	local env = {
 		math = math,
@@ -1428,10 +1426,10 @@ do
 	if setup_user(tmp_user) then -- "1\\"
 		if tmp then
 			create_user_window(cur_user, true, nil, "/magiczockerOS/programs/login.lua")
-			local a = gUD(cur_user).windows[1].window
-			local b = a.get_buttons()
-			table.remove(b, 1)
-			a.set_buttons(b, true)
+			local data = gUD(cur_user)
+			local a = data.windows[1]
+			table.remove(a.buttons, 1)
+			a.window.force_header_update(data.settings)
 		end
 	end
 end
@@ -1673,11 +1671,11 @@ function events(...)
 			end
 			local sys_window = system_windows
 			resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "switch_start" or _key == "s" and "switch_search" or _key == "t" and "switch_calendar")
-		elseif _key == "c" and temp_window and temp_window.get_visible() and temp_window.get_button("close") then -- close window
+		elseif _key == "c" and temp_window and temp_window.get_visible() and get_button(user_data.windows[1], "close") then -- close window
 			user_data.windows[1].kill()
 		elseif _key == "n" and cur_user > 0 then -- new window
 			create_user_window(cur_user)
-		elseif _key == "m" and temp_window and temp_window.get_visible() and temp_window.get_button("minimize") then -- minimize window
+		elseif _key == "m" and temp_window and temp_window.get_visible() and get_button(user_data.windows[1], "minimize") then -- minimize window
 			temp_window.set_visible(false)
 			local a = user_data.windows[1]
 			table.remove(user_data.windows, 1)
@@ -1756,7 +1754,7 @@ function events(...)
 					resize_mode = not resize_mode
 					temp_window.toggle_border(resize_mode)
 				else
-					local a, b = cur_window.window.has_header() and cur_window.window.get_buttons() or nil, false
+					local a, b = cur_window.window.has_header() and cur_window.buttons or nil, false
 					local c = a and a[e[3] - win_x + 1]
 					if c and c[1] == "close" then
 						b = true

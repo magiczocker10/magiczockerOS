@@ -71,9 +71,8 @@ local function create_proc(a, b)
 	apis.window.set_global_visible(false)
 	create_window(b, true)
 	procs[a] = user_data().windows[1]
-	local e = procs[a].window.get_buttons()
+	local e = procs[a].buttons
 	table.remove(e, 1)
-	procs[a].window.set_buttons(e, true)
 	procs[a].is_system = true
 	procs[a].auto_kill = true
 	if a == "startmenu" or a == "search" then
