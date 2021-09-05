@@ -356,12 +356,6 @@ function events(a, b, c)
 			end
 			draw_items()
 		end
-	elseif a == "switch_start" then
-		events("mouse_click", 1, 1, 1)
-	elseif a == "switch_calendar" then
-		events("mouse_click", 1, w - 1 - (user == "" and -1 or 2) + (search and 0 or 3), 1)
-	elseif a == "switch_search" and search then
-		events("mouse_click", 1, w, 1)
 	elseif a == "window_change" or a == "start_change" then
 		draw_start()
 		set_items()
@@ -379,19 +373,23 @@ function events(a, b, c)
 		draw_search()
 	end
 end
-register_key(_HOSTver >= 1132 and 75 or 37, function()
+register_key(_HOSTver >= 1132 and 75 or 37, function() -- K
 	set_visible("osk", not get_visible("osk"))
 end)
-register_key(_HOSTver >= 1132 and 83 or 31, function()
-	toggle("search")
-	draw_search()
+register_key(_HOSTver >= 1132 and 83 or 31, function() -- S
+	if user ~= "" then
+		toggle("search")
+		draw_search()
+	end
 end)
-register_key(_HOSTver >= 1132 and 84 or 20, function()
-	toggle("calendar")
-	draw_clock()
-	set_items()
+register_key(_HOSTver >= 1132 and 84 or 20, function() -- T
+	if user ~= "" then
+		toggle("calendar")
+		draw_clock()
+		set_items()
+	end
 end)
-register_key(_HOSTver >= 1132 and 88 or 45, function()
+register_key(_HOSTver >= 1132 and 88 or 45, function() -- X
 	toggle("startmenu")
 	draw_start()
 end)
