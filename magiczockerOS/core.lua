@@ -1132,11 +1132,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local function kill_window()
 		my_window.is_dead = true
 		my_window.window.drawable(false)
+		local was_visible = false
 		for i = #user_data.windows, 1, -1 do
 			if my_window.id == user_data.windows[i].id then
 				if i == 1 then
 					resize_mode = false
 				end
+				was_visible = user_data.windows[i].window.get_visible()
 				for j = 1, #user_data.labels do
 					if user_data.labels[j].id == user_data.windows[i].id then
 						table.remove(user_data.labels, j)
@@ -1148,7 +1150,9 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 		user_data.desktop = {}
 		_queue(system_windows.taskbar.id .. "", "", "window_change")
-		draw_windows()
+		if was_visible then
+			draw_windows()
+		end
 	end
 	my_window.kill = kill_window
 	my_window.coroutine = coroutine.create(
@@ -1205,6 +1209,7 @@ local function create_system_windows(i)
 				draw_windows()
 			end
 		end,
+		get_button = get_button,
 		get_total_size = function() return total_size[1], total_size[2] end,
 		set_visible = function(name, state)
 			if system_windows[name].window then
@@ -1640,13 +1645,6 @@ function events(...)
 			user_data.windows[1].kill()
 		elseif _key == "n" and cur_user > 0 then -- new window
 			create_user_window(cur_user)
-		elseif _key == "m" and temp_window and temp_window.get_visible() and get_button(user_data.windows[1], "minimize") then -- minimize window
-			temp_window.set_visible(false)
-			local a = user_data.windows[1]
-			table.remove(user_data.windows, 1)
-			user_data.windows[#user_data.windows + 1] = a
-			resume_system("32taskbar", system_windows.taskbar.coroutine, "window_change")
-			draw_windows()
 		elseif position_to_add[_key] and temp_window.get_visible() and temp_window then -- move window
 			local pos_x, pos_y, win_w, win_h = temp_window.get_data()
 			local has_changed

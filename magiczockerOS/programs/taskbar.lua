@@ -246,6 +246,7 @@ local function switch_visible(id, state)
 			table.remove(uData.windows, i)
 			table.insert(uData.windows, visible and 1 or #uData.windows + 1, temp_window)
 			temp_window.window.set_visible(visible)
+			set_items()
 			break
 		end
 	end
@@ -322,30 +323,15 @@ function events(a, b, c)
 			else -- middle
 				local id = window_pos[c - 3 + offset]
 				local uData = user_data()
-				uData.desktop = {}
-				local has_close = false
 				for i = 1, #uData.windows do
 					if uData.windows[i].id == id then
-						has_close = uData.windows[i].window.get_button("close") and true or false
-						if has_close then
-							table.remove(uData.windows, i)
+						if get_button(uData.windows[i], "close") then
+							uData.windows[i].kill()
 						end
 						break
 					end
 				end
-				local tmp = uData.labels
-				for i = 1, #tmp do
-					if tmp[i].id == id then
-						if has_close then
-							table.remove(tmp, i)
-						end
-						break
-					end
-				end
-				set_pos() -- force's the core to redraw the windows
 			end
-			set_items()
-			set_vis()
 		end
 	elseif a == "mouse_scroll" then
 		if c > 3 and c <= w - #time - (search and 3 or 0) then
@@ -375,6 +361,12 @@ function events(a, b, c)
 end
 register_key(_HOSTver >= 1132 and 75 or 37, function() -- K
 	set_visible("osk", not get_visible("osk"))
+end)
+register_key(_HOSTver >= 1132 and 77 or 50, function() -- M
+	local a = user_data().windows[1]
+	if a and a.window.get_visible() and get_button(a, "minimize") then
+		switch_visible(a.id)
+	end
 end)
 register_key(_HOSTver >= 1132 and 83 or 31, function() -- S
 	if user ~= "" then
