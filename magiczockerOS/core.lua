@@ -96,6 +96,7 @@ local textutils = textutils or {}
 local peripheral = peripheral or nil
 local math = math or nil
 local uptime = os.clock or os.time or function() return 0 end
+local registered_keys = {}
 -- functions
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
@@ -1245,6 +1246,9 @@ local function create_system_windows(i)
 		textutils = {
 			complete = textutils.complete, -- contextmenu, osk, taskbar
 		},
+		register_key = function(key, action)
+			registered_keys[key] = registered_keys[key] or action
+		end,
 		apis = apis, -- taskbar
 		-- magiczockerOS = get_os_commands(system_windows[temp]),
 		error = error,
@@ -1378,9 +1382,6 @@ do
 	key_maps[a and 77 or 50] = "m"
 	key_maps[a and 78 or 49] = "n"
 	key_maps[a and 82 or 19] = "r"
-	key_maps[a and 83 or 31] = "s"
-	key_maps[a and 84 or 20] = "t"
-	key_maps[a and 88 or 45] = "x"
 	key_maps[a and 262 or 205] = "right"
 	key_maps[a and 263 or 203] = "left"
 	key_maps[a and 264 or 208] = "down"
@@ -1651,6 +1652,9 @@ function events(...)
 		if need_redraw then
 			draw_windows()
 		end
+	elseif e[1] == "key" and key_timer and registered_keys[e[2]] then
+		registered_keys[e[2]]()
+		key_timer = nil
 	elseif e[1] == "key" and key_timer and key_maps[e[2]] then
 		local _key = key_maps[e[2]]
 		local temp_window = user_data.windows[1] and user_data.windows[1].window or nil
@@ -1664,13 +1668,6 @@ function events(...)
 			resume_user(user_data.windows[1].coroutine, "term_resize")
 			sgv(true)
 			draw_windows()
-		elseif _key == "x" or _key == "t" or _key == "s" then -- open/close startmenu, calendar/clock
-			if resize_mode then
-				resize_mode = false
-				user_data.windows[1].window.toggle_border(false)
-			end
-			local sys_window = system_windows
-			resume_system("15taskbar", sys_window.taskbar.coroutine, _key == "x" and "switch_start" or _key == "s" and "switch_search" or _key == "t" and "switch_calendar")
 		elseif _key == "c" and temp_window and temp_window.get_visible() and get_button(user_data.windows[1], "close") then -- close window
 			user_data.windows[1].kill()
 		elseif _key == "n" and cur_user > 0 then -- new window
