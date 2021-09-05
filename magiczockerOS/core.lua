@@ -1194,6 +1194,8 @@ local function create_system_windows(i)
 		create_window = function(path, root, env, ...)
 			create_user_window(cur_user, root, env, path, ...)
 		end,
+		system_windows = system_windows, -- Contextmenu
+		system_window_order = system_window_order, -- Contextmenu
 		get_visible = function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
 		set_pos = function(posx, posy, posw, posh, not_redraw) -- contextmeu, osk, taskbar
 			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
@@ -1387,7 +1389,6 @@ do
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"
 	key_maps[a and 345 or 157] = "right_ctrl"
-	key_maps[a and 348 or 56] = "context_menu"
 	for k, v in next, key_maps do b[v] = k end
 	for k, v in next, b do key_maps[k] = v end
 end
@@ -1619,39 +1620,6 @@ function events(...)
 		end
 	elseif e[1] == "key" and (key_maps[e[2]] or "") == "right_ctrl" then
 		key_timer = start_timer(key_timer, 0.2)
-	elseif e[1] == "key" and (key_maps[e[2]] or "") == "context_menu" and system_windows.contextmenu.window and not system_windows.contextmenu.window.get_visible() then
-		local my_window
-		local co_window
-		local need_redraw
-		sgv(false)
-		for i = 1, #system_window_order do
-			if system_windows[system_window_order[i]].window.get_visible() then
-				my_window = system_windows[system_window_order[i]]
-				co_window = my_window.contextmenu_on_key
-				if co_window then
-					break
-				end
-			end
-			if system_window_order[i] == "taskbar" and #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
-				my_window = user_data.windows[1]
-				co_window = my_window.contextmenu_on_key
-				if co_window then
-					break
-				end
-			end
-		end
-		if co_window then
-			total_size[1], total_size[2] = apis.window.get_size()
-			local win_x, win_y = my_window.window.get_data()
-			resume_system("17contextmenu", system_windows.contextmenu.coroutine, "set_data", co_window.data, win_x - 1 + co_window.x, win_y - 1 + co_window.y, my_window)
-			resume_system("16contextmenu", system_windows.contextmenu.coroutine, "redraw_items")
-			system_windows.contextmenu.window.set_visible(true)
-			need_redraw = true
-		end
-		sgv(true)
-		if need_redraw then
-			draw_windows()
-		end
 	elseif e[1] == "key" and key_timer and registered_keys[e[2]] then
 		registered_keys[e[2]]()
 		key_timer = nil

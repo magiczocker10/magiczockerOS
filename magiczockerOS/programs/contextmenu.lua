@@ -7,6 +7,7 @@ local max_height, max_width, my_size, key_maps, settings, my_pos, scrollable, cu
 local cursor, items, scroll, caller, parents, cur_raw
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
 local cs = cur_settings
+local events
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -143,9 +144,36 @@ do
 	key_maps[a and 264 or 208] = "down"
 	key_maps[a and 265 or 200] = "up"
 end
+
+register_key(_HOSTver >= 1132 and 46 or 52, function() -- .
+	if system_windows.contextmenu.window.get_visible() then return end
+	local ud = user_data()
+	local co_window, my_window
+	for i = 1, #system_window_order do
+		if system_windows[system_window_order[i]].window.get_visible() then
+			my_window = system_windows[system_window_order[i]]
+			co_window = my_window.contextmenu_on_key
+			if co_window then
+				break
+			end
+		end
+		if not co_window and system_window_order[i] == "taskbar" and #ud.windows > 0 and ud.windows[1].window.get_visible() then
+			my_window = ud.windows[1]
+			co_window = my_window.contextmenu_on_key
+			if co_window then
+				break
+			end
+		end
+	end
+	if co_window then
+		local win_x, win_y = my_window.window.get_data()
+		events("set_data", co_window.data, win_x - 1 + co_window.x, win_y - 1 + co_window.y, my_window)
+		events("redraw_items")
+		set_visible("contextmenu", true)
+	end
+end)
 update_cached_settings()
-while true do
-	local a, b, c, d, e = coroutine.yield()
+function events(a, b, c, d, e)
 	if a == "set_data" then
 		parents = {}
 		caller = e
@@ -181,4 +209,7 @@ while true do
 		update_cached_settings()
 		draw()
 	end
+end
+while true do
+	events(coroutine.yield())
 end
