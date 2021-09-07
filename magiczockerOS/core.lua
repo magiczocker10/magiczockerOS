@@ -1736,9 +1736,8 @@ function events(...)
 							_queue("key", key_maps.right_ctrl)
 							_queue("key", key_maps.m)
 						elseif d == "maximize" then
-							temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
-							resume_user(user_data.windows[1].coroutine, "term_resize")
-							need_redraw = true
+							_queue("key", key_maps.right_ctrl)
+							_queue("key", key_maps.r)
 						end
 					end
 					last_window = b and last_window or cur_window
@@ -1814,10 +1813,13 @@ function events(...)
 		local data = e[5]
 		if type(data) == "table" then
 			local tmp = window_messages[data.my_id] or nil
-			if tmp and tmp[1] < 0 and tmp[2] == nil then
+			if not tmp then
+				return
+			end
+			if tmp[1] < 0 and tmp[2] == nil then
 				tmp[1] = tmp[1] * -1
 			end
-			if tmp and tmp[1] > 0 and tmp[2] and gUD(tmp[2]) then
+			if tmp[1] > 0 and tmp[2] and gUD(tmp[2]) then
 				local tmp1 = gUD(tmp[2]).windows
 				for i = 1, #tmp1 do
 					if tmp1[i].id == tmp[1] then
@@ -1826,11 +1828,11 @@ function events(...)
 						break
 					end
 				end
-			elseif tmp and tmp[1] > 0 and tmp[2] == nil then
+			elseif tmp[1] > 0 and tmp[2] == nil then
 				if system_windows[system_window_order[tmp[1]]] then
 					resume_system("4" .. system_window_order[tmp[1]], system_windows[system_window_order[tmp[1]]].coroutine, e[1], data.my_id, data.data and _unpack(data.data) or nil)
 				end
-			elseif tmp and tmp[1] == 0 and data.mode == "get_settings-answer" then
+			elseif tmp[1] == 0 and data.mode == "get_settings-answer" then
 				window_messages[data.my_id] = nil
 				for k, v in next, users do
 					if v.name == data.username and v.server == data.return_id then
@@ -1887,9 +1889,8 @@ function events(...)
 		for i = 1, #system_window_order do
 			temp_window = system_windows[system_window_order[i]]
 			if temp_window.window.get_visible() then
-				local continue = system_window_order[i] == "desktop" and user_data.windows[1] and user_data.windows[1].window and not user_data.windows[1].window.get_visible() or
-				system_window_order[i] == "desktop" and not user_data.windows[1] or
-				system_window_order[i] ~= "desktop"
+				local continue = system_window_order[i] ~= "desktop" or not user_data.windows[1] or
+							user_data.windows[1].window and not user_data.windows[1].window.get_visible()
 				if continue then
 					resume_system("1" .. system_window_order[i], temp_window.coroutine, _unpack(e))
 					if events_to_break[e[1]] and system_window_order[i] ~= "desktop" and system_window_order[i] ~= "taskbar" then
