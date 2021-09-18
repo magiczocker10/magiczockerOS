@@ -1,3 +1,7 @@
+-- magiczockerOS - Copyright by Julian Kriete 2016-2021
+
+-- My ComputerCraft-Forum account:
+-- http://www.computercraft.info/forums2/index.php?showuser=57180
 local peri, _computer_only, monitor_order, total_size, monitor_mode, global_visible, _size, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, {0, 0}, "normal", true, {0, 0}, {6, 9}, {0, 0}
 local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
 local screen_cache, _tconcat = {}, table.concat

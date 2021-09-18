@@ -1,3 +1,7 @@
+-- magiczockerOS - Copyright by Julian Kriete 2016-2021
+
+-- My ComputerCraft-Forum account:
+-- http://www.computercraft.info/forums2/index.php?showuser=57180
 local hex, get_color = {}, {}
 local _tconcat = table.concat
 local apis, textutils = apis, textutils
