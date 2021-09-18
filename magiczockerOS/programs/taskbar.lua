@@ -67,8 +67,8 @@ local function create_proc(a, b)
 	if procs[a] and not procs[a].is_dead then
 		return nil
 	end
-	local f = apis.window.get_global_visible()
-	apis.window.set_global_visible(false)
+	local f = apis.buffer.get_global_visible()
+	apis.buffer.set_global_visible(false)
 	create_window(b, true)
 	procs[a] = user_data().windows[1]
 	local e = procs[a].buttons
@@ -84,7 +84,7 @@ local function create_proc(a, b)
 		procs[a].env.set_pos(w - 24, 2, nil, nil, true)
 		procs[a].env.os.queueEvent("term_resize")
 	end
-	apis.window.set_global_visible(f)
+	apis.buffer.set_global_visible(f)
 	if a == "search" or a == "calendar" then
 		set_pos()
 	end
@@ -277,7 +277,6 @@ function events(a, b, c)
 					local v = u_data_old.windows[i]
 					if v.is_system and (procs.search == v or procs.startmenu == v or procs.calendar == v) then
 						v.window.set_visible(false)
-						v.window.drawable(true)
 						u_data.windows[#u_data.windows + 1] = v
 						table.remove(u_data_old.windows, i)
 						v.env.set_user(b)
@@ -356,6 +355,7 @@ function events(a, b, c)
 		end
 		draw_start()
 		set_items()
+		draw_clock()
 		draw_search()
 	end
 end

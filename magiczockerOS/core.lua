@@ -294,6 +294,9 @@ local function load_api(name)
 	if file then
 		setmetatable(env, {__index = _G})
 		env.math, env.unpack, env.apis = math, _unpack, apis
+		env.textutils = textutils
+		env.fs = fs
+		env.term = term
 		local content = file.readAll()
 		file.close()
 		local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
@@ -331,20 +334,22 @@ local function draw_windows()
 	if term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
+	apis.buffer.clear_cache(true)
 	local ud = gUD(cur_user)
-	screen = {}
 	local a = ggv()
 	sgv(false)
 	local temp_window, user_win
 	for i = 1, #system_window_order do
 		temp_window = system_windows[system_window_order[i]].window
-		screen = temp_window and temp_window.get_visible() and temp_window.redraw(system_window_order[i] == "osk", screen, i * -1) or screen
+		if temp_window.get_visible() then
+			temp_window.redraw(i * -1)
+		end
 		user_win = system_window_order[i] == "taskbar" and ud.windows or ""
 		for j = 1, #user_win do
 			temp_window = user_win[j].window
 			if temp_window.get_visible() then
-				screen = temp_window.redraw(j == 1, screen, j)
-				if temp_window.get_state() == "maximized" then
+				temp_window.redraw(j)
+				if temp_window.is_maximized() then
 					break
 				end
 			else
@@ -353,7 +358,8 @@ local function draw_windows()
 		end
 	end
 	sgv(a)
-	apis.window.redraw_global_cache(true)
+	apis.buffer.redraw_global_cache(true)
+	screen = apis.buffer.get_screen()
 	if #(ud.windows or "") > 0 and ud.windows[1].window.get_visible() then
 		ud.windows[1].window.restore_cursor()
 	elseif term.setCursorBlink then
@@ -427,20 +433,19 @@ local function save_user_settings(user, data)
 	end
 end
 local function move_windows_to_screen()
-	local total_screen_size, vv = {apis.window.get_size()}, nil
+	local total_screen_size, vv = {apis.buffer.get_size()}, nil
 	local temp_window, win_x, win_y, win_w, win_h, new_win_x, new_win_y
 	for _, v in next, users do
 		vv = v.windows
 		for j = 1, #vv do
 			temp_window = vv[j]
-			win_x, win_y, win_w, win_h = temp_window.window.get_data("normal")
+			win_x, win_y, win_w, win_h = temp_window.window.get_data()
 			new_win_x = win_x > total_screen_size[1] and total_screen_size[1] or win_x
 			new_win_y = win_y > total_screen_size[2] and total_screen_size[2] or win_y
 			if win_x ~= new_win_x or win_y ~= new_win_y then
-				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h, "normal")
+				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h)
 			end
-			temp_window.window.reposition(1, 2, total_screen_size[1], total_screen_size[2] - 1, "maximized")
-			if temp_window.window.get_visible() and temp_window.window.get_state() == "maximized" or temp_window.is_system then
+			if temp_window.window.get_visible() and temp_window.window.is_maximized() or temp_window.is_system then
 				resume_user(temp_window.coroutine, "term_resize")
 			end
 		end
@@ -455,7 +460,7 @@ local function resume_system(name, coro, ...)
 	end
 end
 local function resize_system_windows()
-	local size, win = {apis.window.get_size()}, nil
+	local size, win = {apis.buffer.get_size()}, nil
 	for i = 1, #system_window_order do
 		win = system_window_order[i]
 		if system_windows[win].need_resize and system_windows[win].window then
@@ -472,8 +477,8 @@ local function resize_system_windows()
 end
 local function setup_monitors(...)
 	monitor_resized, monitor_devices = {}, {}
-	apis.window.set_devices(system_settings.monitor_mode or "normal", ...)
-	monitor_order = apis.window.get_devices()
+	apis.buffer.set_devices(system_settings.monitor_mode or "normal", ...)
+	monitor_order = apis.buffer.get_devices()
 	if #monitor_order == 0 then
 		return nil
 	end
@@ -483,7 +488,7 @@ local function setup_monitors(...)
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
-	total_size[1], total_size[2] = apis.window.get_size()
+	total_size[1], total_size[2] = apis.buffer.get_size()
 	sgv(false)
 	resize_system_windows()
 	move_windows_to_screen()
@@ -534,7 +539,7 @@ local function update_windows(user)
 		system_windows.osk.window.force_header_update(data.settings)
 	end
 	sgv(vis_old)
-	apis.window.clear_cache()
+	apis.buffer.clear_cache()
 	draw_windows()
 end
 local function setup_user(username, session)
@@ -566,7 +571,7 @@ local function setup_user(username, session)
 	if #gUD(cur_user).windows > 0 then
 		local tmp = gUD(cur_user).windows
 		for j = 1, #tmp do
-			tmp[j].window.drawable(true)
+			tmp[j].window.set_visible(true)
 		end
 	end
 	update_windows(cur_user)
@@ -634,7 +639,7 @@ local function switch_user()
 	local user_data = gUD(cur_user)
 	if change_user.active then
 		for j = 1, #user_data.windows do
-			user_data.windows[j].window.drawable(false)
+			user_data.windows[j].window.set_visible(false)
 		end
 		if change_user.logoff then
 			users[cur_user] = nil
@@ -685,6 +690,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local user_data = gUD(user_)
 	local is_remote = user_data.server
 	user_data.windows = user_data.windows or {}
+	user_data.get_id = function()
+		for i = 1, #user_data.windows do
+			if user_data.windows[i].id == id then
+				return i
+			end
+		end
+	end
 	table.insert(user_data.windows, 1, {id = id})
 	local my_window = user_data.windows[1]
 	local path = path and "/" .. apis.filesystem.get_path(path) or nil
@@ -692,6 +704,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	if is_remote and is_system_program then
 		is_remote = nil
 	end
+	my_window.user_data = function() return user_data end
+	my_window.get_setting = get_setting
 	my_window.is_top = function() return my_window.id == user_data.windows[1].id or false end -- Used for window.lua
 	my_window.user = user_
 	my_window.buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
@@ -817,7 +831,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			set_pos = is_system_program and function(x, y, width, height, not_redraw)
 				local _a, _b, _c, _d = my_window.window.get_data()
 				my_window.window.reposition(x or _a, y or _b, width or _c, height and height + (my_window.window.has_header() and 1 or 0) or _d)
-				apis.window.clear_cache()
+				apis.buffer.clear_cache()
 				_queue(id .. "", user_, "term_resize")
 				if not not_redraw and my_window.window.get_visible() then
 					draw_windows()
@@ -1131,14 +1145,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	end
 	local function kill_window()
 		my_window.is_dead = true
-		my_window.window.drawable(false)
-		local was_visible = false
+		local was_visible = my_window.window.get_visible()
+		my_window.window.set_visible(false)
 		for i = #user_data.windows, 1, -1 do
 			if my_window.id == user_data.windows[i].id then
 				if i == 1 then
 					resize_mode = false
 				end
-				was_visible = user_data.windows[i].window.get_visible()
 				for j = 1, #user_data.labels do
 					if user_data.labels[j].id == user_data.windows[i].id then
 						table.remove(user_data.labels, j)
@@ -1188,6 +1201,8 @@ local function create_system_windows(i)
 	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
 	system_windows[temp].buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
 	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk", system_windows[temp])
+	system_windows[temp].user_data = function() return gUD(cur_user) end
+	system_windows[temp].get_setting = get_setting
 	if temp == "osk" then
 		system_windows[temp].label = {name = "On-Screen Keyboard"}
 		system_windows[temp].window.force_header_update(gUD(cur_user).settings) -- Update header
@@ -1204,7 +1219,7 @@ local function create_system_windows(i)
 		set_pos = function(posx, posy, posw, posh, not_redraw) -- contextmeu, osk, taskbar
 			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
 			system_windows[window_number].window.reposition(posx or _x, posy or _y, posw or _w, posh or _h)
-			apis.window.clear_cache()
+			apis.buffer.clear_cache()
 			if not not_redraw and system_windows[window_number].window.get_visible() then
 				draw_windows()
 			end
@@ -1220,7 +1235,7 @@ local function create_system_windows(i)
 		end,
 		term = system_windows[temp].window,
 		user = cur_user,
-		user_data = function() return gUD(cur_user) end,
+		user_data = system_windows[temp].user_data,
 		get_setting = get_setting,
 		dofile = dofile, -- osk
 		loadstring = loadstring,
@@ -1405,10 +1420,12 @@ default_settings = get_default_settings()
 load_system_settings()
 load_api("filesystem")
 load_api("peripheral")
-load_api("window")
-ggv = apis.window.get_global_visible
-sgv = apis.window.set_global_visible
-apis.window.set_peripheral(apis.peripheral.create(true))
+load_api("buffer")
+load_api("window2")
+apis.window = apis.window2
+ggv = apis.buffer.get_global_visible
+sgv = apis.buffer.set_global_visible
+apis.buffer.set_peripheral(apis.peripheral.create(true))
 term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "term")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
 w, h = term.getSize()
 setup_monitors(_unpack(system_settings.devices or {}))
@@ -1497,7 +1514,7 @@ function events(...)
 		if not (monitor_devices.term or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
 			e[1] = nil
 		else
-			total_size[1], total_size[2] = apis.window.get_size()
+			total_size[1], total_size[2] = apis.buffer.get_size()
 		end
 	end
 	if e[1] == "timer" and qe[e[2]] and queued_events[qe[e[2]]] then
@@ -1524,17 +1541,17 @@ function events(...)
 					has_changed = true
 					click.y = 2
 					click.x = e[3]
-					tmp_window.window.reposition(win_x, 2, win_w, win_h, "normal")
+					tmp_window.window.reposition(win_x, 2, win_w, win_h)
 				elseif t_id > 0 and e[4] == 1 then
-					if tmp_window.window.get_state() ~= "maximized" then
-						tmp_window.window.set_state("maximized")
+					if not tmp_window.window.is_maximized() then
+						tmp_window.window.set_maximized(true)
 						resume_user(tmp_window.coroutine, "term_resize")
 						has_changed = true
 					end
 					click.x = e[3]
 					click.y = 2
-				elseif t_id > 0 and tmp_window.window.get_state() == "maximized" then
-					tmp_window.window.set_state("normal")
+				elseif t_id > 0 and tmp_window.window.is_maximized() then
+					tmp_window.window.set_maximized(false)
 					win_x, win_y, win_w, win_h = tmp_window.window.get_data()
 					if win_x > e[3] or win_x + win_w - 1 < e[3] then
 						win_x = math.ceil(e[3] - win_w * 0.5)
@@ -1616,7 +1633,7 @@ function events(...)
 			local temp_window = user_data.windows[1].window
 			local win_x, win_y, win_w = temp_window.get_data()
 			if e[3] >= win_x and e[3] < win_x + win_w and e[4] == win_y then
-				temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
+				temp_window.set_maximized(not temp_window.is_maximized())
 				sgv(false)
 				resume_user(user_data.windows[1].coroutine, "term_resize")
 				sgv(true)
@@ -1636,7 +1653,7 @@ function events(...)
 				resize_mode = false
 				temp_window.toggle_border(false)
 			end
-			temp_window.set_state(temp_window.get_state() == "normal" and "maximized" or "normal")
+			temp_window.set_maximized(not temp_window.is_maximized())
 			sgv(false)
 			resume_user(user_data.windows[1].coroutine, "term_resize")
 			sgv(true)
@@ -1654,14 +1671,14 @@ function events(...)
 				pos_y = 2
 			end
 			if pos_x > 0 and pos_x <= w and pos_y > 1 and pos_y <= h then
-				if pos_y == 2 and temp_window.get_state() == "normal" then
-					temp_window.set_state("maximized")
+				if pos_y == 2 and not temp_window.is_maximized() then
+					temp_window.set_maximized(true)
 					has_changed = true
-				elseif pos_y > 2 and temp_window.get_state() == "maximized" then
-					temp_window.set_state("normal")
+				elseif pos_y > 2 and temp_window.is_maximized() then
+					temp_window.set_maximized(false)
 					has_changed = true
 				end
-				if temp_window.get_state() == "normal" then
+				if not temp_window.is_maximized() then
 					pos_x, pos_y, win_w, win_h = temp_window.get_data()
 					pos_x = pos_x + position_to_add[_key][1]
 					if not has_changed then
@@ -1713,7 +1730,7 @@ function events(...)
 				last_click.x = e[3]
 				last_click.y = e[4]
 				last_click.time = uptime()
-				if id > 0 and e[3] == win_x + win_w - 1 and temp_window.get_state() == "normal" then -- resize
+				if id > 0 and e[3] == win_x + win_w - 1 and not temp_window.is_maximized() then -- resize
 					resize_mode = not resize_mode
 					temp_window.toggle_border(resize_mode)
 				else

@@ -80,9 +80,6 @@ local function show_desktop()
 			uData.desktop = {}
 		end
 	end
-	my_win.is_system = false
-	multishell.setTitle(my_win.id, "")
-	my_win.is_system = true
 	set_visible("taskbar", true)
 end
 local function events(a, b, _, c)
