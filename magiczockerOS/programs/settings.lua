@@ -1039,7 +1039,7 @@ local function load_system_settings()
 	end
 end
 function reset_user_settings()
-	save_settings(user, {})
+	save_settings({})
 	set_settings()
 	settings = user_data().settings or {}
 end

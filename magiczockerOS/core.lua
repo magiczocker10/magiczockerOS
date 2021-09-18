@@ -153,13 +153,13 @@ end
 local function stop_timer(id)
 	timers[id] = nil
 end
-local function send_message(side, receiver, content)
+local function send_message(receiver, content)
 	if component then
-		component.invoke(side, "send", receiver, 65535, serialise(content))
+		component.invoke(modem_side, "send", receiver, 65535, serialise(content))
 	elseif use_old then
-		peripheral.call(side, "send", receiver, serialise(content))
+		peripheral.call(modem_side, "send", receiver, serialise(content))
 	else
-		peripheral.call(side, "transmit", receiver, 0, content)
+		peripheral.call(modem_side, "transmit", receiver, 0, content)
 	end
 end
 local function open_modem(modem, state)
@@ -396,7 +396,7 @@ local function load_settings(user)
 	tmpU.settings = nil
 	if tmpU then
 		if tmpU.server then
-			send_message(modem_side, tmpU.server, {return_id = my_computer_id, session_id = tmpU.session_id, protocol = my_protocol, username = tmpU.name, my_id = send_id, mode = "get_settings"})
+			send_message(tmpU.server, {return_id = my_computer_id, session_id = tmpU.session_id, protocol = my_protocol, username = tmpU.name, my_id = send_id, mode = "get_settings"})
 			window_messages[send_id] = {0, 0}
 			send_id = send_id + 1
 		elseif tmpU.name and #tmpU.name > 0 then
@@ -414,7 +414,7 @@ local function save_user_settings(user, data)
 	local tmp = gUD(user)
 	if user > 0 and tmp.settings then
 		if tmp.server then
-			send_message(modem_side, tmp.server, {return_id = my_computer_id, session_id = tmp.session_id, protocol = my_protocol, username = tmp.name, my_id = send_id, mode = "update_settings", data = data})
+			send_message(tmp.server, {return_id = my_computer_id, session_id = tmp.session_id, protocol = my_protocol, username = tmp.name, my_id = send_id, mode = "update_settings", data = data})
 			window_messages[send_id] = {0, 0}
 			send_id = send_id + 1
 		else
@@ -493,8 +493,8 @@ local function load_system_settings()
 	local file = fs.open("/magiczockerOS/settings.json", "r")
 	if file then
 		local content = file.readAll()
-		system_settings = content and (unserialise(content) or {}) or system_settings
 		file.close()
+		system_settings = content and (unserialise(content) or {}) or system_settings
 	end
 	local a = system_settings
 	a.monitor_mode = a.monitor_mode or "normal"
@@ -575,7 +575,7 @@ end
 local function get_remote(id, suser, environment)
 	return function(server_id, func, ...)
 		local user_data = gUD(id > 0 and suser or cur_user)
-		send_message(modem_side, server_id, {return_id = my_computer_id, session_id = user_data.session_id, mode = "execute", protocol = my_protocol, username = user_data.name, my_id = send_id, command = func, data = {...}})
+		send_message(server_id, {return_id = my_computer_id, session_id = user_data.session_id, mode = "execute", protocol = my_protocol, username = user_data.name, my_id = send_id, command = func, data = {...}})
 		window_messages[send_id] = {id, id > 0 and suser or nil}
 		local my_id = send_id
 		send_id = send_id + 1
@@ -810,7 +810,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				update_windows(user_)
 			end or nil,
 			signin_user = is_system_program and function(server_id, user, pass)
-				send_message(modem_side, server_id, {return_id = my_computer_id, protocol = my_protocol, username = user, password = pass, my_id = send_id, mode = "login"})
+				send_message(server_id, {return_id = my_computer_id, protocol = my_protocol, username = user, password = pass, my_id = send_id, mode = "login"})
 				window_messages[send_id] = {id, user_}
 				send_id = send_id + 1
 			end or nil,
