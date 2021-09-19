@@ -101,7 +101,7 @@ function reload_color_palette(settings)
 					c and 255 - temp_color[3] or temp_color[3],
 				}
 				for j = 1, apis.buffer.get_mode() == "extend" and #apis.buffer.get_devices() or 1 do
-					apis.buffer.send_term(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
+					apis.buffer.set_term(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
 				end
 			end
 		end
@@ -229,21 +229,21 @@ function create(x, y, width, height, visible, header, data)
 				if _x > mon_order[i].offset then
 					if apis.buffer.has_cursor_blink() then
 						if cur_blink and data.is_top() then
-							apis.buffer.send_term(i, "setTextColor", my_data[2])
-							apis.buffer.send_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							apis.buffer.set_term(i, "setTextColor", my_data[2])
+							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
 						end
-						apis.buffer.send_term(i, "setCursorBlink", cur_blink)
+						apis.buffer.set_term(i, "setCursorBlink", cur_blink)
 					elseif screen[my_data[3]] then
 						if my_blink and cur_blink then
-							apis.buffer.send_term(i, "setBackgroundColor", screen[my_data[3]].b)
-							apis.buffer.send_term(i, "setTextColor", my_data[2])
-							apis.buffer.send_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
-							apis.buffer.send_term(i, "write", "#")
+							apis.buffer.set_term(i, "setBackgroundColor", screen[my_data[3]].b)
+							apis.buffer.set_term(i, "setTextColor", my_data[2])
+							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							apis.buffer.set_term(i, "write", "#")
 						elseif not cur_blink then
-							apis.buffer.send_term(i, "setBackgroundColor", screen[my_data[3]].b)
-							apis.buffer.send_term(i, "setTextColor", screen[my_data[3]].t)
-							apis.buffer.send_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
-							apis.buffer.send_term(i, "write", screen[my_data[3]].s)
+							apis.buffer.set_term(i, "setBackgroundColor", screen[my_data[3]].b)
+							apis.buffer.set_term(i, "setTextColor", screen[my_data[3]].t)
+							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							apis.buffer.set_term(i, "write", screen[my_data[3]].s)
 						end
 					end
 					break

@@ -10,11 +10,6 @@ local validate_modes = {
 	["extend"] = true,
 	["duplicate"] = true,
 }
-local process_data = {
-	to_draw = {},
-	last = nil,
-	last_screen = nil,
-}
 function set_peripheral(object)
 	peri_call = object and object.call or nil
 	peri_type = object and object.getType or nil
@@ -36,9 +31,9 @@ end
 function clear_cache(keep_old)
 	screen_cache = not keep_old and screen_cache or {}
 	global_cache = keep_old and global_cache or {t = {}, b = {}, s = {}}
-	global_cache_old = keep_old and global_cache_old or {t = {}, b = {}, s = {}}
+	global_cache_old = keep_old and global_cache_old or {}
 end
-local function set_term(device, mode, ...)
+function set_term(device, mode, ...)
 	for i = monitor_mode == "duplicate" and 1 or device or 1, monitor_mode == "duplicate" and #monitor_order or device or 1 do
 		peri_call(monitor_order[i].name, mode, ...)
 	end
@@ -106,11 +101,9 @@ function set_devices(mode, ...)
 		to_clear[monitor_order[i].name] = true
 	end
 	monitor_order = {}
-	local processed, pd = {}, process_data
-	pd.last_backcolor, pd.last_textcolor = pd.last_backcolor or {}, pd.last_textcolor or {}
+	local processed = {}
 	for i = 1, #list do
 		if not processed[list[i]] and peri_type(list[i]) == "monitor" then
-			pd.last_backcolor[list[i]], pd.last_textcolor[list[i]] = -1, -1
 			peri_call(list[i], "setBackgroundColor", 32768)
 			peri_call(list[i], "clear")
 			to_clear[list[i]] = nil
@@ -181,7 +174,7 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 	local endxorg = endx
 	local to_repeat = {}
 	local goto_limit = return_data and 1 or #monitor_order
-	local s, startx, endx, limit_set, continue, to_draw, cur_data, _slineold, _tlineold, _blineold, _sline, _tline, _bline
+	local s, startx, endx, limit_set, continue, to_draw, cur_data, _sline, _tline, _bline
 	for screen = 1, goto_limit do
 		s = monitor_order[screen]
 		startx, endx = startxorg or s.startx, endxorg or s.endx
@@ -190,21 +183,23 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 		continue = endx >= startx and startx <= s.endx and s.startx <= endx
 		to_draw, cur_data = {-1, {}, -1, -1}, {0, -1, -1} -- x, text, bcol, tcol; x, backc, textc
 		_sline, _bline, _tline = global_cache.s[line], global_cache.b[line], global_cache.t[line]
-		global_cache_old.s[line], global_cache_old.b[line], global_cache_old.t[line] = global_cache_old.s[line] or {}, global_cache_old.b[line] or {}, global_cache_old.t[line] or {}
-		_slineold, _blineold, _tlineold = global_cache_old.s[line], global_cache_old.b[line], global_cache_old.t[line]
+		global_cache_old[line] = global_cache_old[line] or {}
+		local _l = global_cache_old[line]
 		startx, endx = not continue and 1 or startx, not continue and 0 or endx
 		for i = startx, endx do
-			local s, b, t, _s, _b, _t = _sline[i], _bline[i], _tline[i], _slineold[i], _blineold[i], _tlineold[i]
-			if s and (not check_changes or not global_cache_old.s[line] or not global_cache_old.s[line][i] or (b ~= _b or t ~= _t or s ~= _s) and not (b == _b and s == " " and _s == " ")) then
+			local _lx = _l[i] or {}
+			local s, b, t, _s, _b, _t = _sline[i], _bline[i], _tline[i], _lx.s, _lx.b, _lx.t
+			if s and (not check_changes or not _l[i] or (b ~= _b or t ~= _t or s ~= _s) and not (b == _b and s == " " and _s == " ")) then
 				if not can_added(to_draw, s, t, b, i) then
 					draw_text(screen, cur_data, to_draw, line, return_data and to_repeat)
 					to_draw[2] = {}
 					to_draw[4] = -1
 					can_added(to_draw, s, t, b, i)
 				end
-				global_cache_old.b[line][i] = to_draw[3]
-				global_cache_old.t[line][i] = to_draw[4] < 1 and t or to_draw[4]
-				global_cache_old.s[line][i] = s
+				_l[i] = _l[i] or {}
+				_l[i].b = to_draw[3]
+				_l[i].t = to_draw[4] < 1 and t or to_draw[4]
+				_l[i].s = s
 				_sline[i] = not (limit_set and screen == goto_limit) and s or nil
 			end
 		end
@@ -219,10 +214,10 @@ function redraw_global_cache(check_changes)
 	for i = 1, h do
 		rd[#rd + 1] = redraw_global_cache_line(check_changes, i, nil, nil, monitor_mode == "duplicate" and #monitor_order > 1)
 	end
-	local monitor_mode_, tmp = monitor_mode, nil
+	local monitor_mode_ = monitor_mode
 	for i = 2, monitor_mode_ == "duplicate" and #monitor_order or 1 do
 		for j = 1, #rd do
-			tmp = rd[j]
+			local tmp = rd[j]
 			for k = 1, #tmp do
 				draw_text(i, copy_table(tmp[k][1]), copy_table(tmp[k][2]), tmp[k][3])
 			end
@@ -230,14 +225,7 @@ function redraw_global_cache(check_changes)
 	end
 end
 function get_screen()
-	local a = {}
-	for i = 1, total_size[2] do
-		a[i] = {}
-		for j = 1, total_size[1] do
-			a[i][j] = screen_cache[i] and screen_cache[i][j] or nil
-		end
-	end
-	return a
+	return screen_cache
 end
 function get_mode()
 	return monitor_mode
@@ -248,14 +236,11 @@ end
 function get_size()
 	return total_size[1], total_size[2]
 end
-function send_term(...)
-	set_term(...)
-end
 function has_palette()
-	return term.setPaletteColor and true or false
+	return not not term.setPaletteColor
 end
 function has_cursor_blink()
-	return term.setCursorBlink and true or false
+	return not not term.setCursorBlink
 end
 function is_colored()
 	return colored
