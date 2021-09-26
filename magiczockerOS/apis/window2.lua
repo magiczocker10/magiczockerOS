@@ -3,6 +3,9 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local hex, get_color = {}, {}
+local st = apis.buffer.set_term
+local bblink = apis.buffer.has_cursor_blink
+local bwrite = apis.buffer.write
 local _tconcat = table.concat
 local apis, textutils = apis, textutils
 for i = 1, 16 do
@@ -101,7 +104,7 @@ function reload_color_palette(settings)
 					c and 255 - temp_color[3] or temp_color[3],
 				}
 				for j = 1, apis.buffer.get_mode() == "extend" and #apis.buffer.get_devices() or 1 do
-					apis.buffer.set_term(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
+					st(j, "setPaletteColor", 2 ^ (i - 1), 1 / 255 * temp_color[1], 1 / 255 * temp_color[2], 1 / 255 * temp_color[3])
 				end
 			end
 		end
@@ -153,10 +156,10 @@ function create(x, y, width, height, visible, header, data)
 			for i = pos_start or 1, pos_end or w do
 				local _xpos = x + i - 1
 				local is_border = my_border and line > 0 and (line == h or (i == 1 or i == w))
-				apis.buffer.write(_xpos, _ypos, {
-					t = is_border and gs("window_resize_border_text") or my_screen[line][i] and my_screen[line][i].t or 1,
-					b = is_border and gs("window_resize_border_back") or my_screen[line][i] and my_screen[line][i].b or 32768,
-					s = is_border and (line == ceiled_h and "|" or i == ceiled_w and "-" or " ") or my_screen[line][i] and my_screen[line][i].s or " ",
+				bwrite(_xpos, _ypos, {
+					t = is_border and gs("window_resize_border_text") or (my_screen[line][i] or fallback_pixel).t,
+					b = is_border and gs("window_resize_border_back") or (my_screen[line][i] or fallback_pixel).b,
+					s = is_border and (line == ceiled_h and "|" or i == ceiled_w and "-" or " ") or (my_screen[line][i] or fallback_pixel).s,
 					id = last_cur_id,
 				})
 			end
@@ -204,15 +207,15 @@ function create(x, y, width, height, visible, header, data)
 			_tconcat({b[3], b[6]:rep(#b[4]), b[9]}),
 		}
 		my_screen[0] = {}
+		local t = my_screen[0]
 		for i = 1, last_header_width do
-			local t = my_screen[0]
-			t[i] = {
+			my_screen[0][i] = {
 				b = get_color[header_tmp[1]:sub(i, i) or "0"],
 				s = header_tmp[2]:sub(i, i),
 				t = get_color[header_tmp[3]:sub(i, i) or "f"],
 			}
 		end
-		last_header = my_screen[0]
+		last_header = t
 	end
 	local function set_cursor()
 		if not apis.buffer.is_visible() then return nil end
@@ -227,23 +230,23 @@ function create(x, y, width, height, visible, header, data)
 			local screen = my_screen[tmpy]
 			for i = apis.buffer.get_mode() == "extend" and #mon_order or 1, 1, -1 do
 				if _x > mon_order[i].offset then
-					if apis.buffer.has_cursor_blink() then
+					if bblink() then
 						if cur_blink and data.is_top() then
-							apis.buffer.set_term(i, "setTextColor", my_data[2])
-							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							st(i, "setTextColor", my_data[2])
+							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
 						end
-						apis.buffer.set_term(i, "setCursorBlink", cur_blink)
+						st(i, "setCursorBlink", cur_blink)
 					elseif screen[my_data[3]] then
 						if my_blink and cur_blink then
-							apis.buffer.set_term(i, "setBackgroundColor", screen[my_data[3]].b)
-							apis.buffer.set_term(i, "setTextColor", my_data[2])
-							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
-							apis.buffer.set_term(i, "write", "#")
+							st(i, "setBackgroundColor", screen[my_data[3]].b)
+							st(i, "setTextColor", my_data[2])
+							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							st(i, "write", "#")
 						elseif not cur_blink then
-							apis.buffer.set_term(i, "setBackgroundColor", screen[my_data[3]].b)
-							apis.buffer.set_term(i, "setTextColor", screen[my_data[3]].t)
-							apis.buffer.set_term(i, "setCursorPos", _x - mon_order[i].offset, _y)
-							apis.buffer.set_term(i, "write", screen[my_data[3]].s)
+							st(i, "setBackgroundColor", screen[my_data[3]].b)
+							st(i, "setTextColor", screen[my_data[3]].t)
+							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							st(i, "write", screen[my_data[3]].s)
 						end
 					end
 					break
@@ -295,8 +298,8 @@ function create(x, y, width, height, visible, header, data)
 			write_to_global_buffer(nil, my_data[4], 1, w)
 			local x, y = get_pos()
 			apis.buffer.redraw_global_cache_line(false, y - 1 + my_data[4], x, x - 1 + w)
-			set_cursor()
 		end
+		set_cursor()
 	end
 	window.current = function()
 		return window
@@ -328,6 +331,15 @@ function create(x, y, width, height, visible, header, data)
 	end
 	window.getSize = function()
 		return get_size()
+	end
+	if apis.buffer.has_palette() then
+		window.getPaletteColor = function(a)
+			expect("getPaletteColor", a, 1, "number")
+			if not color_codes[a] then
+				error("Invalid color (got " .. a .. ")", 2)
+			end
+			return color_codes[a][1], color_codes[a][2], color_codes[a][3]
+		end
 	end
 	window.getTextColor = function()
 		return my_data[2]
@@ -393,6 +405,7 @@ function create(x, y, width, height, visible, header, data)
 		end
 		redraw()
 		apis.buffer.redraw_global_cache(true)
+		set_cursor()
 	end
 	window.set_header_vis = function(a)
 		if header == a then return end
@@ -421,26 +434,36 @@ function create(x, y, width, height, visible, header, data)
 		expect("setCursorPos", a, 1, "number")
 		expect("setCursorPos", b, 2, "number")
 		local mb = my_blink
-		if not apis.buffer.has_cursor_blink() then
+		if not bblink() then
 			my_blink = false
 			set_cursor()
 		end
 		my_data[3], my_data[4], my_blink = math.floor(a), math.floor(b), mb
+		set_cursor()
 	end
 	window.set_maximized = function(a)
-		expect("setMaximized", a, 1, "boolean")
+		expect("set_maximized", a, 1, "boolean")
 		maximized = a
 		create_header(true)
 		window.redraw()
 		apis.buffer.redraw_global_cache(true)
 	end
 	if apis.buffer.has_palette() then
-		window.getPaletteColor = function(a)
-			expect("getPaletteColor", a, 1, "number")
-			if color_codes[a] == nil then
+		function window.setPaletteColor(a, r, g, b)
+			expect("setPaletteColor", a, 1, "number")
+			if not color_codes[a] then
 				error("Invalid color (got " .. a .. ")", 2)
 			end
-			return color_codes[a][1], color_codes[a][2], color_codes[a][3]
+			local new_color = {}
+			if type(r) == "number" and not g and not b then
+				new_color = {colors.unpackRGB(r)}
+			else
+				expect("setPaletteColor", r, 2, "number")
+				expect("setPaletteColor", g, 3, "number")
+				expect("setPaletteColor", b, 4, "number")
+				new_color[1], new_color[2], new_color[3] = r, g, b
+			end
+			color_codes[color] = new_color
 		end
 	end
 	window.setTextColor = function(a)
@@ -486,6 +509,7 @@ function create(x, y, width, height, visible, header, data)
 	window.getTextColour = window.getTextColor
 	window.isColour = window.isColor
 	window.setBackgroundColour = window.setBackgroundColor
+	window.setPaletteColour = window.setPaletteColor
 	window.setTextColour = window.setTextColor
 	window.clear()
 	return window

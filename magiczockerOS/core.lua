@@ -1184,11 +1184,11 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 	)
 	resume_user(my_window.coroutine, "term_resize")
+	_queue(system_windows.taskbar.id .. "", "", "window_change")
 	if vis_old then
 		sgv(true)
 		draw_windows()
 	end
-	_queue(system_windows.taskbar.id .. "", "", "window_change")
 end
 local function create_system_windows(i)
 	local message = ""
