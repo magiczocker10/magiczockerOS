@@ -1187,7 +1187,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	_queue(system_windows.taskbar.id .. "", "", "window_change")
 	if vis_old then
 		sgv(true)
-		draw_windows()
+		_queue("redraw_windows")
 	end
 end
 local function create_system_windows(i)
@@ -1896,6 +1896,8 @@ function events(...)
 			end
 		end
 		setup_monitors(_unpack(system_settings.devices or {}))
+		draw_windows()
+	elseif e[1] == "redraw_windows" then
 		draw_windows()
 	elseif e[1] == "filesystem_changed" then
 		if e[3] == "/magiczockerOS/users/" .. user_data.name .. "/files/desktop" then

@@ -225,17 +225,16 @@ function create(x, y, width, height, visible, header, data)
 		local success = (data.id < 0 or data.is_top()) and (not my_border or my_border and my_data[3] > 1 and my_data[3] < w and my_data[4] > 0 and my_data[4] < h)
 		local only_off = my_data[3] < 1 or my_data[3] > w or my_data[4] < 1 or my_data[4] > h or false
 		if success and (not only_off or not my_blink) then
-			local tmpy = my_data[4]
 			local mon_order = apis.buffer.get_devices()
-			local screen = my_screen[tmpy]
+			local screen = my_screen[my_data[4]]
 			for i = apis.buffer.get_mode() == "extend" and #mon_order or 1, 1, -1 do
 				if _x > mon_order[i].offset then
 					if bblink() then
 						if cur_blink and data.is_top() then
 							st(i, "setTextColor", my_data[2])
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
+							st(i, "setCursorBlink", cur_blink)
 						end
-						st(i, "setCursorBlink", cur_blink)
 					elseif screen[my_data[3]] then
 						if my_blink and cur_blink then
 							st(i, "setBackgroundColor", screen[my_data[3]].b)
