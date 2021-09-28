@@ -418,7 +418,7 @@ local function load_settings(user)
 end
 local function save_user_settings(user, data)
 	local tmp = gUD(user)
-	if user > 0 and tmp.settings then
+	if tmp and user > 0 and tmp.settings then
 		if tmp.server then
 			send_message(tmp.server, {return_id = my_computer_id, session_id = tmp.session_id, protocol = my_protocol, username = tmp.name, my_id = send_id, mode = "update_settings", data = data})
 			window_messages[send_id] = {0, 0}
@@ -440,8 +440,8 @@ local function move_windows_to_screen()
 		for j = 1, #vv do
 			temp_window = vv[j]
 			win_x, win_y, win_w, win_h = temp_window.window.get_data()
-			new_win_x = win_x > total_screen_size[1] and total_screen_size[1] or win_x
-			new_win_y = win_y > total_screen_size[2] and total_screen_size[2] or win_y
+			new_win_x = math.min(win_x, total_screen_size[1])
+			new_win_y = math.min(win_y, total_screen_size[2])
 			if win_x ~= new_win_x or win_y ~= new_win_y then
 				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h)
 			end
@@ -482,9 +482,8 @@ local function setup_monitors(...)
 	if #monitor_order == 0 then
 		return nil
 	end
-	local name
 	for i = 1, #monitor_order do
-		name = monitor_order[i].name
+		local name = monitor_order[i].name
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
@@ -1269,7 +1268,7 @@ local function create_system_windows(i)
 			complete = textutils.complete, -- contextmenu, osk, taskbar
 		},
 		register_key = function(key, action)
-			registered_keys[key] = registered_keys[key] or action
+			registered_keys[key] = action
 		end,
 		apis = apis, -- taskbar
 		-- magiczockerOS = get_os_commands(system_windows[temp]),

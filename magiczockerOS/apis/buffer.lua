@@ -66,8 +66,7 @@ local function calculate_device_offset()
 			local _w, _h = get_nearest_scale("width", mo.name, w), get_nearest_scale("height", mo.name, h)
 			peri_call(mo.name, "setTextScale", 5) -- Force the event "monitor_resize" to fire
 			local a = _w > _h and _h or _w
-			cdo_args[1], cdo_args[2] = a - 0.5, a + 0.5
-			cdo_args[1], cdo_args[2] = cdo_args[1] < 0.5 and 0.5 or cdo_args[1], cdo_args[2] > 5 and 5 or cdo_args[2]
+			cdo_args[1], cdo_args[2] = math.max(0.5, a - 0.5), math.min(5, a + 0.5)
 			for j = cdo_args[2], cdo_args[1], -0.5 do
 				peri_call(mo.name, "setTextScale", j)
 				local tmp = {peri_call(mo.name, "getSize")}
