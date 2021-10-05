@@ -2,7 +2,7 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local peri, _computer_only, monitor_order, total_size, monitor_mode, global_visible, _size, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, {0, 0}, "normal", true, {0, 0}, {6, 9}, {0, 0}
+local peri, _computer_only, monitor_order, total_size, monitor_mode, global_visible, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, {0, 0}, "normal", true, {6, 9}, {0, 0}
 local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
 local screen_cache, _tconcat = {}, table.concat
 local validate_modes = {
@@ -41,7 +41,7 @@ end
 local function get_nearest_scale(mode, device, length)
 	local _mode = mode == "width" and 1 or 2
 	peri_call(device, "setTextScale", 0.5)
-	_size[1], _size[2] = peri_call(device, "getSize")
+	local _size = {peri_call(device, "getSize")}
 	local a = pixel_size[_mode] / (_size[_mode] or 1) * 2
 	for i = 5, 0.5, -.5 do
 		if length <= pixel_size[_mode] / (a * i) then
@@ -53,6 +53,7 @@ end
 local function calculate_device_offset()
 	local cur_offset, total_width, mon_len = 0, 0, #monitor_order
 	local w = nil
+	local _size = {0, 0}
 	h = nil
 	for i = 1, mon_len do
 		peri_call(monitor_order[i].name, "setTextScale", 0.5)
@@ -86,37 +87,31 @@ local function calculate_device_offset()
 		h = monitor_mode == "extend" and h > _size[2] and _size[2] or h
 	end
 	if monitor_mode == "extend" then
-		w = total_width
 		total_size[1], total_size[2] = total_width, h
 	end
-	if not w or not h or #monitor_order == 0 then
-		error"Empty variable"
+	if #monitor_order == 0 then
+		error"No valid devices."
 	end
 end
 function set_devices(mode, ...)
 	monitor_mode = validate_modes[mode] and mode or "normal"
-	local bw, list, to_clear = false, monitor_mode == "normal" and _computer_only or {...}, {}
-	for i = 1, type(monitor_order) == "table" and #monitor_order or 0 do
-		to_clear[monitor_order[i].name] = true
-	end
+	local bw, list = false, monitor_mode == "normal" and _computer_only or {...}
+	local m_o = monitor_order
 	monitor_order = {}
 	local processed = {}
 	for i = 1, #list do
 		if not processed[list[i]] and peri_type(list[i]) == "monitor" then
 			peri_call(list[i], "setBackgroundColor", 32768)
 			peri_call(list[i], "clear")
-			to_clear[list[i]] = nil
 			bw = not peri_call(list[i], "isColor") or bw
 			monitor_order[#monitor_order + 1] = {name = list[i]}
 		end
 		processed[list[i]] = true
 	end
 	colored = not bw
-	for k in next, to_clear do
-		if peri_call then
-			peri_call(k, "setBackgroundColor", 32768)
-			peri_call(k, "clear")
-		end
+	for i = 1, peri_call and type(m_o) == "table" and #m_o or 0 do
+		peri_call(m_o[i], "setBackgroundColor", 32768)
+		peri_call(m_o[i], "clear")
 	end
 	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "term"} or nil
 	calculate_device_offset()
@@ -169,19 +164,17 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 	if not global_visible or not line or line > h or not global_cache.s[line] then return nil end
 	local monitor_mode_ = monitor_mode
 	monitor_mode = return_data and "extend" or monitor_mode
-	local startxorg = startx
-	local endxorg = endx
-	local to_repeat = {}
+	local to_repeat, startxorg, endxorg = {}, startx, endx
 	local goto_limit = return_data and 1 or #monitor_order
-	local s, startx, endx, limit_set, continue, to_draw, cur_data, _sline, _tline, _bline
+	local limit_set
 	for screen = 1, goto_limit do
-		s = monitor_order[screen]
-		startx, endx = startxorg or s.startx, endxorg or s.endx
-		startx, endx = startx < s.startx and s.startx or startx, endx > s.endx and s.endx or endx
+		local s = monitor_order[screen]
+		local startx = math.max(startxorg or s.startx, s.startx)
+		local endx = math.min(endxorg or s.endx, s.endx)
 		limit_set = return_data or startxorg and endxorg
-		continue = endx >= startx and startx <= s.endx and s.startx <= endx
-		to_draw, cur_data = {-1, {}, -1, -1}, {0, -1, -1} -- x, text, bcol, tcol; x, backc, textc
-		_sline, _bline, _tline = global_cache.s[line], global_cache.b[line], global_cache.t[line]
+		local continue = endx >= startx and startx <= s.endx and s.startx <= endx
+		local to_draw, cur_data = {-1, {}, -1, -1}, {0, -1, -1} -- x, text, bcol, tcol; x, backc, textc
+		local _sline, _bline, _tline = global_cache.s[line], global_cache.b[line], global_cache.t[line]
 		global_cache_old[line] = global_cache_old[line] or {}
 		local _l = global_cache_old[line]
 		startx, endx = not continue and 1 or startx, not continue and 0 or endx
@@ -213,8 +206,7 @@ function redraw_global_cache(check_changes)
 	for i = 1, h do
 		rd[#rd + 1] = redraw_global_cache_line(check_changes, i, nil, nil, monitor_mode == "duplicate" and #monitor_order > 1)
 	end
-	local monitor_mode_ = monitor_mode
-	for i = 2, monitor_mode_ == "duplicate" and #monitor_order or 1 do
+	for i = 2, monitor_mode == "duplicate" and #monitor_order or 1 do
 		for j = 1, #rd do
 			local tmp = rd[j]
 			for k = 1, #tmp do
