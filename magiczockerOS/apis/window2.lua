@@ -200,8 +200,8 @@ function create(x, y, width, height, visible, header, data)
 		end
 		b[7], b[8], b[9] = colored and hex[gs("window_resize_button_back")] or b[7], colored and (foreground and not maximized and last_cur_id > 0 and "o" or " ") or b[8], colored and hex[gs("window_resize_button_text")] or b[9]
 		header_tmp = {
-			_tconcat({b[1], 
-			b[5]:rep(#b[4]), 
+			_tconcat({b[1],
+			b[5]:rep(#b[4]),
 			b[7]}),
 			_tconcat({b[2], b[4], b[8]}),
 			_tconcat({b[3], b[6]:rep(#b[4]), b[9]}),
@@ -284,19 +284,27 @@ function create(x, y, width, height, visible, header, data)
 			_blit(a, b, c)
 		end
 	end
+	local _clearLine = function(l, x, y, w, h)
+		my_screen[l] = {}
+		for i = 1, w do
+			my_screen[l][i] = {b = my_data[1], t = my_data[2], s = " "}
+		end
+		write_to_global_buffer(nil, l, 1, w)
+		apis.buffer.redraw_global_cache_line(false, y - 1 + l, x, x - 1 + w)
+	end
 	window.clear = function()
+		local w, h = get_size()
+		local x, y = get_pos()
 		for i = 1, ({get_size()})[2] do
-			my_screen[i] = {}
+			_clearLine(i, x, y, w, h)
 		end
 		set_cursor()
 	end
 	window.clearLine = function()
 		local w, h = get_size()
 		if my_data[4] > 0 and my_data[4] <= h then
-			my_screen[my_data[4]] = {}
-			write_to_global_buffer(nil, my_data[4], 1, w)
 			local x, y = get_pos()
-			apis.buffer.redraw_global_cache_line(false, y - 1 + my_data[4], x, x - 1 + w)
+			_clearLine(my_data[4], x, y, w, h)
 		end
 		set_cursor()
 	end
