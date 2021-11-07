@@ -110,8 +110,8 @@ function set_devices(mode, ...)
 	end
 	colored = not bw
 	for i = 1, peri_call and type(m_o) == "table" and #m_o or 0 do
-		peri_call(m_o[i], "setBackgroundColor", 32768)
-		peri_call(m_o[i], "clear")
+		peri_call(m_o[i].name, "setBackgroundColor", 32768)
+		peri_call(m_o[i].name, "clear")
 	end
 	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "term"} or nil
 	calculate_device_offset()
