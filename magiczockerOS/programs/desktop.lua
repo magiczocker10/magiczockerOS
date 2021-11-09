@@ -156,7 +156,7 @@ local function events(e, _, x, y)
 	end
 end
 update_cached_settings()
-col_ = cs.cb
+col_ = cs.db
 events("term_resize")
 while true do
 	events(coroutine.yield())
