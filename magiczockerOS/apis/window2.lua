@@ -198,11 +198,13 @@ function create(x, y, width, height, visible, header, data)
 		else
 			b[5], b[6] = __ and "0" or "f", __ and "f" or "0"
 		end
-		b[7], b[8], b[9] = colored and hex[gs("window_resize_button_back")] or b[7], colored and (foreground and not maximized and last_cur_id > 0 and "o" or " ") or b[8], colored and hex[gs("window_resize_button_text")] or b[9]
+		if foreground and not maximized and last_cur_id > 0 then
+			b[7], b[8], b[9] = colored and hex[gs("window_resize_button_back")] or b[7], colored and "o" or b[8], colored and hex[gs("window_resize_button_text")] or b[9]
+		else
+			b[7], b[8], b[9] = hex[gs("window_bar_inactive_back")], colored and " " or b[8], colored and hex[gs("window_bar_inactive_text")] or b[9]
+		end
 		header_tmp = {
-			_tconcat({b[1],
-			b[5]:rep(#b[4]),
-			b[7]}),
+			_tconcat({b[1], b[5]:rep(#b[4]), b[7]}),
 			_tconcat({b[2], b[4], b[8]}),
 			_tconcat({b[3], b[6]:rep(#b[4]), b[9]}),
 		}
