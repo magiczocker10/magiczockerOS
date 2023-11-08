@@ -139,7 +139,7 @@ function create(x, y, width, height, visible, header, data)
 		if maximized then
 			w, h = apis.buffer.get_size()
 		end
-		return maximized and w or my_size[1], maximized and h - 1 or my_size[2]
+		return maximized and w or my_size[1], maximized and h - 2 or my_size[2]
 	end
 	local function get_pos(with_header)
 		return maximized and 1 or my_pos[1], (maximized and 3 or my_pos[2]) - (with_header and header and 1 or 0)
