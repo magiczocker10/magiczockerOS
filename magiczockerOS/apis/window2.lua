@@ -198,10 +198,12 @@ function create(x, y, width, height, visible, header, data)
 		else
 			b[5], b[6] = __ and "0" or "f", __ and "f" or "0"
 		end
-		if foreground and not maximized and last_cur_id > 0 then
+		if not foreground then
+			b[7], b[8], b[9] = hex[gs("window_bar_inactive_back")], colored and " " or b[8], colored and hex[gs("window_bar_inactive_text")] or b[9]
+		elseif not maximized and last_cur_id > 0 then
 			b[7], b[8], b[9] = colored and hex[gs("window_resize_button_back")] or b[7], colored and "o" or b[8], colored and hex[gs("window_resize_button_text")] or b[9]
 		else
-			b[7], b[8], b[9] = hex[gs("window_bar_inactive_back")], colored and " " or b[8], colored and hex[gs("window_bar_inactive_text")] or b[9]
+			b[7], b[8], b[9] = colored and hex[gs("window_bar_active_back")] or b[7], colored and " " or b[8], colored and hex[gs("window_bar_active_text")] or b[9]
 		end
 		header_tmp = {
 			_tconcat({b[1], b[5]:rep(#b[4]), b[7]}),
@@ -213,7 +215,7 @@ function create(x, y, width, height, visible, header, data)
 		for i = 1, last_header_width do
 			my_screen[0][i] = {
 				b = get_color[header_tmp[1]:sub(i, i) or "0"],
-				s = header_tmp[2]:sub(i, i),
+				s = header_tmp[2]:sub(i, i) or " ",
 				t = get_color[header_tmp[3]:sub(i, i) or "f"],
 			}
 		end
