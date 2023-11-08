@@ -31,7 +31,7 @@
 	mouse_left_handed = false,
 	search_back = 256,
 	search_text = 1,
-	search_seperator_text = 256,
+	search_seperator_text = 128,
 	search_field_text = 1,
 	search_button_active_back = 256,
 	search_button_active_text = 1,
