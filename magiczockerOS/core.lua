@@ -101,7 +101,6 @@ local registered_keys = {}
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
 	local to_return = ""
-	local seen = {}
 	if type(data) == "string" then
 		return ("%q"):format(data)
 	elseif type(data) == "number" or type(data) == "boolean" then
@@ -113,15 +112,12 @@ local function fallback_serialise(data, processed)
 	end
 	processed[data] = true
 	for k, v in next, data do
-		if not seen[v] then
-			seen[v] = true
-			local _k = k
-			local serialised = fallback_serialise(v, processed)
-			if type(_k) == "string" then
-				_k = ("%q"):format(_k)
-			end
-			to_return = to_return .. (#to_return == 0 and "" or ",") .. "[" .. _k .. "]=" .. tostring(serialised)
+		local _k = k
+		local serialised = fallback_serialise(v, processed)
+		if type(_k) == "string" then
+			_k = ("%q"):format(_k)
 		end
+		to_return = to_return .. (#to_return == 0 and "" or ",") .. "[" .. _k .. "]=" .. tostring(serialised)
 	end
 	processed[data] = nil
 	return "{" .. to_return .. "}"
