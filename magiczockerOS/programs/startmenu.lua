@@ -117,7 +117,7 @@ end
 create(true, false, "CraftOS", function() close_os() end)
 if fs.exists("/magiczockerOS/programs/settings.lua") then
 	create(true, false, "Settings", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings.lua", true) end)
-	create(true, false, "Settings Old", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings-.lua", true) end)
+	create(true, false, "Settings New", function() set_my_vis(false) create_window("/magiczockerOS/programs/settings-new.lua", true) end)
 end
 create(true, false, "Shell", function() set_my_vis(false) create_window() end)
 create(true, false, "Show Desktop", function() show_desktop() end)
