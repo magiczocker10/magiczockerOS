@@ -80,16 +80,18 @@ local function expect(a, b, c, ...)
 	end
 	return error(a .. ": Invalid arg #" .. c .. " (" .. (#d > 1 and _tconcat(d, ", ", 1, #d - 1) .. " or " or "") .. d[#d] .. " expected)")
 end
-function reload_color_palette(settings)
+function reload_color_palette(user_data)
+	local settings = user_data.settings
 	if apis.buffer.is_colored() and apis.buffer.has_palette() then
 		if cp[settings.color_mode] and ((settings.color_mode or 1) ~= last_palette.mode or (settings.invert_colors or false) ~= last_palette.inverted or (settings.original_colors or false) ~= last_palette.original) then
 			last_palette = {mode = settings.color_mode or 1, inverted = settings.invert_colors, original = settings.original_colors}
-			local a = settings.original_colors and "original" or "new"
+			local a = settings.color_palette == 1 and "original" or "new"
+			local palette = settings.color_palette == 3 and user_data.color_codes or color_palette[a]
 			for i = 1, 16 do
 				local temp_color, b, c = {
-					color_palette[a][i][1],
-					color_palette[a][i][2],
-					color_palette[a][i][3],
+					palette[i][1],
+					palette[i][2],
+					palette[i][3],
 				}, cp[settings.color_mode], settings.color_mode and settings.color_mode > 1
 				local red, green, blue = round(temp_color[1] * b[1] + temp_color[2] * b[2] + temp_color[3] * b[3]), round(temp_color[1] * b[4] + temp_color[2] * b[5] + temp_color[3] * b[6]), round(temp_color[1] * b[7] + temp_color[2] * b[8] + temp_color[3] * b[9])
 				temp_color = {
