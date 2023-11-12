@@ -13,6 +13,7 @@
 	clock_text_inactive = 1,
 	clock_visible = true,
 	color_mode = 1,
+	color_palette = 1,
 	invert_colors = false,
 	original_colors = false,
 	context_menu_background = 128,
