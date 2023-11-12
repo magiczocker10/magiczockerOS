@@ -3,11 +3,11 @@
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 local hex, get_color = {}, {}
+local apis, textutils = apis, textutils
 local st = apis.buffer.set_term
 local bblink = apis.buffer.has_cursor_blink
 local bwrite = apis.buffer.write
 local _tconcat = table.concat
-local apis, textutils = apis, textutils
 for i = 1, 16 do
 	local tmp = 2 ^ (i - 1)
 	hex[tmp] = ("0123456789abcdef"):sub(i, i)
@@ -131,6 +131,11 @@ function create(x, y, width, height, visible, header, data)
 	if header then
 		my_pos[2] = my_pos[2] + 1
 	end
+	local ud = data.user_data()
+	ud.color_codes = ud.color_codes or {}
+	for k, v in next, color_palette.new do
+		ud.color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
+	end
 	local function gs(a)
 		return data.get_setting(data.user_data().settings, a)
 	end
@@ -144,7 +149,7 @@ function create(x, y, width, height, visible, header, data)
 	local function get_pos(with_header)
 		return maximized and 1 or my_pos[1], (maximized and 3 or my_pos[2]) - (with_header and header and 1 or 0)
 	end
-	local function write_to_global_buffer(cur_id, line, pos_start, pos_end)
+	local function write_to_global_buffer(_, line, pos_start, pos_end)
 		local w, h = get_size()
 		if my_visible and line > (header and -1 or 0) and line <= h then
 			pos_start = pos_start and pos_end and (pos_start < 1 and 1 or pos_start) or nil
@@ -165,10 +170,10 @@ function create(x, y, width, height, visible, header, data)
 			end
 		end
 	end
-	local function redraw(cur_id)
+	local function redraw()
 		local w, h = get_size()
 		for i = header and 0 or 1, my_visible and h or 0 do
-			write_to_global_buffer(cur_id, i, 1, w)
+			write_to_global_buffer(nil, i, 1, w)
 		end
 	end
 	local function create_header()
@@ -288,7 +293,7 @@ function create(x, y, width, height, visible, header, data)
 			_blit(a, b, c)
 		end
 	end
-	local _clearLine = function(l, x, y, w, h)
+	local _clearLine = function(l, x, y, w)
 		my_screen[l] = {}
 		for i = 1, w do
 			my_screen[l][i] = {b = my_data[1], t = my_data[2], s = " "}
@@ -297,10 +302,10 @@ function create(x, y, width, height, visible, header, data)
 		apis.buffer.redraw_global_cache_line(false, y - 1 + l, x, x - 1 + w)
 	end
 	window.clear = function()
-		local w, h = get_size()
+		local w = get_size()
 		local x, y = get_pos()
 		for i = 1, ({get_size()})[2] do
-			_clearLine(i, x, y, w, h)
+			_clearLine(i, x, y, w)
 		end
 		set_cursor()
 	end
@@ -308,7 +313,7 @@ function create(x, y, width, height, visible, header, data)
 		local w, h = get_size()
 		if my_data[4] > 0 and my_data[4] <= h then
 			local x, y = get_pos()
-			_clearLine(my_data[4], x, y, w, h)
+			_clearLine(my_data[4], x, y, w)
 		end
 		set_cursor()
 	end
@@ -346,10 +351,10 @@ function create(x, y, width, height, visible, header, data)
 	if apis.buffer.has_palette() then
 		window.getPaletteColor = function(a)
 			expect("getPaletteColor", a, 1, "number")
-			if not color_codes[a] then
+			if not ud.color_codes[a] then
 				error("Invalid color (got " .. a .. ")", 2)
 			end
-			return color_codes[a][1], color_codes[a][2], color_codes[a][3]
+			return ud.color_codes[a][1], ud.color_codes[a][2], ud.color_codes[a][3]
 		end
 	end
 	window.getTextColor = function()
@@ -462,7 +467,7 @@ function create(x, y, width, height, visible, header, data)
 	if apis.buffer.has_palette() then
 		function window.setPaletteColor(a, r, g, b)
 			expect("setPaletteColor", a, 1, "number")
-			if not color_codes[a] then
+			if not ud.color_codes[a] then
 				error("Invalid color (got " .. a .. ")", 2)
 			end
 			local new_color = {}
@@ -474,7 +479,7 @@ function create(x, y, width, height, visible, header, data)
 				expect("setPaletteColor", b, 4, "number")
 				new_color[1], new_color[2], new_color[3] = r, g, b
 			end
-			color_codes[color] = new_color
+			ud.color_codes[a] = new_color
 		end
 	end
 	window.setTextColor = function(a)
