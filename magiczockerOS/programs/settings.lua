@@ -80,7 +80,7 @@ local categories = {
 		entries = {
 			{title = "Color Mode", type = "drop-down", value = "color_mode", entries = {"Off", "Achromatomaly", "Achromatopsia / Gray", "Deuteranomaly", "Deuteranopia", "Protanomaly", "Protanopia", "Sepia", "Tritanomaly", "Tritanopia"}},
 			{title = "Invert: ", type = "boolean", value = "invert_colors"},
-			{title = "Color palette", type = "drop-down", value = "color_palette", entries = {"Default", "Original", "Custom (setColorPalette)"}},
+			{title = "Color palette", type = "drop-down", value = "color_palette", entries = {"Original", "New", "Custom (setColorPalette)"}},
 		},
 	},
 	{
