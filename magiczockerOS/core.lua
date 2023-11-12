@@ -559,6 +559,7 @@ local function setup_user(username, session)
 			tmp[j].window.set_visible(true)
 		end
 	end
+	apis.window.init_user_palette(gUD(cur_user))
 	update_windows(cur_user)
 	return true
 end
@@ -1204,12 +1205,12 @@ local function create_system_windows(i)
 	add_to_log("Starting " .. temp)
 	system_windows[temp].contextmenu_data = nil
 	system_windows[temp].id = i * -1
+	system_windows[temp].user_data = function() return gUD(cur_user) end
 	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
 	system_windows[temp].buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
 	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk", system_windows[temp])
 	system_windows[temp].min_width = 10
 	system_windows[temp].min_height = 5
-	system_windows[temp].user_data = function() return gUD(cur_user) end
 	system_windows[temp].get_setting = get_setting
 	if temp == "osk" then
 		system_windows[temp].label = {name = "On-Screen Keyboard"}
