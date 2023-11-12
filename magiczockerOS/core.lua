@@ -548,11 +548,11 @@ local function setup_user(username, session)
 		return nil
 	end
 	last_window = nil
-	if not session then
+	if not session and name ~= "" then
 		local a = "/magiczockerOS/users/" .. name .. "/files"
-		if name ~= "" and fs.exists(a) and not fs.isDir(a) then fs.delete(a) end
-		if name ~= "" and not fs.exists(a) then fs.makeDir(a) end
-		if name ~= "" and not fs.exists(a .. "/desktop") then fs.makeDir(a .. "/desktop") end
+		if fs.exists(a) and not fs.isDir(a) then fs.delete(a) end
+		if not fs.exists(a) then fs.makeDir(a) end
+		if not fs.exists(a .. "/desktop") then fs.makeDir(a .. "/desktop") end
 		apis.filesystem.add_listener(a .. "/desktop", {makeDir = true, open = true, delete = true})
 	end
 	load_settings(cur_user)
@@ -1443,6 +1443,7 @@ do
 		a.window.force_header_update(data.settings)
 	end
 end
+apis.filesystem.add_listener("/desktop", {makeDir = true, open = true, delete = true}) -- For remote users
 add_to_log("Loaded user")
 if not term.setCursorBlink then
 	cursorblink_timer = start_timer(cursorblink_timer, 0.5)
@@ -1888,6 +1889,8 @@ function events(...)
 	elseif e[1] == "filesystem_changed" then
 		if e[3] == "/magiczockerOS/users/" .. user_data.name .. "/files/desktop" then
 			resume_system("2desktop", system_windows.desktop.coroutine, "term_resize")
+		elseif e[3] == "/desktop" and user_data.server then
+			resume_system("3desktop", system_windows.desktop.coroutine, "term_resize")
 		end
 	elseif e[1] and not resize_mode then
 		local temp_window
