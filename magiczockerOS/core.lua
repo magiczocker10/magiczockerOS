@@ -140,7 +140,6 @@ local function _unpack(a, b)
 		return a[b], _unpack(a, b + 1)
 	end
 end
-_unpack = table.unpack or _unpack
 local function add_timer(duration)
 	last_timer = last_timer + 1
 	timers[last_timer] = os.clock() + duration
@@ -169,7 +168,8 @@ local function open_modem(modem, state)
 end
 local available_sides = {"top", "bottom", "left", "right", "front", "back"}
 local function search_modem()
-	local side
+	modem_side = nil
+	local side = ""
 	if component then
 		for a in component.list("modem") do
 			side = a
@@ -183,17 +183,16 @@ local function search_modem()
 			end
 		end
 	end
-	if side and #side > 0 then
-		open_modem(side)
-		local methods = peripheral and peripheral.getMethods(modem_side) or {}
-		for i = 1, #methods do
-			if methods[i] == "send" then
-				use_old = true -- version 1.3
-				break
-			end
+	if #side == 0 then
+		return nil
+	end
+	open_modem(side)
+	local methods = peripheral and peripheral.getMethods(modem_side) or {}
+	for i = 1, #methods do
+		if methods[i] == "send" then
+			use_old = true -- version 1.3
+			break
 		end
-	else
-		modem_side = nil
 	end
 end
 local function get_timer()
@@ -257,8 +256,8 @@ end
 local function unserialise(str)
 	local ok, err = (loadstring or load)("return " .. str, "core: unserialize", "t", {})
 	if ok then
-		local ok, result = run_program(function() return ok() end, function(err) return err end)
-		if ok then
+		local ok2, result = run_program(function() return ok() end, function(err) return err end)
+		if ok2 then
 			return result
 		end
 	end
@@ -287,41 +286,39 @@ local function load_api(name)
 	add_to_log("Loading " .. name)
 	local env = {}
 	local file = fs.open("/magiczockerOS/apis/" .. name .. ".lua", "r")
-	if file then
-		setmetatable(env, {__index = _G})
-		env.math, env.unpack, env.apis = math, _unpack, apis
-		env.textutils = textutils
-		env.fs = fs
-		env.term = term
-		local content = file.readAll()
-		file.close()
-		local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
-		if api then
-			if setfenv then
-				setfenv(api, env)
-			end
-			local ok, err = run_program(function() return api() end, function(err) return err end)
-			if not ok then
-				if err and err ~= "" then
-					error_org(err, 0)
-				end
-				return nil
-			end
-			local api_ = {}
-			for k, v in next, env do
-				if v ~= env then
-					api_[k] = v
-				end
-			end
-			apis[name] = api_
-			add_to_log("Loaded " .. name .. "!")
-			return true
-		elseif err and err ~= "" then
-			error_org(err, 0)
-		end
-		return nil
+	if not file then
+		error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
 	end
-	error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
+	setmetatable(env, {__index = _G})
+	env.math, env.unpack, env.apis = math, _unpack, apis
+	env.textutils = textutils
+	env.fs = fs
+	env.term = term
+	local content = file.readAll()
+	file.close()
+	local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
+	if api then
+		if setfenv then
+			setfenv(api, env)
+		end
+		local ok, err = run_program(function() return api() end, function(err) return err end)
+		if not ok then
+			if err and err ~= "" then
+				error_org(err, 0)
+			end
+			return nil
+		end
+		local api_ = {}
+		for k, v in next, env do
+			if v ~= env then
+				api_[k] = v
+			end
+		end
+		apis[name] = api_
+		add_to_log("Loaded " .. name .. "!")
+	elseif err and err ~= "" then
+		error_org(err, 0)
+	end
 end
 local function gUD(id) -- get_user_data
 	return users[id] or {}
@@ -743,15 +740,14 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					end
 				end,
 				setTitle = function(n, title)
-					if type(n) == "number" and type(title) == "string" then
-						title = title:gsub("\t", "")
-						for j = 1, #user_data.windows do
-							if user_data.windows[j].id == n and (user_data.name == "" or not user_data.windows[j].is_system) then
-								user_data.windows[j].label.name = title
-								user_data.windows[j].window.force_header_update(user_data.settings) -- Update header
-								_queue(system_windows.taskbar.id .. "", "", "window_change")
-								break
-							end
+					if type(n) ~= "number" or type(title) ~= "string" then return end
+					title = title:gsub("\t", "")
+					for j = 1, #user_data.windows do
+						if user_data.windows[j].id == n and (user_data.name == "" or not user_data.windows[j].is_system) then
+							user_data.windows[j].label.name = title
+							user_data.windows[j].window.force_header_update(user_data.settings) -- Update header
+							_queue(system_windows.taskbar.id .. "", "", "window_change")
+							break
 						end
 					end
 				end,
@@ -878,20 +874,19 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		end
 		env.unpack = _unpack
 		env.dofile = function(path)
-			if env.fs.exists(path) and not env.fs.isDir(path) then
-				local file = env.fs.open(path, "r")
-				if file then
-					local content = file.readAll()
-					file.close()
-					local program, err = (env.loadstring or env.load)(content, path, "t", env._G)
-					if env.setfenv then
-						env.setfenv(program, env._G)
-					end
-					if err then
-						return error(err)
-					end
-					return program()
+			if not env.fs.exists(path) or env.fs.isDir(path) then return end
+			local file = env.fs.open(path, "r")
+			if file then
+				local content = file.readAll()
+				file.close()
+				local program, err = (env.loadstring or env.load)(content, path, "t", env._G)
+				if env.setfenv then
+					env.setfenv(program, env._G)
 				end
+				if err then
+					return error(err)
+				end
+				return program()
 			end
 		end
 		env, uenv = uenv, env
@@ -1367,20 +1362,18 @@ local function check_click_outside(id)
 			end
 		end
 		local ud = gUD(cur_user)
-		if ud then
-			local b = false
-			for i = #ud.windows, 1, -1 do
-				if i ~= id and ud.windows[i].click_outside and ud.windows[i].window.get_visible() then
-					a, b = true, true
-					ud.windows[i].window.set_visible(false)
-					ud.windows[#ud.windows + 1] = ud.windows[i]
-					table.remove(ud.windows, i)
-					id = i <= id and id - 1 or id
-				end
+		local b = false
+		for i = #(ud.windows or ""), 1, -1 do
+			if i ~= id and ud.windows[i].click_outside and ud.windows[i].window.get_visible() then
+				a, b = true, true
+				ud.windows[i].window.set_visible(false)
+				ud.windows[#ud.windows + 1] = ud.windows[i]
+				table.remove(ud.windows, i)
+				id = i <= id and id - 1 or id
 			end
-			if b then
-				resume_system("9taskbar", system_windows.taskbar.coroutine, "start_change")
-			end
+		end
+		if b then
+			resume_system("9taskbar", system_windows.taskbar.coroutine, "start_change")
 		end
 	end
 	return a
@@ -1823,8 +1816,8 @@ function events(...)
 			if tmp[1] < 0 and tmp[2] == nil then
 				tmp[1] = tmp[1] * -1
 			end
-			if tmp[1] > 0 and tmp[2] and gUD(tmp[2]) then
-				local tmp1 = gUD(tmp[2]).windows
+			if tmp[1] > 0 and tmp[2] then
+				local tmp1 = gUD(tmp[2]).windows or ""
 				for i = 1, #tmp1 do
 					if tmp1[i].id == tmp[1] then
 						resume_user(tmp1[i].coroutine, e[1], data.my_id, data.data and _unpack(data.data) or nil)
@@ -1848,9 +1841,8 @@ function events(...)
 		end
 	elseif type(ton(e[1])) == "number" then
 		local _id = ton(e[1])
-		local _user = e[2]
-		if _id > 0 and gUD(_user) then
-			local tmp = gUD(_user).windows or ""
+		if _id > 0 then
+			local tmp = gUD(e[2]).windows or ""
 			for i = 1, #tmp do
 				if tmp[i].id == _id then
 					resume_user(tmp[i].coroutine, _unpack(e, 3))
