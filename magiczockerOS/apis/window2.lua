@@ -88,10 +88,11 @@ function reload_color_palette(user_data)
 			local a = settings.color_palette == 1 and "original" or "new"
 			local palette = settings.color_palette == 3 and user_data.color_codes or color_palette[a]
 			for i = 1, 16 do
+				local p_index = settings.color_palette == 3 and 2 ^ (i - 1) or i
 				local temp_color, b, c = {
-					palette[i][1],
-					palette[i][2],
-					palette[i][3],
+					palette[p_index][1],
+					palette[p_index][2],
+					palette[p_index][3],
 				}, cp[settings.color_mode], settings.color_mode and settings.color_mode > 1
 				local red, green, blue = round(temp_color[1] * b[1] + temp_color[2] * b[2] + temp_color[3] * b[3]), round(temp_color[1] * b[4] + temp_color[2] * b[5] + temp_color[3] * b[6]), round(temp_color[1] * b[7] + temp_color[2] * b[8] + temp_color[3] * b[9])
 				temp_color = {
@@ -112,6 +113,12 @@ function reload_color_palette(user_data)
 		end
 	end
 end
+function init_user_palette(data)
+	data.color_codes = data.color_codes or {}
+	for k, v in next, color_palette.original do
+		data.color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
+	end
+end
 function create(x, y, width, height, visible, header, data)
 	local header_tmp
 	local data = data
@@ -130,13 +137,9 @@ function create(x, y, width, height, visible, header, data)
 	local window = {}
 	local last_header
 	local last_cur_id = 0
+	local ud = data.user_data()
 	if header then
 		my_pos[2] = my_pos[2] + 1
-	end
-	local ud = data.user_data()
-	ud.color_codes = ud.color_codes or {}
-	for k, v in next, color_palette.new do
-		ud.color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
 	end
 	local function gs(a)
 		return data.get_setting(data.user_data().settings, a)
@@ -376,7 +379,7 @@ function create(x, y, width, height, visible, header, data)
 	end
 	window.native = window.current
 	window.nativePaletteColor = function(num)
-		local tmp = color_palette[gs("original_colors") and "original" or "new"]
+		local tmp = color_palette[gs("color_palette") == 2 and "new" or "original"]
 		local n = tmp[native_conv[num] or -1]
 		if n then
 			return n[1], n[2], n[3]
@@ -482,6 +485,7 @@ function create(x, y, width, height, visible, header, data)
 				new_color[1], new_color[2], new_color[3] = r, g, b
 			end
 			ud.color_codes[a] = new_color
+			reload_color_palette(ud)
 		end
 	end
 	window.setTextColor = function(a)
