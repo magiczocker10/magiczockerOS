@@ -695,6 +695,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	my_window.user = user_
 	my_window.buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
 	my_window.window = apis.window.create(2, 3, 25, 10, true, true, my_window)
+	my_window.min_height = 5
+	my_window.min_width = 10
 	my_window.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
 	user_data.desktop = {}
 	local uenv = uenv or {}
@@ -710,6 +712,28 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			math = math,
 			debug = debug,
 			_HOSTver = is_system_program and _HOSTver or nil,
+			get_min_height = is_system_program and function(a)
+				return my_window.min_height
+			end or nil,
+			get_min_width = is_system_program and function(a)
+				return my_window.min_width
+			end or nil,
+			set_min_height = is_system_program and function(a)
+				my_window.min_height = a
+				local win_x, win_y, win_w, win_h = my_window.window.get_data()
+				my_window.window.reposition(win_x, win_y, win_w, math.max(win_h, a))
+				if win_h ~= a then
+					_queue(id .. "", user_, "term_resize")
+				end
+			end or nil,
+			set_min_width = is_system_program and function(a)
+				my_window.min_width = a
+				local win_x, win_y, win_w, win_h = my_window.window.get_data()
+				my_window.window.reposition(win_x, win_y, math.max(win_w, a), win_h)
+				if win_w ~= a then
+					_queue(id .. "", user_, "term_resize")
+				end
+			end or nil,
 			fs = {},
 			multishell = {
 				getCount = function() return #user_data.windows end,
@@ -1184,6 +1208,8 @@ local function create_system_windows(i)
 	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
 	system_windows[temp].buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
 	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk", system_windows[temp])
+	system_windows[temp].min_width = 10
+	system_windows[temp].min_height = 5
 	system_windows[temp].user_data = function() return gUD(cur_user) end
 	system_windows[temp].get_setting = get_setting
 	if temp == "osk" then
@@ -1550,28 +1576,18 @@ function events(...)
 				end
 			elseif resize_mode and t_id > 0 then
 				if click.x == win_x + win_w - 1 then -- border right
-					win_w = e[3] - win_x + 1
-					if win_w < 10 then
-						win_w = 10
-					end
+					win_w = math.max(e[3] - win_x + 1, tmp_window.min_width)
 					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
 					click.x = win_x + win_w - 1
 				elseif click.x == win_x then -- border left
 					local org_w = win_x + win_w - 1
-					win_x = win_x + e[3] - click.x
-					win_w = win_w - e[3] + click.x
-					if win_w < 10 then
-						win_w = 10
-						win_x = org_w - win_w + 1
-					end
+					win_x = math.max(win_x + e[3] - click.x, org_w - win_w + 1)
+					win_w = math.max(win_w - e[3] + click.x, tmp_window.min_width)
 					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
 					click.x = win_x
 				end
 				if click.y == win_y + win_h - 1 then -- border bottom
-					win_h = e[4] - win_y + 1
-					if win_h < 5 then
-						win_h = 5
-					end
+					win_h = math.max(e[4] - win_y + 1, tmp_window.min_height)
 					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
 					click.y = win_y + win_h - 1
 				end
