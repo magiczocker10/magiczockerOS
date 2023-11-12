@@ -391,26 +391,23 @@ local function copy_table(des, source, processed)
 end
 local function load_settings(user)
 	local tmpU = gUD(user)
-	tmpU.settings = nil
-	if tmpU then
-		if tmpU.server then
-			send_message(tmpU.server, {return_id = my_computer_id, session_id = tmpU.session_id, protocol = my_protocol, username = tmpU.name, my_id = send_id, mode = "get_settings"})
-			window_messages[send_id] = {0, 0}
-			send_id = send_id + 1
-		elseif tmpU.name and #tmpU.name > 0 then
-			local file = fs.open("/magiczockerOS/users/" .. tmpU.name .. "/settings.json", "r")
-			if file then
-				local content = file.readAll()
-				file.close()
-				tmpU.settings = content and unserialise(content) or tmpU.settings
-			end
+	if tmpU.server then
+		send_message(tmpU.server, {return_id = my_computer_id, session_id = tmpU.session_id, protocol = my_protocol, username = tmpU.name, my_id = send_id, mode = "get_settings"})
+		window_messages[send_id] = {0, 0}
+		send_id = send_id + 1
+		tmpU.settings = {}
+	elseif #(tmpU.name or "") > 0 then
+		local file, content = fs.open("/magiczockerOS/users/" .. tmpU.name .. "/settings.json", "r"), ""
+		if file then
+			content = file.readAll()
+			file.close()
 		end
+		tmpU.settings = #content > 0 and unserialise(content) or {}
 	end
-	tmpU.settings = tmpU.settings or {}
 end
 local function save_user_settings(user, data)
 	local tmp = gUD(user)
-	if tmp and user > 0 and tmp.settings then
+	if user > 0 and tmp.settings then
 		if tmp.server then
 			send_message(tmp.server, {return_id = my_computer_id, session_id = tmp.session_id, protocol = my_protocol, username = tmp.name, my_id = send_id, mode = "update_settings", data = data})
 			window_messages[send_id] = {0, 0}
@@ -1438,14 +1435,12 @@ add_to_log("Starting user")
 do
 	local tmp = fs.exists("/magiczockerOS/programs/login.lua")
 	local tmp_user = tmp and "" or fs.list("/magiczockerOS/users/")[1]
-	if setup_user(tmp_user) then -- "1\\"
-		if tmp then
-			create_user_window(cur_user, true, nil, "/magiczockerOS/programs/login.lua")
-			local data = gUD(cur_user)
-			local a = data.windows[1]
-			table.remove(a.buttons, 1)
-			a.window.force_header_update(data.settings)
-		end
+	if tmp and setup_user(tmp_user) then -- "1\\"
+		create_user_window(cur_user, true, nil, "/magiczockerOS/programs/login.lua")
+		local data = gUD(cur_user)
+		local a = data.windows[1]
+		table.remove(a.buttons, 1)
+		a.window.force_header_update(data.settings)
 	end
 end
 add_to_log("Loaded user")
