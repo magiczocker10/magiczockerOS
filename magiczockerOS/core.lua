@@ -363,17 +363,13 @@ local function draw_windows()
 	end
 end
 local function get_user_id(name, server)
-	local tmp, to_return = true, 0
 	for i = 1, #users do
 		if users[i].name == name and users[i].server == server then
-			tmp, to_return = false, i
-			break
+			return i
 		end
 	end
-	if tmp then
-		to_return = cur_user + 1
-		users[to_return] = {name = name, server = server, windows = {}, labels = {}, desktop = {}, settings = {}, session_id = nil}
-	end
+	local to_return = cur_user + 1
+	users[to_return] = {name = name, server = server, windows = {}, labels = {}, desktop = {}, settings = {}, session_id = nil}
 	return to_return
 end
 local function copy_table(des, source, processed)
