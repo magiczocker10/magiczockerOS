@@ -150,9 +150,9 @@ local function stop_timer(id)
 end
 local function send_message(receiver, content)
 	if component then
-		component.invoke(modem_side, "send", receiver, 65535, serialise(content))
+		component.invoke(modem_side, "send", receiver, 65535, fallback_serialise(content))
 	elseif use_old then
-		peripheral.call(modem_side, "send", receiver, serialise(content))
+		peripheral.call(modem_side, "send", receiver, fallback_serialise(content))
 	else
 		peripheral.call(modem_side, "transmit", receiver, 0, content)
 	end
@@ -590,7 +590,6 @@ local function get_remote(id, suser, environment)
 	end
 end
 local function get_os_commands(win)
-	local user_ = cur_user
 	return {
 		contextmenu = system_windows.contextmenu.window and {
 			clear_map = function() win.contextmenu_data = nil end,
@@ -712,10 +711,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			math = math,
 			debug = debug,
 			_HOSTver = is_system_program and _HOSTver or nil,
-			get_min_height = is_system_program and function(a)
+			get_min_height = is_system_program and function()
 				return my_window.min_height
 			end or nil,
-			get_min_width = is_system_program and function(a)
+			get_min_width = is_system_program and function()
 				return my_window.min_width
 			end or nil,
 			set_min_height = is_system_program and function(a)
