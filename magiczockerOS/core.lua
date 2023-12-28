@@ -1099,8 +1099,8 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	if file then
 		content = file.readAll()
 		file.close()
-	elseif not is_system_program or is_remote and path then
-		content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\ntmp.close()\nelse\nerror(\"File not exists\")\nend"
+	--elseif not is_system_program or is_remote and path then
+	--	content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\ntmp.close()\nelse\nerror(\"File not exists\")\nend"
 	else
 		message = "File not exists"
 	end
