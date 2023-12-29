@@ -129,7 +129,7 @@ end
 local function events(a, b, c, d)
 	local e = fields[field]
 	if a == "char" and e then
-		if b:match("[a-zA-Z%d-_%.]") then
+		if b:match("[a-zA-Z%d-_%.\\]") then
 			e[5] = e[5]:sub(1, e[1] - 1) .. b .. e[5]:sub(e[1])
 			e[1] = e[1] + 1
 			set_cursor(field)
@@ -175,7 +175,7 @@ local function events(a, b, c, d)
 	elseif a == "modem_message" then
 		if c then
 			reset()
-			switch_user(false, fields[1][4], c)
+			switch_user(false, fields[1][5], c.data[1])
 		else
 			error"Invalid user"
 		end
