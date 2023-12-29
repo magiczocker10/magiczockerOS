@@ -68,7 +68,7 @@ local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ""):match("%s*(%S+)$")
 local default_settings = {}
 -- tables
 local drag_old = {0, 0}
-local bios_to_reload = {"loadfile", "write", "print", "printError", "read"}
+local bios_to_reload = {"load", "loadfile", "write", "print", "printError", "read"}
 local events_to_break = {key = true, key_up = true, char = true, paste = true, terminate = true} -- this is for the last part from the main repeat loop and the send_event function for system windows
 local supported_mouse_events = {mouse_click = true, mouse_drag = true, mouse_up = true, mouse_scroll = true, mouse_click_monitor = true, mouse_drag_monitor = true}
 local total_size = {0, 0}
@@ -136,7 +136,7 @@ local function _queue(...)
 end
 local function _unpack(a, b)
 	local b = b or 1
-	if a[b] then
+	if type(a[b]) ~= "nil" then
 		return a[b], _unpack(a, b + 1)
 	end
 end
@@ -149,6 +149,9 @@ local function stop_timer(id)
 	timers[id] = nil
 end
 local function send_message(receiver, content)
+	if not modem_side then
+		return nil
+	end
 	if component then
 		component.invoke(modem_side, "send", receiver, 65535, fallback_serialise(content))
 	elseif use_old then
@@ -528,6 +531,8 @@ local function update_windows(user)
 	draw_windows()
 end
 local function setup_user(username, session)
+	add_to_log("Signing in " .. username)
+	add_to_log("Session " .. (session or ""))
 	local tmp = username:find("\\") or nil
 	local name = tmp and username:sub(tmp + 1) or username
 	local server = tmp and tonumber(username:sub(1, tmp - 1)) or nil
@@ -570,13 +575,16 @@ local function get_remote(id, suser, environment)
 		window_messages[send_id] = {id, id > 0 and suser or nil}
 		local my_id = send_id
 		send_id = send_id + 1
-		local timer = environment.os.startTimer(2)
+		local timer = environment.os.startTimer(1)
 		while true do
 			local e = {environment.coroutine.yield()}
 			if e[1] == "modem_message" and type(e[2]) == "number" then
 				if e[2] == my_id and type(e[3]) == "table" and e[3].protocol == "magiczockerOS-server" then
+					if timer then
+						environment.os.cancelTimer(timer)
+					end
 					window_messages[send_id] = nil
-					return e[3]
+					return table.unpack(e[3].data)
 				end
 			elseif e[1] == "timer" and e[2] == timer then
 				window_messages[send_id] = nil
@@ -674,6 +682,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local user_ = sUser or cur_user
 	local user_data = gUD(user_)
 	local is_remote = user_data.server
+	add_to_log("Ist server " .. tostring(is_remote))
 	user_data.windows = user_data.windows or {}
 	user_data.get_id = function()
 		for i = 1, #user_data.windows do
@@ -986,6 +995,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if _G[tmp] then
 					env[tmp] = (env.loadstring or env.load)(overrides[tmp] or string.dump(_G[tmp]), "Bios - " .. tmp, nil, env)
 					if overrides[tmp] then
+						--add_to_log(overrides[tmp])
 						env[tmp] = env[tmp]()
 					end
 					if setfenv then
@@ -1100,7 +1110,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		content = file.readAll()
 		file.close()
 	--elseif not is_system_program or is_remote and path then
-	--	content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\ntmp.close()\nelse\nerror(\"File not exists\")\nend"
+	--	content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\nelse\nerror(\"File not exists\")\nend"
 	else
 		message = "File not exists"
 	end
@@ -1268,6 +1278,9 @@ local function create_system_windows(i)
 				end
 				return var
 			end,
+			cancelTimer = function(n)
+				window_timers[n] = nil
+			end
 		},
 		table = {
 			insert = table.insert, -- taskbar
@@ -1283,25 +1296,13 @@ local function create_system_windows(i)
 		apis = apis, -- taskbar
 		-- magiczockerOS = get_os_commands(system_windows[temp]),
 		error = error,
+		tostring = tostring
 	}
 	if system_windows[temp].filesystem then
-		env.os = {
-			startTimer = function(nTime)
-				local var = 0
-				if nTime <= 0 then
-					var = 1
-					env.os.queueEvent("timer", 1)
-				else
-					var = os.startTimer(nTime)
-					window_timers[var] = {system_windows[temp].id, nil}
-				end
-				return var
-			end,
-			queueEvent = function(...)
-				_queue(system_windows[temp].id .. "", "", ...)
-			end,
-			clock = os.clock, --desktop
-		}
+		env.os.queueEvent = function(...)
+			_queue(system_windows[temp].id .. "", "", ...)
+		end
+		env.os.clock = os.clock --desktop
 		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
 	end
 	local file = fs.open(path, "r")
@@ -1339,7 +1340,7 @@ end
 local function load_bios()
 	add_to_log("Loading bios...")
 	overrides = {}
-	local function_list = {read = true, print = true, printError = true, loadfile = true, write = true}
+	local function_list = {read = true, print = true, printError = true, load = true, loadfile = true, write = true}
 	local start
 	local function check_expect_path(path)
 		if not _G["~expect"] and fs.exists(path) and not fs.isDir(path) then
@@ -1361,7 +1362,11 @@ local function load_bios()
 				tmp = line:sub(1, 9) == "function " and line:find("%(") and line:sub(10, ({line:find("%(")})[1] - 1)
 				if tmp and function_list[tmp] then
 					start = tmp
-					overrides[start] = "local function dummy" .. line:sub(({line:find("%(")})[2])
+					overrides[start] = ""
+					if tmp == "load" then
+						overrides[start] = overrides[start] .. "\nlocal nativeload = load\n"
+					end
+					overrides[start] = overrides[start] .. "local function dummy" .. line:sub(({line:find("%(")})[2])
 					overrides[start] = overrides[start] .. "\nlocal expect = _ENV[\"~expect\"]"
 				elseif start then
 					overrides[start] = overrides[start] .. "\n" .. line
@@ -1611,6 +1616,7 @@ function events(...)
 	elseif e[1] == "peripheral_detach" and e[2] == modem_side then
 		search_modem()
 	elseif e[1] == "rednet_message" and use_old then
+		add_to_log("rednet_message")
 		_queue("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
 	elseif e[1] == "monitor_touch" or e[1] == "monitor_scroll" then
 		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
@@ -1829,6 +1835,7 @@ function events(...)
 			if not tmp then
 				return
 			end
+			data.data = data.data or {}
 			if tmp[1] < 0 and tmp[2] == nil then
 				tmp[1] = tmp[1] * -1
 			end
@@ -1836,14 +1843,14 @@ function events(...)
 				local tmp1 = gUD(tmp[2]).windows or ""
 				for i = 1, #tmp1 do
 					if tmp1[i].id == tmp[1] then
-						resume_user(tmp1[i].coroutine, e[1], data.my_id, data.data and _unpack(data.data) or nil)
+						resume_user(tmp1[i].coroutine, e[1], data.my_id, data)
 						tmp[e[2]] = nil
 						break
 					end
 				end
 			elseif tmp[1] > 0 and tmp[2] == nil then
 				if system_windows[system_window_order[tmp[1]]] then
-					resume_system("4" .. system_window_order[tmp[1]], system_windows[system_window_order[tmp[1]]].coroutine, e[1], data.my_id, data.data and _unpack(data.data) or nil)
+					resume_system("4" .. system_window_order[tmp[1]], system_windows[system_window_order[tmp[1]]].coroutine, e[1], data.my_id, data)
 				end
 			elseif tmp[1] == 0 and data.mode == "get_settings-answer" then
 				window_messages[data.my_id] = nil
