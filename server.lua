@@ -894,7 +894,7 @@ repeat
 		if view == -1 then
 			draw_changelog()
 		elseif view >= 0 then
-			if (view[view] or "") == "field" then
+			if (views[view] or "") == "field" then
 				local cursor_ = cursor
 				for i = 1, #items do
 					cursor = i
