@@ -1227,7 +1227,26 @@ local function create_system_windows(i)
 		system_windows[temp].window.force_header_update(gUD(cur_user).settings) -- Update header
 	end
 	local env = {
-		math = math,
+		os = {
+			date = os.date, -- taskbar
+			time = os.time, -- taskbar
+			queueEvent = _queue, -- contextmenu
+			startTimer = function(nTime) -- taskbar
+				local var = 0
+				if nTime <= 0 then
+					var = 1
+					_queue(system_windows[temp].id .. "", nil, "timer", 1)
+				else
+					var = os.startTimer(nTime)
+					window_timers[var] = {system_windows[temp].id}
+				end
+				return var
+			end,
+			cancelTimer = function(n)
+				window_timers[n] = nil
+			end
+		},
+		apis = apis,
 		fs = system_windows[temp].filesystem or fs,
 		create_window = function(path, root, env, ...)
 			create_user_window(cur_user, root, env, path, ...)
@@ -1256,48 +1275,18 @@ local function create_system_windows(i)
 		user = cur_user,
 		user_data = system_windows[temp].user_data,
 		get_setting = get_setting,
-		dofile = dofile, -- osk
-		loadstring = loadstring,
-		coroutine = {
-			yield = coroutine.yield, -- all
-		},
-		tonumber = tonumber, -- osk
-		type = type, -- contextmenu
-		os = {
-			time = os.time, -- taskbar
-			date = os.date, -- taskbar
-			queueEvent = _queue, -- contextmenu
-			startTimer = function(nTime) -- taskbar
-				local var = 0
-				if nTime <= 0 then
-					var = 1
-					_queue(system_windows[temp].id .. "", nil, "timer", 1)
-				else
-					var = os.startTimer(nTime)
-					window_timers[var] = {system_windows[temp].id}
-				end
-				return var
-			end,
-			cancelTimer = function(n)
-				window_timers[n] = nil
-			end
-		},
-		table = {
-			insert = table.insert, -- taskbar
-			remove = table.remove, -- taskbar
-		},
 		_HOSTver = _HOSTver, -- all
-		textutils = {
-			complete = textutils.complete, -- contextmenu, osk, taskbar
-		},
 		register_key = function(key, action)
 			registered_keys[key] = action
-		end,
-		apis = apis, -- taskbar
-		-- magiczockerOS = get_os_commands(system_windows[temp]),
-		error = error,
-		tostring = tostring
+		end
 	}
+	setmetatable( env, {
+		-- Do nothing to set table read only
+		__newindex = function() end,
+
+		-- Use _G as fallback if variable is not specified above
+		__index = _G
+	} )
 	if system_windows[temp].filesystem then
 		env.os.queueEvent = function(...)
 			_queue(system_windows[temp].id .. "", "", ...)
