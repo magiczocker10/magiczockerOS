@@ -1228,8 +1228,6 @@ local function create_system_windows(i)
 	end
 	local env = {
 		os = {
-			date = os.date, -- taskbar
-			time = os.time, -- taskbar
 			queueEvent = _queue, -- contextmenu
 			startTimer = function(nTime) -- taskbar
 				local var = 0
@@ -1287,11 +1285,14 @@ local function create_system_windows(i)
 		-- Use _G as fallback if variable is not specified above
 		__index = _G
 	} )
+	setmetatable( env.os, {
+		-- Use _G.os as fallback if variable is not specified above
+		__index = _G.os
+	} )
 	if system_windows[temp].filesystem then
 		env.os.queueEvent = function(...)
 			_queue(system_windows[temp].id .. "", "", ...)
 		end
-		env.os.clock = os.clock --desktop
 		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
 	end
 	local file = fs.open(path, "r")
