@@ -198,8 +198,8 @@ local function events(e, d, x, y)
 				view = view + 1
 				draw()
 			end
-		elseif (y == 4 or y == 6) and (x - 2) % 5 > 0 then -- view 1
-			year = year - 1 + math_ceil((x - 2) * 0.2) + (y == 6 and 4 or 0)
+		elseif (y == 4 or y == 6) and (x - 3) % 5 > 0 then -- view 1
+			year = year - 1 + math_ceil((x - 3) * 0.2) + (y == 6 and 4 or 0)
 			view = view + 1
 			draw()
 		end
