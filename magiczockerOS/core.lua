@@ -510,7 +510,7 @@ local function update_windows(user)
 		end
 		resume_system("33" .. system_window_order[i], tmp.coroutine, "user", user, change_user.logoff)
 		if data.settings then
-			resume_system("32" .. system_window_order[i], tmp.coroutine, "refresh_settings")
+			resume_system("32" .. system_window_order[i], tmp.coroutine, "refresh_settings", data.settings)
 		end
 		if system_window_order[i] == "taskbar" then
 			resume_system("31taskbar", system_windows.taskbar.coroutine, "window_change")
@@ -520,7 +520,7 @@ local function update_windows(user)
 		tmp = data.windows[i]
 		tmp.window.force_header_update(data.settings)
 		if tmp.is_system then
-			resume_user(tmp.coroutine, "refresh_settings")
+			resume_user(tmp.coroutine, "refresh_settings", data.settings)
 		end
 	end
 	if system_windows.osk.window then
@@ -708,7 +708,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	my_window.min_width = 10
 	my_window.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
 	user_data.desktop = {}
-	local uenv = uenv or {}
+	--local uenv = uenv or {}
 	local env
 	my_window.contextmenu_data = nil
 	my_window.is_system = is_system_program
@@ -718,8 +718,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local function set_env()
 		local native_id = os.getComputerID and os.getComputerID() or 0
 		env = {
-			math = math,
-			debug = debug,
 			_HOSTver = is_system_program and _HOSTver or nil,
 			get_min_height = is_system_program and function()
 				return my_window.min_height
@@ -822,7 +820,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					local _, param = env.os.pullEvent( "timer" )
 				until param == timer
 			end,
-			textutils = textutils,
 			get_setting = is_system_program and get_setting or nil,
 			unserialise = is_system_program and unserialise or nil,
 			set_monitor_settings = is_system_program and function(mode, ...)
@@ -922,9 +919,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				return program()
 			end
 		end
-		env, uenv = uenv, env
-		copy_table(env, uenv)
-		copy_table(env, _G)
 		my_window.env = env
 		env.os.run = function(_tEnv, path, ...)
 			if type(_tEnv) ~= "table" then
@@ -981,7 +975,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 			env.printError(path .. ": File not exists", 0)
 		end
-		copy_table(env.os, _G.os)
 		do
 			local tmp = my_window.filesystem
 			for k in next, is_system_program and tmp or _G.fs do
@@ -1050,6 +1043,13 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		if (_VERSION or "") == "Lua 5.1" then -- Bug fix for shell
 			env._ENV = env
 		end
+		-- Use _G as fallback if variable is not specified above
+		setmetatable( env.os, {
+			__index = _G.os
+		} )
+		setmetatable( env, {
+			__index = _G
+		} )
 		if not fs.exists("/rom/apis/io.lua") and fs.exists("/magiczockerOS/CC/io.lua") then -- Fix for CraftOS-PC
 			local tEnv = {}
 			setmetatable(tEnv, {__index = env._G})
@@ -1278,10 +1278,8 @@ local function create_system_windows(i)
 			registered_keys[key] = action
 		end
 	}
+	env._G = env
 	setmetatable( env, {
-		-- Do nothing to set table read only
-		__newindex = function() end,
-
 		-- Use _G as fallback if variable is not specified above
 		__index = _G
 	} )

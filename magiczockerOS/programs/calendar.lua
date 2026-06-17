@@ -48,8 +48,7 @@ local width = string_rep(' ', w)
 local month_keys = {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}
 local leap_year = false
 local key_maps = {}
-local settings
-local cs = {}
+local settings = {}
 local year_keys = {
 	[0] = 6,
 	[1] = 4,
@@ -58,10 +57,6 @@ local year_keys = {
 }
 
 -- Functions
-local function update_cached_settings()
-	cs.cb = get_setting(settings, "calendar_back")
-	cs.ct = get_setting(settings, "calendar_text")
-end
 local function year_key( a )
 	-- 1700 = 4
 	-- 1800 = 2
@@ -294,10 +289,12 @@ local function events(e, d, x, y)
 	elseif e == 'term_resize' then
 		draw()
 	elseif e == 'refresh_settings' then
-		settings = user_data().settings or {}
-		update_cached_settings()
-		term_setBackgroundColor( colors.lightGray )
-		term_setTextColor( colors.white )
+		settings = {
+			cb = d.calendar_back or 256,
+			ct = d.calendar_text or 1
+		}
+		term_setBackgroundColor( settings.cb )
+		term_setTextColor( settings.ct )
 		draw()
 	end
 end
@@ -310,7 +307,6 @@ do
 	key_maps[a and 265 or 200] = 'up'
 end
 
-events('refresh_settings')
 while true do
-	events(coroutine_yield())
+	events( coroutine_yield() )
 end

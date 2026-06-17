@@ -2,12 +2,19 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
+
+-- Define global variables as local
+local math_floor = math.floor
+
+-- Variables
 local search = fs.exists("/magiczockerOS/programs/search.lua")
 local calendar = fs.exists("/magiczockerOS/programs/calendar.lua")
-local offset, line, time, user, front, list, window_pos, procs, settings, cur_settings = 0, "", "", user or "", {}, {}, {}, {}, user_data().settings or {}, {}
+local offset, line, time, user, front, list, window_pos, procs = 0, "", "", user or "", {}, {}, {}, {}
 local u_data, events, w
-local cs = cur_settings
+local settings = {}
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
+
+-- Functions
 local function back_color(...)
 	local b = ({...})[a]
 	if b then term.setBackgroundColor(b) end
@@ -16,32 +23,11 @@ local function text_color(...)
 	local b = ({...})[a]
 	if b then term.setTextColor(b) end
 end
-local function update_cached_settings()
-	cs.cba = get_setting(settings, "clock_back_active")
-	cs.cbi = get_setting(settings, "clock_back_inactive")
-	cs.cf = get_setting(settings, "clock_format")
-	cs.cta = get_setting(settings, "clock_text_active")
-	cs.cti = get_setting(settings, "clock_text_inactive")
-	cs.cv = get_setting(settings, "clock_visible")
-	cs.sebab = get_setting(settings, "search_button_active_back")
-	cs.sebat = get_setting(settings, "search_button_active_text")
-	cs.sebib = get_setting(settings, "search_button_inactive_back")
-	cs.sebit = get_setting(settings, "search_button_inactive_text")
-	cs.stbab = get_setting(settings, "startmenu_button_active_back")
-	cs.stbat = get_setting(settings, "startmenu_button_active_text")
-	cs.stbib = get_setting(settings, "startmenu_button_inactive_back")
-	cs.stbit = get_setting(settings, "startmenu_button_inactive_text")
-	cs.tb = get_setting(settings, "taskbar_back")
-	cs.tiab = get_setting(settings, "taskbar_items_active_back")
-	cs.tiat = get_setting(settings, "taskbar_items_active_text")
-	cs.tiib = get_setting(settings, "taskbar_items_inactive_back")
-	cs.tiit = get_setting(settings, "taskbar_items_inactive_text")
-end
 local function get_time()
-	if cs.cv and (os.time or os.date) then
-		local c_f = cs.cf
+	if settings.cv and (os.time or os.date) then
+		local c_f = settings.cf
 		if os.date then
-			return os.date(" %" .. (c_f and "H" or "I") .. ":%M" .. (c_f and "" or " %p") .. " ")
+			return os.date( c_f and ' %H:%M ' or ' %I:%M %p ' )
 		else
 			local a = nil
 			local b = os.time()
@@ -51,13 +37,13 @@ local function get_time()
 					b = b - 12
 				end
 			end
-			local hour = "0" .. math.floor(b)
-			local minute = "0" .. math.floor((b - hour) * 60)
+			local hour = math_floor(b)
+			local minute = math_floor((b - hour) * 60)
 			local tmp = not term.isColor and (get_visible("calendar") and "-" or "_") or " "
-			return tmp .. hour:sub(-2) .. ":" .. minute:sub(-2) .. "" .. (a and " " .. a or "") .. tmp
+			return tmp .. ('%02d'):format( hour ) .. ":" .. ('%02d'):format( minute ) .. (a and " " .. a or "") .. tmp
 		end
 	else
-		return ""
+		return ''
 	end
 end
 local function get_proc_vis(a)
@@ -92,11 +78,11 @@ end
 local function draw_start()
 	term.setCursorPos(1, 1)
 	if get_proc_vis("startmenu") then
-		back_color(32768, 256, cs.stbab)
-		text_color(1, 1, cs.stbat)
+		back_color(32768, 256, settings.stbab)
+		text_color(1, 1, settings.stbat)
 	else
-		back_color(1, 128, cs.stbib)
-		text_color(32768, 1, cs.stbit)
+		back_color(1, 128, settings.stbib)
+		text_color(32768, 1, settings.stbit)
 	end
 	term.write(not term.isColor and (get_proc_vis("startmenu") and "-m-" or "_m_") or " m ")
 end
@@ -104,11 +90,11 @@ local function draw_search()
 	if user ~= "" and search then
 		term.setCursorPos(w - 2, 1)
 		if get_proc_vis("search") then
-			back_color(32768, 256, cs.sebab)
-			text_color(1, 1, cs.sebat)
+			back_color(32768, 256, settings.sebab)
+			text_color(1, 1, settings.sebat)
 		else
-			back_color(1, 128, cs.sebib)
-			text_color(32768, 1, cs.sebit)
+			back_color(1, 128, settings.sebib)
+			text_color(32768, 1, settings.sebit)
 		end
 		term.write(not term.isColor and (get_proc_vis("search") and "-S-" or "_S_") or " S ")
 	end
@@ -133,11 +119,11 @@ local function draw_items()
 		end
 	end
 	if c then
-		back_color(1, 128, cs.tiib)
-		text_color(32768, 1, cs.tiit)
+		back_color(1, 128, settings.tiib)
+		text_color(32768, 1, settings.tiit)
 		term.write(a:sub(1, a:find("\t") - 1))
-		back_color(32768, 256, cs.tiab)
-		text_color(1, 1, cs.tiat)
+		back_color(32768, 256, settings.tiab)
+		text_color(1, 1, settings.tiat)
 		local found = a:find("\t")
 		local last = found
 		while found do
@@ -147,16 +133,16 @@ local function draw_items()
 				last = found
 			end
 		end
-		back_color(1, 128, cs.tiib)
-		text_color(32768, 1, cs.tiit)
+		back_color(1, 128, settings.tiib)
+		text_color(32768, 1, settings.tiit)
 		term.write(a:sub(last + 1, #a))
 	else
-		back_color(1, 128, cs.tiib)
-		text_color(32768, 1, cs.tiit)
+		back_color(1, 128, settings.tiib)
+		text_color(32768, 1, settings.tiit)
 		term.write(a)
 	end
 	if ({term.getCursorPos()})[1] < w - (user == "" and -1 or 2) - #time then
-		back_color(1, 128, cs.tb)
+		back_color(1, 128, settings.tb)
 		local e = w - (user == "" and -1 or 2) - #time - ({term.getCursorPos()})[1]
 		local f = (" "):rep(e)
 		term.write(not term.isColor and ("_"):rep(e) or f)
@@ -203,13 +189,13 @@ local function set_items()
 end
 local function draw_clock()
 	time = get_time()
-	if cs.cv then
+	if settings.cv then
 		if get_proc_vis("calendar") then
-			back_color(32768, 256, cs.cba)
-			text_color(1, 32768, cs.cta)
+			back_color(32768, 256, settings.cba)
+			text_color(1, 32768, settings.cta)
 		else
-			back_color(1, 128, cs.cbi)
-			text_color(32768, 1, cs.cti)
+			back_color(1, 128, settings.cbi)
+			text_color(32768, 1, settings.cti)
 		end
 		term.setCursorPos(w + 1 - #time - ((not search or user == "") and 0 or 3), 1)
 		term.write(time)
@@ -267,6 +253,8 @@ local function toggle(a)
 		c.desktop = d
 	end
 end
+
+-- Events
 function events(a, b, c)
 	if a == "user" or a == "refresh_settings" then
 		local u_data_old = u_data
@@ -286,8 +274,27 @@ function events(a, b, c)
 			end
 			user = u_data.name
 		else
-			settings = u_data.settings or {}
-			update_cached_settings()
+			settings = {
+				cba = b.clock_back_active or 256,
+				cbi = b.clock_back_inactive or 128,
+				cf = b.clock_format or true,
+				cta = b.clock_text_active or 1,
+				cti = b.clock_text_inactive or 1,
+				cv = b.clock_visible or true,
+				sebab = b.search_button_active_back or 256,
+				sebat = b.search_button_active_text or 1,
+				sebib = b.search_button_inactive_back or 128,
+				sebit = b.search_button_inactive_text or 1,
+				stbab = b.startmenu_button_active_back or 256,
+				stbat = b.startmenu_button_active_text or 1,
+				stbib = b.startmenu_button_inactive_back or 128,
+				stbit = b.startmenu_button_inactive_text or 1,
+				tb = b.taskbar_back or 128,
+				tiab = b.taskbar_items_active_back or 256,
+				tiat = b.taskbar_items_active_text or 1,
+				tiib = b.taskbar_items_inactive_back or 128,
+				tiit = b.taskbar_items_inactive_text or 1
+			}
 			send_event("calendar", a)
 			send_event("search", a)
 			send_event("startmenu", a)
@@ -385,7 +392,6 @@ register_key(_HOSTver >= 1132 and 88 or 45, function() -- X
 	toggle("startmenu")
 	draw_start()
 end)
-update_cached_settings()
 events("term_resize")
 while true do
 	events(coroutine.yield())
