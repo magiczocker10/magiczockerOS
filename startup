@@ -2,30 +2,27 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local file, env = fs.open('/magiczockerOS/core.lua', 'r'), {
+local file = fs.open('/magiczockerOS/core.lua', 'r')
+local env = setmetatable( {
 	dumps = {
-		--load = string.dump( _G.load, true ) or nil,
+		--load = string.dump( _G.load, true ),
 		loadfile = _G.loadfile and string.dump( _G.loadfile, true ) or nil,
 		print = _G.print and string.dump( _G.print, true ) or nil,
 		printError = _G.printError and string.dump( _G.printError, true ) or nil,
 		read = _G.read and string.dump( _G.read, true ) or nil,
 		write = _G.write and string.dump( _G.write, true ) or nil,
 	}
-}
-setmetatable( env, {
+}, {
 	__index = _G
 } )
 env._G = env
-env._ENV = env
 if not file then
 	error('/magiczockerOS/core.lua: File not exists', 0)
 end
-local content, err = (loadstring or load)(file.readAll(), '@/magiczockerOS/core.lua', 't', env)
+local content, err = load(file.readAll(), '@/magiczockerOS/core.lua', 't', env)
 file.close()
 if content then
-	if setfenv then
-		setfenv(content, env)
-	end
+	env._ENV = env
 else
 	if err and err ~= '' then
 		error(err, 0)

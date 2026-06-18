@@ -277,10 +277,10 @@ function events(a, b, c)
 			settings = {
 				cba = b.clock_back_active or 256,
 				cbi = b.clock_back_inactive or 128,
-				cf = b.clock_format or true,
+				cf = b.clock_format,
 				cta = b.clock_text_active or 1,
 				cti = b.clock_text_inactive or 1,
-				cv = b.clock_visible or true,
+				cv = b.clock_visible,
 				sebab = b.search_button_active_back or 256,
 				sebat = b.search_button_active_text or 1,
 				sebib = b.search_button_inactive_back or 128,
@@ -295,6 +295,12 @@ function events(a, b, c)
 				tiib = b.taskbar_items_inactive_back or 128,
 				tiit = b.taskbar_items_inactive_text or 1
 			}
+			if settings.cf == nil then
+				settings.cf = true
+			end
+			if settings.cv == nil then
+				settings.cv = true
+			end
 			send_event("calendar", a)
 			send_event("search", a)
 			send_event("startmenu", a)
