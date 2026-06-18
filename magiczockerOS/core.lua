@@ -24,6 +24,16 @@
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 	THE SOFTWARE.
 ]]
+--require('strictmw')
+
+-- Move dumped functions to local table to not expose them to user windows
+local dumps = {}
+for k, v in pairs( _G.dumps ) do
+	dumps[k] = v
+end
+_G.dumps = nil
+
+-- Variables
 local boot_logger_enabled = false
 local use_old
 local my_protocol = "magiczockerOS-client"
@@ -34,18 +44,13 @@ local window_messages = {}
 local timers = {}
 local last_timer = 0
 local last_timer_exec = 0
-
 local users = {}
 local cur_user = 0
-
 local queued_events = {}
 local qe = {}
-
 local has_errored
 local error_org = error
 local ggv, sgv
-
--- variables
 local computer = computer
 local component = component
 local events
@@ -66,9 +71,7 @@ local refresh_startbutton
 local cursorblink_timer
 local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
 local default_settings = {}
--- tables
 local drag_old = {0, 0}
-local bios_to_reload = {"load", "loadfile", "write", "print", "printError", "read"}
 local events_to_break = {key = true, key_up = true, char = true, paste = true, terminate = true} -- this is for the last part from the main repeat loop and the send_event function for system windows
 local supported_mouse_events = {mouse_click = true, mouse_drag = true, mouse_up = true, mouse_scroll = true, mouse_click_monitor = true, mouse_drag_monitor = true}
 local total_size = {0, 0}
@@ -97,7 +100,8 @@ local peripheral = peripheral or nil
 local math = math or nil
 local uptime = os.clock or os.time or function() return 0 end
 local registered_keys = {}
--- functions
+
+-- Functions
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
 	local to_return = ""
@@ -875,6 +879,17 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
 			magiczockerOS = get_os_commands(my_window),
 		}
+		env._G = env
+		if (_VERSION or "") == "Lua 5.1" then -- Bug fix for shell
+			env._ENV = env
+		end
+		-- Use _G as fallback if variable is not specified above
+		setmetatable( env.os, {
+			__index = _G.os
+		} )
+		setmetatable( env, {
+			__index = _G
+		} )
 		env.os.reboot = is_system_program and os.reboot or env.os.shutdown
 		for k, v in next, my_window.window do
 			native_term[k] = v
@@ -983,17 +998,10 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				end
 			end
 			-- copy bios functions to env
-			for i = 1, #bios_to_reload do
-				tmp = bios_to_reload[i]
-				if _G[tmp] then
-					env[tmp] = (env.loadstring or env.load)(overrides[tmp] or string.dump(_G[tmp]), "Bios - " .. tmp, nil, env)
-					if overrides[tmp] then
-						--add_to_log(overrides[tmp])
-						env[tmp] = env[tmp]()
-					end
-					if setfenv then
-						setfenv(env[tmp], env)
-					end
+			for k, v in pairs( dumps ) do
+				env[k] = load(v, "Bios - " .. k, 't', env)
+				if setfenv then
+					setfenv(env[k], env)
 				end
 			end
 		end
@@ -1039,17 +1047,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			end
 			env.error(path .. ": File not exists")
 		end
-		env._G = env
-		if (_VERSION or "") == "Lua 5.1" then -- Bug fix for shell
-			env._ENV = env
-		end
-		-- Use _G as fallback if variable is not specified above
-		setmetatable( env.os, {
-			__index = _G.os
-		} )
-		setmetatable( env, {
-			__index = _G
-		} )
 		if not fs.exists("/rom/apis/io.lua") and fs.exists("/magiczockerOS/CC/io.lua") then -- Fix for CraftOS-PC
 			local tEnv = {}
 			setmetatable(tEnv, {__index = env._G})
