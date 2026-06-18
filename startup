@@ -19,10 +19,13 @@ env._G = env
 if not file then
 	error('/magiczockerOS/core.lua: File not exists', 0)
 end
-local content, err = load(file.readAll(), '@/magiczockerOS/core.lua', 't', env)
+local content, err = (loadstring or load)(file.readAll(), '@/magiczockerOS/core.lua', 't', env)
 file.close()
 if content then
 	env._ENV = env
+	if setfenv then
+		setfenv(content, env)
+	end
 else
 	if err and err ~= '' then
 		error(err, 0)
