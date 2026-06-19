@@ -301,9 +301,9 @@ function events(a, b, c)
 			if settings.cv == nil then
 				settings.cv = true
 			end
-			send_event("calendar", a)
-			send_event("search", a)
-			send_event("startmenu", a)
+			send_event("calendar", a, b)
+			send_event("search", a, b)
+			send_event("startmenu", a, b)
 		end
 		draw_clock()
 		draw_start()

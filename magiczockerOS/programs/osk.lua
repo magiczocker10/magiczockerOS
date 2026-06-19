@@ -66,9 +66,9 @@ local function load_keys()
 	end
 	load_lines( 2, string_format( '/magiczockerOS/key_mappings/%s.map', settings.osk_key_mapping ) )
 	load_lines( 1, '/magiczockerOS/key_mappings/base.map' )
-	for i = 1, #out1 do
-		view[1][i] = table_concat( out1[i], ' ')
-		view[2][i] = table_concat( out2[i], ' ')
+	for k, v in next, out1 do
+		view[1][k] = table_concat( v, ' ')
+		view[2][k] = table_concat( out2[k], ' ')
 	end
 end
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
@@ -87,10 +87,10 @@ local function set_color()
 end
 local function draw()
 	local w = 0
-	for y = 1, #layout do
-		term_cursor(1, y)
-		term_write(view[mode][y])
-		w = #view[mode][y] > w and #view[mode][y] or w
+	for k, _ in next, layout do
+		term_cursor(1, k)
+		term_write(view[mode][k])
+		w = #view[mode][k] > w and #view[mode][k] or w
 	end
 	return w
 end
