@@ -238,7 +238,7 @@ function create(x, y, width, height, visible, header, data)
 		local _x, _y = x - 1 + my_data[3], y - 1 + my_data[4]
 		local success = (data.id < 0 or data.is_top()) and (not my_border or my_border and my_data[3] > 1 and my_data[3] < w and my_data[4] > 0 and my_data[4] < h)
 		local only_off = my_data[3] < 1 or my_data[3] > w or my_data[4] < 1 or my_data[4] > h or false
-		if success then
+		if success and (not only_off or not my_blink) then
 			local mon_order = apis.buffer.get_devices()
 			local screen = my_screen[my_data[4]]
 			for i = apis.buffer.get_mode() == "extend" and #mon_order or 1, 1, -1 do
