@@ -139,7 +139,7 @@ function create(is_system)
 		else
 			to_return = list
 		end
-		return unpack(to_return)
+		return table.unpack(to_return)
 	end
 	peri.getNames = function()
 		return get_devices(is_system, false, "monitor")

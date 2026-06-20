@@ -108,12 +108,6 @@ local function setup_data(data)
 	end
 	process_data(my_pos[1], my_pos[2])
 end
-local function unpack(a, b)
-	local b = b or 1
-	if a[b] then
-		return a[b], unpack(a, b + 1)
-	end
-end
 local function handle_click(a)
 	if type(items[a].event) == "function" and items[a].system_added then
 		items[a].event()
@@ -134,7 +128,7 @@ local function handle_click(a)
 		setup_data(tmp)
 		draw()
 	else
-		os.queueEvent(caller.id .. "", caller.user or "", unpack(items[a].raw, 2))
+		os.queueEvent(caller.id .. "", caller.user or "", table.unpack(items[a].raw, 2))
 		set_visible("contextmenu", false)
 	end
 end

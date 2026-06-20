@@ -43,7 +43,6 @@ local send_id = 0
 local window_messages = {}
 local timers = {}
 local last_timer = 0
-local last_timer_exec = 0
 local users = {}
 local cur_user = 0
 local queued_events = {}
@@ -138,15 +137,9 @@ local function _queue(...)
 	end
 	qe[a] = #queued_events
 end
-local function _unpack(a, b)
-	local b = b or 1
-	if type(a[b]) ~= "nil" then
-		return a[b], _unpack(a, b + 1)
-	end
-end
 local function add_timer(duration)
 	last_timer = last_timer + 1
-	timers[last_timer] = os.clock() + duration
+	timers[last_timer] = (computer and computer.uptime or os.clock)() + duration
 	return last_timer
 end
 local function stop_timer(id)
@@ -204,11 +197,10 @@ local function search_modem()
 end
 local function get_timer()
 	local to_return
-	local to_check = os.clock()
+	local to_check = (computer and computer.uptime or os.clock)()
 	for k, v in next, timers do
-		to_return = v and v >= last_timer_exec and v <= to_check and (not to_return or v < to_return) and k or to_return
+		to_return = v and v <= to_check and (not to_return or v < to_return) and k or to_return
 	end
-	last_timer_exec = to_return and to_check or last_timer_exec
 	return to_return
 end
 local stop_time = os.cancelTimer
@@ -252,10 +244,10 @@ local function run_program(prog, errorhandling) -- xpcall -- copied from https:/
 	local args
 	while coro_status(coro) ~= "dead" do
 		args = {coro_yield()}
-		ok = {coro_resume(coro, _unpack(args))}
+		ok = {coro_resume(coro, table.unpack(args))}
 	end
 	if ok[1] then
-		return true, _unpack(ok, 2)
+		return true, table.unpack(ok, 2)
 	else
 		return false, errorhandling and errorhandling(ok[2]) or ok[2]
 	end
@@ -297,7 +289,7 @@ local function load_api(name)
 		error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
 	end
 	setmetatable(env, {__index = _G})
-	env.math, env.unpack, env.apis = math, _unpack, apis
+	env.math, env.apis = math, apis
 	env.textutils = textutils
 	env.fs = fs
 	env.term = term
@@ -597,7 +589,7 @@ local function get_remote(id, suser, environment)
 				window_messages[send_id] = nil
 				return environment.error("Terminated!")
 			else
-				environment.os.queueEvent(_unpack(e))
+				environment.os.queueEvent(table.unpack(e))
 			end
 		end
 	end
@@ -917,7 +909,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			active_term = target
 			return oldRedirectTarget
 		end
-		env.unpack = _unpack
 		env.dofile = function(path)
 			if not env.fs.exists(path) or env.fs.isDir(path) then return end
 			local file = env.fs.open(path, "r")
@@ -969,7 +960,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if env.setfenv then
 						env.setfenv(program, tEnv)
 					end
-					local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
+					local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
 					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
 						my_window.label.name = title_old
 						my_window.window.force_header_update(user_data.settings)
@@ -1188,7 +1179,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				wait_error()
 				kill_window()
 			else
-				local ok, err = run_program(function() return program(_unpack(args)) end, function(err) return err end)
+				local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
 				if not ok then
 					message = (err or "") ~= "" and err or "Unknown error"
 					wait_error()
@@ -1232,7 +1223,7 @@ local function create_system_windows(i)
 					var = 1
 					_queue(system_windows[temp].id .. "", nil, "timer", 1)
 				else
-					var = os.startTimer(nTime)
+					var = start_timer(nil, nTime)
 					window_timers[var] = {system_windows[temp].id}
 				end
 				return var
@@ -1425,7 +1416,7 @@ sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))
 term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "term")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
 w, h = term.getSize()
-setup_monitors(_unpack(system_settings.devices or {}))
+setup_monitors(table.unpack(system_settings.devices or {}))
 apis.window.reload_color_palette({settings = {color_mode = 1} })
 sgv(false)
 load_bios()
@@ -1516,7 +1507,7 @@ function events(...)
 	if e[1] == "timer" and qe[e[2]] and queued_events[qe[e[2]]] then
 		local tmp = qe[e[2]]
 		qe[e[2]] = nil
-		events(_unpack(queued_events[tmp]))
+		events(table.unpack(queued_events[tmp]))
 	elseif (e[1] == "mouse_drag" and (monitor_devices.term or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
@@ -1789,7 +1780,7 @@ function events(...)
 			end
 		end
 	elseif e[1] == "mouse_drag" or e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor" then
-	elseif e[1] == "timer" and e[2] == cursorblink_timer then
+	elseif e[1] == "timer" and tostring(e[2]) == tostring(cursorblink_timer) then
 		if user_data.windows[1] then
 			user_data.windows[1].window.toggle_cursor_blink()
 		end
@@ -1801,13 +1792,13 @@ function events(...)
 			local tmp1 = tmpu.windows or {}
 			for i = 1, #tmp1 do
 				if tmp1[i].id == tmp[e[2]][1] then
-					resume_user(tmp1[i].coroutine, _unpack(e))
+					resume_user(tmp1[i].coroutine, table.unpack(e))
 					break
 				end
 			end
 		elseif tmp[e[2]] and (tmp[e[2]][1] or 0) < 0 then
 			local tmp_ = system_window_order[tmp[e[2]][1] * -1]
-			resume_system("5" .. tmp_, system_windows[tmp_].coroutine, _unpack(e))
+			resume_system("5" .. tmp_, system_windows[tmp_].coroutine, table.unpack(e))
 		end
 		tmp[e[2]] = nil
 	elseif e[1] == "modem_message" then
@@ -1853,22 +1844,22 @@ function events(...)
 			local tmp = gUD(e[2]).windows or ""
 			for i = 1, #tmp do
 				if tmp[i].id == _id then
-					resume_user(tmp[i].coroutine, _unpack(e, 3))
+					resume_user(tmp[i].coroutine, table.unpack(e, 3))
 					break
 				end
 			end
 		elseif _id < 0 then
-			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, _unpack(e, 3))
+			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, table.unpack(e, 3))
 		end
 	elseif e[1] == "term_resize" then
 		w, h = term.getSize()
-		setup_monitors(_unpack(system_settings.devices or {}))
+		setup_monitors(table.unpack(system_settings.devices or {}))
 		draw_windows()
 	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
 		if monitor_resized and monitor_resized[e[2]] then
 			monitor_resized[e[2]] = nil
 		else
-			setup_monitors(_unpack(system_settings.devices or {}))
+			setup_monitors(table.unpack(system_settings.devices or {}))
 			draw_windows()
 		end
 	elseif e[1] == "peripheral" and (apis.peripheral.get_type(e[2]) or "") == "monitor" then
@@ -1882,7 +1873,7 @@ function events(...)
 				break
 			end
 		end
-		setup_monitors(_unpack(system_settings.devices or {}))
+		setup_monitors(table.unpack(system_settings.devices or {}))
 		draw_windows()
 	elseif e[1] == "redraw_windows" then
 		draw_windows()
@@ -1900,7 +1891,7 @@ function events(...)
 				local continue = system_window_order[i] ~= "desktop" or not user_data.windows[1] or
 							user_data.windows[1].window and not user_data.windows[1].window.get_visible()
 				if continue then
-					resume_system("1" .. system_window_order[i], temp_window.coroutine, _unpack(e))
+					resume_system("1" .. system_window_order[i], temp_window.coroutine, table.unpack(e))
 					if events_to_break[e[1]] and system_window_order[i] ~= "desktop" and system_window_order[i] ~= "taskbar" then
 						break
 					end
@@ -1910,7 +1901,7 @@ function events(...)
 				for j = 1, #user_data.windows do
 					temp_window = user_data.windows[j]
 					if temp_window.window.get_visible() then
-						resume_user(temp_window.coroutine, _unpack(e))
+						resume_user(temp_window.coroutine, table.unpack(e))
 						if events_to_break[e[1]] then
 							break
 						end

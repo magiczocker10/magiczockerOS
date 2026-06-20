@@ -5,7 +5,6 @@
 local file = fs.open('/magiczockerOS/core.lua', 'r')
 local env = setmetatable( {
 	dumps = {
-		--load = string.dump( _G.load, true ),
 		loadfile = _G.loadfile and string.dump( _G.loadfile, true ) or nil,
 		print = _G.print and string.dump( _G.print, true ) or nil,
 		printError = _G.printError and string.dump( _G.printError, true ) or nil,
@@ -16,6 +15,10 @@ local env = setmetatable( {
 	__index = _G
 } )
 env._G = env
+if _G.table.unpack == nil then
+	-- Polyfill for Lua 5.1
+	_G.table.unpack = unpack
+end
 if not file then
 	error('/magiczockerOS/core.lua: File not exists', 0)
 end

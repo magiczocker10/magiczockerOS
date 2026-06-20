@@ -238,7 +238,7 @@ function create(x, y, width, height, visible, header, data)
 		local _x, _y = x - 1 + my_data[3], y - 1 + my_data[4]
 		local success = (data.id < 0 or data.is_top()) and (not my_border or my_border and my_data[3] > 1 and my_data[3] < w and my_data[4] > 0 and my_data[4] < h)
 		local only_off = my_data[3] < 1 or my_data[3] > w or my_data[4] < 1 or my_data[4] > h or false
-		if success and (not only_off or not my_blink) then
+		if success then
 			local mon_order = apis.buffer.get_devices()
 			local screen = my_screen[my_data[4]]
 			for i = apis.buffer.get_mode() == "extend" and #mon_order or 1, 1, -1 do
@@ -255,7 +255,7 @@ function create(x, y, width, height, visible, header, data)
 							st(i, "setTextColor", my_data[2])
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
 							st(i, "write", "#")
-						elseif not cur_blink then
+						else
 							st(i, "setBackgroundColor", screen[my_data[3]].b)
 							st(i, "setTextColor", screen[my_data[3]].t)
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
@@ -287,6 +287,10 @@ function create(x, y, width, height, visible, header, data)
 		local buffer_y = y - 1 + _y
 		write_to_global_buffer(nil, _y, cur, cur + text_len)
 		apis.buffer.redraw_global_cache_line(true, buffer_y, buffer_x, buffer_x + text_len)
+		local my_blink_old = my_blink
+		my_blink = false
+		set_cursor()
+		my_blink = my_blink_old
 		my_data[3] = my_data[3] + text_len
 		set_cursor()
 	end

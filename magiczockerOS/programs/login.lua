@@ -54,7 +54,7 @@ local function set_blink()
 	end
 end
 local function draw()
-	local line = (" "):rep(w - 9)
+	local line = (" "):rep(w)
 	text_color(1, 1, 1)
 	back_color(32768, 128, 2048)
 	for y = 1, h do
@@ -76,7 +76,7 @@ local function draw()
 			back_color(32768, 128, 2048)
 			term.write(" ")
 		else
-			term.write("         " .. line)
+			term.write(line)
 		end
 	end
 	set_blink()

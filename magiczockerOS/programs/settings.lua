@@ -861,7 +861,7 @@ local function setup_textfield(count, setting)
 	t_var.button_on_click = function()
 		local setting = setting
 		view = 0
-		setting.on_save(unpack(t_var.values))
+		setting.on_save(table.unpack(t_var.values))
 		redraw()
 	end
 	cur_textfield.cursor = 1
@@ -988,7 +988,7 @@ local function save_system_settings(not_set)
 			file.write(textutils.serialize(sys_set))
 			file.close()
 			if not not_set and set_monitor_settings then
-				set_monitor_settings(sys_set.monitor_mode, unpack(sys_set.devices))
+				set_monitor_settings(sys_set.monitor_mode, table.unpack(sys_set.devices))
 			end
 			sys_set.monitor = __
 			sys_set.monitor_mode = mode
