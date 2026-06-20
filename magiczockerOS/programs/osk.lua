@@ -17,7 +17,7 @@ local layout, view
 -- Functions
 local function load_keys()
 	local f = fs_open( '/magiczockerOS/key_mappings/data.lua', 'r' )
-	local codes = loadstring( f.readAll() )()
+	local codes = (loadstring or load)( f.readAll() )()
 	f.close()
 	local is_arrow = {
 		DOWN = true,

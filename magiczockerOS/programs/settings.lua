@@ -33,7 +33,7 @@ local filter_login = not fs.exists("/magiczockerOS/programs/login.lua")
 local filter_osk = not fs.exists("/magiczockerOS/programs/osk.lua")
 local filter_search = not fs.exists("/magiczockerOS/programs/search.lua")
 local key_map_setting
-local events
+local events = function() end
 if not term.isColor or not term.isColor() then
 	filter_colors = true
 end

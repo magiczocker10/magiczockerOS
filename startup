@@ -34,7 +34,7 @@ else
 end
 local ok, err = xpcall(function() return content() end, function(err) return err end)
 if not ok then
-	if err and err ~= "" then
+	if err and err ~= '' then
 		error(err, 0)
 	end
 end
