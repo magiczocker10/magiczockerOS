@@ -2,8 +2,9 @@
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
-local peri, _computer_only, monitor_order, total_size, monitor_mode, global_visible, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, {0, 0}, "normal", true, {6, 9}, {0, 0}
+local peri, _computer_only, monitor_order, monitor_mode, global_visible, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, "normal", true, {6, 9}, {0, 0}
 local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
+local total_size_x, total_size_y = 0, 0
 local screen_cache, _tconcat = {}, table.concat
 local validate_modes = {
 	["normal"] = true,
@@ -82,12 +83,12 @@ local function calculate_device_offset()
 		total_width = total_width + _size[1]
 		if monitor_mode ~= "extend" and i == 1 then
 			w, h = _size[1], _size[2]
-			total_size[1], total_size[2] = w, h
+			total_size_x, total_size_y = w, h
 		end
 		h = monitor_mode == "extend" and h > _size[2] and _size[2] or h
 	end
 	if monitor_mode == "extend" then
-		total_size[1], total_size[2] = total_width, h
+		total_size_x, total_size_y = total_width, h
 	end
 	if #monitor_order == 0 then
 		error"No valid devices."
@@ -225,7 +226,7 @@ function get_devices()
 	return monitor_order
 end
 function get_size()
-	return total_size[1], total_size[2]
+	return total_size_x, total_size_y
 end
 function has_palette()
 	return not not term.setPaletteColor
@@ -240,7 +241,7 @@ function is_visible()
 	return global_visible
 end
 function write(x, y, pixel_data)
-	if x < 1 or x > total_size[1] or y < 1 or y > total_size[2] then
+	if x < 1 or x > total_size_x or y < 1 or y > total_size_y then
 		return
 	end
 	screen_cache[y] = screen_cache[y] or {}

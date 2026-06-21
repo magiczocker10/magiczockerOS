@@ -73,7 +73,8 @@ local default_settings = {}
 local drag_old = {0, 0}
 local events_to_break = {key = true, key_up = true, char = true, paste = true, terminate = true} -- this is for the last part from the main repeat loop and the send_event function for system windows
 local supported_mouse_events = {mouse_click = true, mouse_drag = true, mouse_up = true, mouse_scroll = true, mouse_click_monitor = true, mouse_drag_monitor = true}
-local total_size = {0, 0}
+local total_size_x = 0
+local total_size_y = 0
 local system_settings = {}
 local window_timers = {}
 local position_to_add = {left = {-1, 0}, right = {1, 0}, up = {0, -1}, down = {0, 1}}
@@ -418,15 +419,16 @@ local function save_user_settings(user, data)
 	end
 end
 local function move_windows_to_screen()
-	local total_screen_size, vv = {apis.buffer.get_size()}, nil
+	local total_x, total_y = apis.buffer.get_size()
+	local vv = nil
 	local temp_window, win_x, win_y, win_w, win_h, new_win_x, new_win_y
 	for _, v in next, users do
 		vv = v.windows
 		for j = 1, #vv do
 			temp_window = vv[j]
 			win_x, win_y, win_w, win_h = temp_window.window.get_data()
-			new_win_x = math.min(win_x, total_screen_size[1])
-			new_win_y = math.min(win_y, total_screen_size[2])
+			new_win_x = math.min(win_x, total_x)
+			new_win_y = math.min(win_y, total_y)
 			if win_x ~= new_win_x or win_y ~= new_win_y then
 				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h)
 			end
@@ -472,7 +474,7 @@ local function setup_monitors(...)
 		monitor_resized[name] = true
 		monitor_devices[name] = i
 	end
-	total_size[1], total_size[2] = apis.buffer.get_size()
+	total_size_x, total_size_y = apis.buffer.get_size()
 	sgv(false)
 	resize_system_windows()
 	move_windows_to_screen()
@@ -854,7 +856,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				change_user.session = session
 				switch_user()
 			end or nil,
-			get_total_size = is_system_program and function() return total_size[1], total_size[2] end or nil,
+			get_total_size = is_system_program and function() return total_size_x, total_size_y end or nil,
 			get_visible = is_system_program and function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
 			set_visible = is_system_program and function(name, state)
 				if system_windows[name] and system_windows[name].window then
@@ -1249,7 +1251,7 @@ local function create_system_windows(i)
 			end
 		end,
 		get_button = get_button,
-		get_total_size = function() return total_size[1], total_size[2] end,
+		get_total_size = function() return total_size_x, total_size_y end,
 		set_visible = function(name, state)
 			if system_windows[name].window then
 				system_windows[name].window.set_visible(state)
@@ -1501,14 +1503,14 @@ function events(...)
 		if not (monitor_devices.term or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
 			e[1] = nil
 		else
-			total_size[1], total_size[2] = apis.buffer.get_size()
+			total_size_x, total_size_y = apis.buffer.get_size()
 		end
 	end
 	if e[1] == "timer" and qe[e[2]] and queued_events[qe[e[2]]] then
 		local tmp = qe[e[2]]
 		qe[e[2]] = nil
 		events(table.unpack(queued_events[tmp]))
-	elseif (e[1] == "mouse_drag" and (monitor_devices.term or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size[2] and e[3] <= total_size[1] and last_window and last_window.window and last_window.window.get_visible() then
+	elseif (e[1] == "mouse_drag" and (monitor_devices.term or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size_y and e[3] <= total_size_x and last_window and last_window.window and last_window.window.get_visible() then
 		drag_old[1], drag_old[2] = e[3], e[4]
 		local has_changed = false
 		local tmp_window = last_window
@@ -1673,7 +1675,7 @@ function events(...)
 			end
 		end
 		key_timer = nil
-	elseif (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size[2] and e[3] <= total_size[1] then
+	elseif (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size_y and e[3] <= total_size_x then
 		drag_old[1] = 0
 		drag_old[2] = 0
 		last_window = nil

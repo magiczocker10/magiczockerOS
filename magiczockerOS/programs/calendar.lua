@@ -7,7 +7,6 @@
 local coroutine_yield = coroutine.yield
 local math_ceil, math_floor = math.ceil, math.floor
 local os_date = os.date
-local string_format, string_rep = string.format, string.rep
 local term_setBackgroundColor, term_setCursorPos, term_setTextColor, term_write = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
 local table_concat, table_insert = table.concat, table.insert
 
@@ -44,11 +43,10 @@ local months = {
 	{'Nov', 30, 334},
 	{'Dec', 31, 365}
 }
-local width = string_rep(' ', w)
+local width = ( ' ' ):rep( w )
 local month_keys = {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}
 local leap_year = false
 local key_maps = {}
-local settings = {}
 local year_keys = {
 	[0] = 6,
 	[1] = 4,
@@ -81,16 +79,16 @@ local function draw(a, b)
 	if view < 3 then -- Year and Month overview
 		for y = a or 1, b or 8 do
 			if y == 2 then
-				line = view == 1 and string_format( ' %s %s  Please select  > %s ',
+				line = view == 1 and ( ' %s %s  Please select  > %s ' ):format(
 					(cursor[2] == 1 and '-' or ' '),
 					(year > 1970 and '<' or ' '),
 					(cursor[2] == 1 and '-' or ' ')
-				) or string_format( ' %s %s%s%d%s> %s ',
+				) or ( ' %s %s%s%d%s> %s ' ):format(
 					(cursor[2] == 1 and '-' or ' '),
 					(year > 1970 and '<' or ' '),
-					string_rep(' ', math_floor((17 - #tostring(year)) * 0.5)),
+					( ' ' ):rep( math_floor((17 - #tostring(year)) * 0.5) ),
 					year,
-					string_rep(' ', math_ceil((17 - #tostring(year)) * 0.5)),
+					( ' ' ):rep( math_ceil((17 - #tostring(year)) * 0.5) ),
 					(cursor[2] == 1 and '-' or ' ')
 				)
 			elseif y == 4 or y == 6 then
@@ -126,28 +124,28 @@ local function draw(a, b)
 	elseif view == 3 then -- Day overview
 		offset = get_week_day(1, month, year)
 		local m = months[month]
-		local tmp = string_format( '%s %d', m[1], year )
+		local tmp = ( '%s %d' ):format( m[1], year )
 		local endline = 10
 		months[2][2] = leap_year and 29 or 28
 		local tmp2 = get_week(1, month, year)
 		for y = a or 1, b or 11 do
 			if y == 2 then
-				line = string_format( ' %s %s%s%s%s> %s ',
+				line = ( ' %s %s%s%s%s> %s ' ):format(
 					(cursor[2] == 1 and '-' or ' '),
 					(year == 1970 and month == 1 and ' ' or '<'),
-					string_rep(' ', math_floor((17 - #tmp) * 0.5)),
+					( ' ' ):rep( math_floor((17 - #tmp) * 0.5) ),
 					tmp,
-					string_rep(' ', math_ceil((17 - #tmp) * 0.5)),
+					( ' ' ):rep( math_ceil((17 - #tmp) * 0.5) ),
 					(cursor[2] == 1 and '-' or ' ')
 				)
 			elseif y == 4 then
 				line = '    Mo.Tu.We.Th.Fr.Sa.Su '
 			elseif y > 4 and y < endline then
-				local out = {' ', string_format('%02d ', (tmp2 == 0 and get_week(31, 12, year - 1) or tmp2))}
+				local out = { ' ', ( '%02d ' ):format( tmp2 == 0 and get_week(31, 12, year - 1) or tmp2) }
 				tmp2 = tmp2 + 1
 				for i = 1, 7 do
 					local num = (y - 5) * 7 + i - offset + 1
-					table_insert( out, cur_date.day == num and cur_date.month == month and cur_date.year == year and '##' or (num > 0 and num <= m[2] and string_format('%2d', num) or '  '))
+					table_insert( out, cur_date.day == num and cur_date.month == month and cur_date.year == year and '##' or (num > 0 and num <= m[2] and ( '%2d' ):format( num ) or '  '))
 					table_insert( out, num > 0 and num < m[2] and i < 7 and '|' or ' ')
 					endline = num >= m[2] and y or 11
 				end
@@ -289,12 +287,8 @@ local function events(e, d, x, y)
 	elseif e == 'term_resize' then
 		draw()
 	elseif e == 'refresh_settings' then
-		settings = {
-			cb = d.calendar_back or 256,
-			ct = d.calendar_text or 1
-		}
-		term_setBackgroundColor( settings.cb )
-		term_setTextColor( settings.ct )
+		term_setBackgroundColor( d.calendar_back or 256 )
+		term_setTextColor( d.calendar_text or 1 )
 		draw()
 	end
 end

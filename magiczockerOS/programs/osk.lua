@@ -6,7 +6,6 @@
 -- Define global variables as local
 local coroutine_yield = coroutine.yield
 local fs_open = fs.open
-local string_format, string_rep = string.format, string.rep
 local table_concat, table_insert = table.concat, table.insert
 local term_cursor, term_setBackgroundColor, term_setTextColor, term_write = term.setCursorPos, term.setBackgroundColor or function() end, term.setTextColor or function() end, term.write
 
@@ -55,17 +54,17 @@ local function load_keys( mapping )
 				posY = posY + 1
 			elseif word == 'PLACEHOLDER' then
 				local count = tonumber(line:sub(line:find('%s'), #line))
-				local tmp = count > 1 and string_rep(' ', count - 1) or ''
+				local tmp = count > 1 and ( ' ' ):rep( count - 1 ) or ''
 				table_insert( out1[posY], tmp )
 				table_insert( out2[posY], tmp )
 				table_insert( layout[posY], {tmp, tmp, 0, 0} )
 			else
-				error( string_format( 'Line %s: %s', file_line, word ) )
+				error( ( 'Line %s: %s' ):format( file_line, word ) )
 			end
 		end
 		file.close()
 	end
-	load_lines( 2, string_format( '/magiczockerOS/key_mappings/%s.map', mapping ) )
+	load_lines( 2, ( '/magiczockerOS/key_mappings/%s.map' ):format( mapping ) )
 	load_lines( 1, '/magiczockerOS/key_mappings/base.map' )
 	for k, v in next, out1 do
 		view[1][k] = table_concat( v, ' ')

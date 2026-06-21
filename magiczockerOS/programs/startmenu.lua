@@ -8,7 +8,6 @@ local coroutine_yield = coroutine.yield
 local fs_exists = fs.exists
 local math_ceil, math_floor = math.ceil, math.floor
 local os_reboot, os_shutdown = os.reboot, os.shutdown
-local string_rep = string.rep
 local term_setBackgroundColor, term_setCursorPos, term_setTextColor, term_write = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
 
 -- Variables
@@ -18,7 +17,7 @@ local key_maps = {}
 local menu = { {}, {} }
 local mode = 1
 local my_win = user_data().windows[1]
-local settings = {}
+local item_align = 1
 local width = 1
 
 -- Functions
@@ -50,10 +49,10 @@ local function set_my_vis(a)
 end
 local function draw()
 	for k, v in next, menu[mode] do
-		local a, b, c = v[1], settings.sia, cursor == k and bw < 3 and '-' or ' '
+		local a, b, c = v[1], item_align, cursor == k and bw < 3 and '-' or ' '
 		local d = (width - #a) * 0.5
 		term_setCursorPos(1, k)
-		term_write(c .. (a == '' and string_rep('-', width - 2) or b == 2 and string_rep(' ', math_floor(d) - 1) .. a .. string_rep(' ', math_ceil(d) - 1) or b == 3 and string_rep(' ', width - #a - 2) .. a or a .. string_rep(' ', width - #a - 2)) .. c)
+		term_write(c .. (a == '' and ( '-' ):rep( width - 2 ) or b == 2 and ( ' ' ):rep( math_floor(d) - 1 ) .. a .. ( ' ' ):rep( math_ceil(d) - 1 ) or b == 3 and ( ' ' ):rep( width - #a - 2 ) .. a or a .. ( ' ' ):rep( width - #a - 2 )) .. c)
 	end
 end
 local function size()
@@ -113,13 +112,9 @@ create(true, true, 'Shutdown', function() os_shutdown() end)
 -- Events
 local function events(e, d, _, y)
 	if e == 'refresh_settings' then
-		settings = {
-			sb = d.startmenu_back or 256,
-			sia = d.startmenu_items_align or 1,
-			st = d.startmenu_text or 1
-		}
-		back_color(32768, 256, settings.sb)
-		text_color(1, 1, settings.st)
+		item_align = d.startmenu_items_align or 1,
+		back_color(32768, 256, d.startmenu_back or 256)
+		text_color(1, 1, d.startmenu_text or 1)
 		size()
 		draw()
 	elseif e == 'mouse_click' and d == 1 then

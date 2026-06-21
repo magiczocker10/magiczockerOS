@@ -60,9 +60,9 @@ local function draw()
 	for y = 1, h do
 		term.setCursorPos(1, y)
 		if y == 2 or y == 4 or y == 6 and mode == 2 then
-			term.write" "
+			term.write(" ")
 			set_cursor(y == 2 and 1 or y == 6 and 3 or 2)
-			term.write" "
+			term.write(" ")
 		elseif y == (mode == 2 and 8 or 6) then
 			term.write((" "):rep(w - 3 - #L1))
 			back_color(1, 256, 256)
