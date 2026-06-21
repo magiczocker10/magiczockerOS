@@ -5,6 +5,7 @@
 local file = fs.open('/magiczockerOS/core.lua', 'r')
 local env = setmetatable( {
 	dumps = {
+		dofile = _G.dofile and string.dump( _G.dofile, true ) or nil,
 		loadfile = _G.loadfile and string.dump( _G.loadfile, true ) or nil,
 		print = _G.print and string.dump( _G.print, true ) or nil,
 		printError = _G.printError and string.dump( _G.printError, true ) or nil,

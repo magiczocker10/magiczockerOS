@@ -680,7 +680,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local user_ = sUser or cur_user
 	local user_data = gUD(user_)
 	local is_remote = user_data.server
-	add_to_log("Ist server " .. tostring(is_remote))
+	add_to_log("Is server " .. tostring(is_remote))
 	user_data.windows = user_data.windows or {}
 	user_data.get_id = function()
 		for i = 1, #user_data.windows do
@@ -717,28 +717,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 		local native_id = os.getComputerID and os.getComputerID() or 0
 		env = {
 			_HOSTver = is_system_program and _HOSTver or nil,
-			get_min_height = is_system_program and function()
-				return my_window.min_height
-			end or nil,
-			get_min_width = is_system_program and function()
-				return my_window.min_width
-			end or nil,
-			set_min_height = is_system_program and function(a)
-				my_window.min_height = a
-				local win_x, win_y, win_w, win_h = my_window.window.get_data()
-				my_window.window.reposition(win_x, win_y, win_w, math.max(win_h, a))
-				if win_h ~= a then
-					_queue(id .. "", user_, "term_resize")
-				end
-			end or nil,
-			set_min_width = is_system_program and function(a)
-				my_window.min_width = a
-				local win_x, win_y, win_w, win_h = my_window.window.get_data()
-				my_window.window.reposition(win_x, win_y, math.max(win_w, a), win_h)
-				if win_w ~= a then
-					_queue(id .. "", user_, "term_resize")
-				end
-			end or nil,
 			fs = {},
 			multishell = {
 				getCount = function() return #user_data.windows end,
@@ -910,22 +888,6 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 			local oldRedirectTarget = active_term
 			active_term = target
 			return oldRedirectTarget
-		end
-		env.dofile = function(path)
-			if not env.fs.exists(path) or env.fs.isDir(path) then return end
-			local file = env.fs.open(path, "r")
-			if file then
-				local content = file.readAll()
-				file.close()
-				local program, err = (env.loadstring or env.load)(content, path, "t", env._G)
-				if env.setfenv then
-					env.setfenv(program, env._G)
-				end
-				if err then
-					return error(err)
-				end
-				return program()
-			end
 		end
 		my_window.env = env
 		env.os.run = function(_tEnv, path, ...)
