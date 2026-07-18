@@ -67,7 +67,7 @@ local function create_proc(a, b)
 	elseif a == "calendar" then
 		procs[a].window.set_header_vis(false)
 		procs[a].click_outside = true
-		procs[a].env.set_pos(w - 24, 2, nil, nil, true)
+		procs[a].env.set_pos(w - 22, 2, nil, nil, true)
 		procs[a].env.os.queueEvent("term_resize")
 	end
 	apis.buffer.set_global_visible(f)
@@ -364,7 +364,7 @@ function events(a, b, c)
 	elseif a == "term_resize" then
 		w = term.getSize()
 		if procs.calendar then
-			procs.calendar.env.set_pos(w - 24, nil, nil, nil, true)
+			procs.calendar.env.set_pos(w - 22, nil, nil, nil, true)
 		end
 		draw_start()
 		set_items()

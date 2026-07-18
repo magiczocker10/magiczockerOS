@@ -1,306 +1,189 @@
+-- Calender works from 15.10.1582 until 31.12.9999
 -- magiczockerOS - Copyright by Julian Kriete 2016-2021
 
 -- My ComputerCraft-Forum account:
 -- http://www.computercraft.info/forums2/index.php?showuser=57180
 
 -- Define global variables as local
-local coroutine_yield = coroutine.yield
-local math_ceil, math_floor = math.ceil, math.floor
-local os_date = os.date
-local term_setBackgroundColor, term_setCursorPos, term_setTextColor, term_write = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
-local table_concat, table_insert = table.concat, table.insert
+local cy = coroutine.yield
+local mf = math.floor
+local tb, tc, tt, tw = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
 
 -- Variables
-local w = 25
-local h = 1
-local cur_date = os_date and os_date('*t') or {
-	day = 1,
-	hour = 1,
-	isdst = false,
-	min = 0,
-	month = 1,
-	sec = 0,
-	wday = 5,
-	yday = 1,
-	year = 1970
+local bw = term and term.isColor and (term.isColor() and 3 or (_VERSION):match('^Lua%s') and 2 or 1) or 0
+local date = os.date and os.date( '*t' ) or {}
+local day, month, year = date.day or 1, date.month or 1, date.year or 1970
+local k = {}
+local w = 23
+local h = 8
+local offsets = {
+	0,31,60,91,121,152,182,213,244,274,305,335,
+	0,31,59,90,120,151,181,212,243,273,304,334
 }
-local cursor = {1, 1}
-local view = 3
-local month = cur_date.month
-local year = cur_date.year
-local offset = 0
-local months = {
-	{'Jan', 31, 31},
-	{'Feb', 28, 59},
-	{'Mar', 31, 90},
-	{'Apr', 30, 120},
-	{'May', 31, 151},
-	{'Jun', 30, 181},
-	{'Jul', 31, 212},
-	{'Aug', 31, 243},
-	{'Sep', 30, 273},
-	{'Oct', 31, 304},
-	{'Nov', 30, 334},
-	{'Dec', 31, 365}
-}
-local width = ( ' ' ):rep( w )
-local month_keys = {1, 4, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6}
-local leap_year = false
-local key_maps = {}
-local year_keys = {
-	[0] = 6,
-	[1] = 4,
-	[2] = 2,
-	[3] = 0
-}
+local cb, cl, ct, ctt, ctb
 
 -- Functions
-local function year_key( a )
-	-- 1700 = 4
-	-- 1800 = 2
-	-- 1900 = 0
-	-- 2000 = 6
-	-- 2100 = 4
-	-- ...
-	return year_keys[ ( tonumber( a ) - 16 ) % 4 ]
+local function back(...)
+	tb( ({...})[bw] )
 end
-local function get_week_day(a, b, c) -- Source: http://mathforum.org/dr.math/faq/faq.calendar.html
-	local year2 = tonumber(tostring(c):sub(-2))
-	leap_year = c % 4 == 0 and not (c % 100 == 0 and c % 400 > 0)
-	local tmp = (math_floor(year2 * 0.25) + a + month_keys[b] - ((leap_year and b == 1 or leap_year and b == 2) and 1 or 0) + year_key(tostring(c):sub(1, -3)) + year2) % 7
-	return tmp == 0 and 6 or tmp == 1 and 7 or tmp - 1
+
+local function text(...)
+	tt( ({...})[bw] )
 end
-local function get_week(a, b, c) -- Source: http://www.salesianer.de/util/kalwoch.html
-	local d = (b > 1 and months[b - 1][3] or 0) + (c % 4 == 0 and not (c % 100 == 0 and c % 400 > 0) and b > 2 and 1 or 0)
-	return (d + a - get_week_day(a, b, c) + get_week_day(4, 1, c) - 4) / 7 + 1
+
+local function write(...)
+	tw( ({...})[bw + 1] )
 end
-local function draw(a, b)
-	local line = ''
-	if view < 3 then -- Year and Month overview
-		for y = a or 1, b or 8 do
-			if y == 2 then
-				line = view == 1 and ( ' %s %s  Please select  > %s ' ):format(
-					(cursor[2] == 1 and '-' or ' '),
-					(year > 1970 and '<' or ' '),
-					(cursor[2] == 1 and '-' or ' ')
-				) or ( ' %s %s%s%d%s> %s ' ):format(
-					(cursor[2] == 1 and '-' or ' '),
-					(year > 1970 and '<' or ' '),
-					( ' ' ):rep( math_floor((17 - #tostring(year)) * 0.5) ),
-					year,
-					( ' ' ):rep( math_ceil((17 - #tostring(year)) * 0.5) ),
-					(cursor[2] == 1 and '-' or ' ')
-				)
-			elseif y == 4 or y == 6 then
-				local out = {}
-				if view == 1 then -- Year overview
-					table_insert( out, cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 5 or 1) and '  >' or '   ' )
-					local start = year - 1
-					local iend = y == 6 and 8 or 4
-					for i = y == 6 and 5 or 1, iend do
-						table_insert( out, start + i)
-						table_insert( out, cursor[1] == i + 1 and i < iend and '>' or cursor[1] == i and '<' or ' ' )
-					end
-					table_insert( out, '  ' )
-				else -- Month overview
-					table_insert( out, cursor[2] == (y == 4 and 2 or 3) and cursor[1] == (y == 6 and 7 or 1) and '>' or ' ' )
-					local iend = y == 6 and 12 or 6
-					for i = y == 6 and 7 or 1, iend do
-						table_insert( out, months[i][1] )
-						table_insert( out, (cursor[1] == i + 1 and i < iend and '>' or cursor[1] == i and '<' or ' ') )
-					end
+
+local function week_day( d, m, y ) -- Source: https://de.wikipedia.org/wiki/Wochentagsberechnung
+	if ( m < 3 ) then
+		y = y - 1
+	end
+	return ( ( d + mf( 2.6 * ( ( m + 9 ) % 12 + 1 ) - 0.2 ) + y % 100 + mf( y % 100 * 0.25 ) + mf( y * 0.0025 ) - 2 * mf( y * 0.01 ) - 1 ) % 7 + 7 ) % 7 + 1
+end
+
+local function leap_year( y )
+	return y % 4 == 0 and y % 100 ~= 0 or y % 400 == 0
+end
+
+local function days_in_month( m, l ) -- Source: http://lua-users.org/wiki/DayOfWeekAndDaysInMonthExample
+	return m == 2 and l and 29 or ('\31\28\31\30\31\30\31\31\30\31\30\31'):byte( m )
+end
+
+local function week( d, m, y, l, x ) -- Source: https://en.wikipedia.org/wiki/ISO_week_date
+	local w = mf(( 10 + offsets[ m + (l and 12 or 0 ) ] + d - week_day( d, m, y ) ) / 7 )
+	if not x and w == 53 and week(1, 1, y + 1, l) == 1 then
+		return 1
+	end
+	return w == 0 and week(31, 12, y - 1, l, true) or w
+end
+
+local function draw()
+	local a = week_day( 1, month, year ) % 7
+	if a == 0 then
+		a = 7
+	end
+	local ly = leap_year( year )
+	local days = days_in_month( month, ly )
+	a = 1 - a
+	back( 32768, 1, cb )
+	for y = 1, h do
+		tc( 1, y )
+		if y == 1 then
+			text( 1, 256, cl )
+			tw( '< ' )
+			text( 1, 128, ct )
+			tw( ('JanFebMarAprMayJunJulAugSepOctNovDec'):sub(3 * month - 2, 3 * month) )
+			text( 1, 256, cl )
+			tw( ' >        < ' )
+			text( 1, 128, ct )
+			tw( ( '%4d' ):format( year ) )
+			text( 1, 256, cl )
+			tw( ' >' )
+		elseif y == 2 then
+			text( 1, 256, cl )
+			tw( '   Mo Th We Th Fr Sa Su' )
+		else
+			for x = 1, 7 do
+				a = a + 1
+				if x == 1 then
+					text( 1, 256, cl )
+					tw( a <= days and ( '%2d' ):format( week( a > 0 and a or 1, month, year, ly ) ) or '  ' )
+					text( 1, 128, ct )
 				end
-				line = table_concat( out, '' )
-			else
-				line = width
-			end
-			term_setCursorPos(1, y)
-			term_write(line)
-		end
-		if 8 ~= h then
-			h = 8
-			set_pos(nil, nil, w, h)
-		end
-	elseif view == 3 then -- Day overview
-		offset = get_week_day(1, month, year)
-		local m = months[month]
-		local tmp = ( '%s %d' ):format( m[1], year )
-		local endline = 10
-		months[2][2] = leap_year and 29 or 28
-		local tmp2 = get_week(1, month, year)
-		for y = a or 1, b or 11 do
-			if y == 2 then
-				line = ( ' %s %s%s%s%s> %s ' ):format(
-					(cursor[2] == 1 and '-' or ' '),
-					(year == 1970 and month == 1 and ' ' or '<'),
-					( ' ' ):rep( math_floor((17 - #tmp) * 0.5) ),
-					tmp,
-					( ' ' ):rep( math_ceil((17 - #tmp) * 0.5) ),
-					(cursor[2] == 1 and '-' or ' ')
-				)
-			elseif y == 4 then
-				line = '    Mo.Tu.We.Th.Fr.Sa.Su '
-			elseif y > 4 and y < endline then
-				local out = { ' ', ( '%02d ' ):format( tmp2 == 0 and get_week(31, 12, year - 1) or tmp2) }
-				tmp2 = tmp2 + 1
-				for i = 1, 7 do
-					local num = (y - 5) * 7 + i - offset + 1
-					table_insert( out, cur_date.day == num and cur_date.month == month and cur_date.year == year and '##' or (num > 0 and num <= m[2] and ( '%2d' ):format( num ) or '  '))
-					table_insert( out, num > 0 and num < m[2] and i < 7 and '|' or ' ')
-					endline = num >= m[2] and y or 11
+				if a == day and month == date.month and year == date.year then
+					tw( ' ' )
+					back( 1, 128, ctb )
+					text( 32768, 1, ctt )
+					write( '##', ( '%2d' ):format( a ), ( '%2d' ):format( a ), ( '%2d' ):format( a ) )
+					back( 32768, 1, cb )
+					text( 1, 128, ct )
+				else
+					tw( (a > 0 and a <= days) and ( ' %2d' ):format( a ) or '   ' )
 				end
-				line = table_concat( out, '' )
-			else
-				line = width
-			end
-			term_setCursorPos(1, y)
-			term_write(line)
-			if y == endline + 1 then
-				if y ~= h then
-					h = y
-					set_pos(nil, nil, w, h)
-				end
-				break
 			end
 		end
 	end
+end
+
+local function fix_date()
+	if month == 13 then
+		month = 1
+		year = year + 1
+	elseif month == 0 then
+		month = 12
+		year = year - 1
+	end
+	if year < 1582 then
+		year = 1582
+	elseif year > 9999 then
+		month = 12
+		year = 9999
+	end
+	if year == 1582 and month < 11 then
+		month = 11
+	end
+	draw()
 end
 
 -- Events
-local function events(e, d, x, y)
-	if e == 'mouse_click' then
-		if x > 4 and x < w - 3 and y == 2 and view > 1 then
-			view = view - 1
-			year = view == 1 and year - year % 8 + 2 or year
-			cursor[1], cursor[2] = view == 2 and -5 or -3, 1
-			draw()
-		elseif view == 3 then
-			if x == 4 and y == 2 and not (year == 1970 and month == 1) then
-				month = month == 1 and 12 or month - 1
-				year = month == 12 and year - 1 or year
-				draw()
-			elseif x == w - 3 and y == 2 then
-				month = month == 12 and 1 or month + 1
-				year = month == 1 and year + 1 or year
-				draw()
-			end
-		elseif view == 2 then
-			if x == 4 and y == 2 and year > 1970 then
-				year = year - 1
-				draw(2, 2)
-			elseif x == w - 3 and y == 2 then
-				year = year + 1
-				draw(2, 2)
-			elseif (y == 4 or y == 6) and (x - 1) % 4 > 0 then
-				month = math_ceil((x - 1) * 0.25) + (y == 6 and 6 or 0)
-				view = view + 1
-				draw()
-			end
-		elseif (y == 4 or y == 6) and (x - 3) % 5 > 0 then -- view 1
-			year = year - 1 + math_ceil((x - 3) * 0.2) + (y == 6 and 4 or 0)
-			view = view + 1
-			draw()
+local function events( e, d, x, y )
+	if e == 'mouse_click' and y == 1 then
+		if x == 1 then
+			month = month - 1
+			fix_date()
+		elseif x == 7 then
+			month = month + 1
+			fix_date()
+		elseif x == w - 7 then
+			year = year - 1
+			fix_date()
+		elseif x == w then
+			year = year - 1
+			fix_date()
 		end
-	elseif e == 'mouse_scroll' then
-		if view == 3 and not (d == -1 and year == 1970 and month == 1) then
+	elseif e == 'mouse_scroll' and y == 1 then
+		if x < 8 then
 			month = month + d
-			if month == 0 then
-				month = 12
-				year = year - 1
-			elseif month == 13 then
-				month = 1
-				year = year + 1
-			end
-			draw()
-		elseif view == 2 and not (d == -1 and year == 1970) then
+			fix_date()
+		elseif x > w - 8 then
 			year = year + d
-			draw()
-		elseif view == 1 and not (d == -1 and year == 1970) then
-			year = year + 8 * d
-			draw()
+			fix_date()
 		end
-	elseif e == 'key' then
-		d = key_maps[d] or ''
-		if d == 'up' and cursor[2] > 1 then
-			cursor[1], cursor[2] = cursor[1] - (view == 2 and 6 or 4), cursor[2] - 1
-			draw()
-		elseif d == 'down' and cursor[2] < 3 and view < 3 then
-			cursor[1], cursor[2] = cursor[1] + (view == 2 and 6 or 4), cursor[2] + 1
-			draw()
-		elseif (d == 'left' or d == 'right') and cursor[2] == 1 then
-			if view == 3 then
-				month = month + (d == 'left' and -1 or 1)
-				if month == 0 then
-					month = 12
-					year = year - 1
-				elseif month == 13 then
-					month = 1
-					year = year + 1
-				end
-			elseif view == 2 then
-				year = year + (d == 'left' and -1 or 1)
-			else
-				year = year + (d == 'left' and -8 or 8)
-			end
-			draw()
-		elseif d == 'enter' and cursor[2] == 1 and view > 1 then
-			view = view - 1
-			year = view == 1 and year - year % 8 + 2 or year
-			cursor[1] = view == 2 and -5 or view == 1 and -3 or 1
-			draw()
-		elseif d == 'enter' and cursor[2] > 1 and view < 3 then
-			if view == 1 then
-				year = year - 1 + cursor[1]
-			else -- view == 2
-				month = cursor[1]
-			end
-			cursor[1], cursor[2] = 1, 2
-			view = view + 1
-			draw()
-		elseif d == 'left' and (cursor[1] == 1 or cursor[1] == (view == 2 and 7 or 5)) then
-			cursor[1] = view == 3 and 1 or (view == 2 and 6 or 4) * (cursor[2] - 1)
-			if view == 2 then
-				year = year - 1
-				cursor[1] = cursor[2] == 2 and 6 or 12
-			else
-				year = year - 8
-				cursor[1] = cursor[2] == 2 and 4 or 8
-			end
-			draw()
-		elseif d == 'left' then
-			cursor[1] = view == 3 and 1 or cursor[1] - 1
-			draw()
-		elseif d == 'right' and cursor[1] == (view == 2 and 6 or 4) * (cursor[2] - 1) then
-			cursor[1] = view == 3 and 1 or (view == 2 and 6 or 4) * (cursor[2] - 2) + 1
-			if view == 2 then
-				year = year + 1
-				cursor[1] = cursor[2] == 2 and 1 or 7
-			else
-				year = year + 8
-				cursor[1] = cursor[2] == 2 and 1 or 5
-			end
-			draw()
-		elseif d == 'right' then
-			cursor[1] = view == 3 and 1 or cursor[1] + 1
-			draw()
+	elseif e == 'key' and k[d] then
+		if k[d] == 'l' then
+			month = month - 1
+		elseif k[d] == 'r' then
+			month = month + 1
+		elseif k[d] == 'u' then
+			year = year - 1
+		elseif k[d] == 'd' then
+			year = year + 1
 		end
+		fix_date()
 	elseif e == 'term_resize' then
-		draw()
+		local parentW, parentH = term.getSize(true)
+		set_pos(nil, nil, w, h)
 	elseif e == 'refresh_settings' then
-		term_setBackgroundColor( d.calendar_back or 256 )
-		term_setTextColor( d.calendar_text or 1 )
+		cb = d.calendar_back or 1
+		cl = d.calender_label or 256
+		ct = d.calendar_text or 128
+		ctb = d.calendar_today_back or 2048
+		ctt = d.calendar_today_text or 1
 		draw()
 	end
 end
-do
-	local a = _HOSTver >= 1132
-	key_maps[a and 257 or 28] = 'enter'
-	key_maps[a and 262 or 205] = 'right'
-	key_maps[a and 263 or 203] = 'left'
-	key_maps[a and 264 or 208] = 'down'
-	key_maps[a and 265 or 200] = 'up'
-end
 
+do
+	--local a = true or _HOSTver >= 1132
+	local a = false
+	k[a and 262 or 205] = 'r'
+	k[a and 263 or 203] = 'l'
+	k[a and 264 or 208] = 'd'
+	k[a and 265 or 200] = 'u'
+end
+events( 'term_resize' )
+events( 'refresh_settings', {} )
 while true do
-	events( coroutine_yield() )
+	events( cy() )
 end
