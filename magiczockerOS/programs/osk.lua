@@ -6,7 +6,7 @@
 -- Define global variables as local
 local cy = coroutine.yield
 local open = fs.open
-local concat, insert = table.concat, table.insert
+local concat = table.concat
 local tb, tc, tt, tw = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
 
 -- Variables
@@ -35,40 +35,37 @@ local function load_keys( okm )
 	view[2] = {}
 	local function load_lines( y, path )
 		local file = open( path, 'r' )
-		local file_line = 0
-		for line in file.readLine do
-			file_line = file_line + 1
-			word = line:match('[^%s]+')
-			c_word = codes[word]
-			if c_word then
-				insert( out1[y], c_word[1] )
-				insert( out2[y], c_word[2] )
-				insert( layout[y], c_word )
-				if is_arrow[ word ] then
-					arrows[glfw and codes[word][3] or codes[word][4]] = true
-				end
-			elseif word == '##' then
-			elseif word == 'NEWLINE' then
+		for l in file.readLine do
+			if not l:match('^##') then
 				y = y + 1
 				out1[y] = out1[y] or {}
 				out2[y] = out2[y] or {}
 				layout[y] = layout[y] or {}
-			elseif word == 'NEWLINE_BASE' then
-				y = y + 1
-			elseif word == 'PLACEHOLDER' then
-				local count = tonumber(line:sub(line:find('%s'), #line))
-				local tmp = count > 1 and ( ' ' ):rep( count - 1) or ''
-				insert( out1[y], tmp )
-				insert( out2[y], tmp )
-				insert( layout[y], {tmp, tmp, 0, 0} )
-			else
-				error( ( 'Line %s: %s' ):format( file_line, word ) )
+				for word in l:gmatch('%S+') do
+					c_word = codes[word]
+					if word:match('^PLACEHOLDER_') then
+						local count = tonumber(word:sub(13))
+						local tmp = count > 1 and ( ' ' ):rep( count - 1) or ''
+						out1[y][ #out1[y] + 1 ] = tmp
+						out2[y][ #out2[y] + 1 ] = tmp
+						layout[y][ #layout[y] + 1 ] = {tmp, tmp, 0, 0}
+					elseif c_word then
+						out1[y][ #out1[y] + 1 ] = c_word[1]
+						out2[y][ #out2[y] + 1 ] = c_word[2]
+						layout[y][ #layout[y] + 1 ] = c_word
+						if is_arrow[ word ] then
+							arrows[glfw and codes[word][3] or codes[word][4]] = true
+						end
+					else
+						error( ( '%s: %s' ):format( path, word ) )
+					end
+				end
 			end
 		end
 		file.close()
 	end
-	load_lines( 2, ( '/magiczockerOS/key_mappings/%s.map' ):format( okm ) )
-	load_lines( 1, '/magiczockerOS/key_mappings/base.map' )
+	load_lines( 1, ( '/magiczockerOS/key_mappings/%s.map' ):format( okm ) )
+	load_lines( 0, '/magiczockerOS/key_mappings/base.map' )
 	for k, v in next, out1 do
 		view[1][k] = concat( v, ' ' )
 		view[2][k] = concat( out2[k], ' ' )
