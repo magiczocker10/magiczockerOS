@@ -33,8 +33,8 @@ local function load_keys( okm )
 	layout[2] = {}
 	view[1] = {}
 	view[2] = {}
-	local function load_lines( y, path )
-		local file = open( path, 'r' )
+	local function load_lines( path )
+		local file, y = open( path, 'r' ), 0
 		for l in file.readLine do
 			if not l:match('^##') then
 				y = y + 1
@@ -44,11 +44,10 @@ local function load_keys( okm )
 				for word in l:gmatch('%S+') do
 					c_word = codes[word]
 					if word:match('^PLACEHOLDER_') then
-						local count = tonumber(word:sub(13))
-						local tmp = count > 1 and ( ' ' ):rep( count - 1) or ''
-						out1[y][ #out1[y] + 1 ] = tmp
-						out2[y][ #out2[y] + 1 ] = tmp
-						layout[y][ #layout[y] + 1 ] = {tmp, tmp, 0, 0}
+						local c = ( ' ' ):rep( tonumber( word:sub( 13 ) ) - 1 )
+						out1[y][ #out1[y] + 1 ] = c
+						out2[y][ #out2[y] + 1 ] = c
+						layout[y][ #layout[y] + 1 ] = {c, c, 0, 0}
 					elseif c_word then
 						out1[y][ #out1[y] + 1 ] = c_word[1]
 						out2[y][ #out2[y] + 1 ] = c_word[2]
@@ -64,8 +63,8 @@ local function load_keys( okm )
 		end
 		file.close()
 	end
-	load_lines( 1, ( '/magiczockerOS/key_mappings/%s.map' ):format( okm ) )
-	load_lines( 0, '/magiczockerOS/key_mappings/base.map' )
+	load_lines( ( '/magiczockerOS/key_mappings/%s.map' ):format( okm ) )
+	load_lines( '/magiczockerOS/key_mappings/base.map' )
 	for k, v in next, out1 do
 		view[1][k] = concat( v, ' ' )
 		view[2][k] = concat( out2[k], ' ' )
@@ -122,7 +121,7 @@ local function events(e, d, x, y)
 		tb( ( {32768, 32768, a} )[ c ] )
 		tt( ( {1, 1, a == 1 and 32768 or b} )[ c ] )
 		local w = draw()
-		set_pos(nil, nil, w - 1, #layout + 1)
+		set_pos(nil, nil, w, #layout + 1)
 		draw()
 	end
 end
