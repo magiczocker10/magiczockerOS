@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local hex, get_color = {}, {}
 local apis, textutils = apis, textutils
 local st = apis.buffer.set_term
@@ -137,12 +135,12 @@ function create(x, y, width, height, visible, header, data)
 	local window = {}
 	local last_header
 	local last_cur_id = 0
-	local ud = data.user_data()
+	local ud = {} or data.magicOS.user_data()
 	if header then
 		my_pos[2] = my_pos[2] + 1
 	end
 	local function gs(a)
-		return data.get_setting(data.user_data().settings, a)
+		return data.magicOS.get_setting(data.magicOS.user_data().settings, a)
 	end
 	local function get_size()
 		local w, h
@@ -185,21 +183,21 @@ function create(x, y, width, height, visible, header, data)
 		if not header then return end
 		local w = get_size()
 		local colored = apis.buffer.is_colored()
-		local foreground = data.id < 0 or data.is_top()
+		local foreground = data.env.multishell.getCurrent() == data.env.multishell.getFocus()
 		if last_header and foreground == last_header_first and last_header_width == w then
 			my_screen[0] = last_header
 			return
 		end
 		last_header_first, last_header_width = foreground, w
 		local b = {"", "", "", "", "", "", "", "", ""}
-		local my_buttons = data.buttons
+		local my_buttons = data.magicOS.buttons
 		if colored then
 			for i = 1, last_cur_id > 0 and #my_buttons or 1 do
 				local a = my_buttons[i]
 				b[1], b[2], b[3] = b[1] .. (foreground and hex[gs("window_" .. a[1] .. "_button_active_back") or a[2]] or hex[gs("window_" .. a[1] .. "_button_inactive_back") or a[3]]), b[2] .. "o", b[3] .. (foreground and hex[gs("window_" .. a[1] .. "_button_active_text") or a[4]] or hex[gs("window_" .. a[1] .. "_button_inactive_text") or a[5]])
 			end
 		end
-		b[4] = ((colored and " " or "=") .. data.label.name .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (last_cur_id > 0 and #my_buttons or 0) - 1 or last_header_width)
+		b[4] = ((colored and " " or "=") .. data.env.multishell.getTitle(data.index) .. (colored and " " or "="):rep(last_header_width)):sub(1, colored and last_header_width - (last_cur_id > 0 and #my_buttons or 0) - 1 or last_header_width)
 		local __ = foreground
 		if colored then
 			b[5], b[6] = hex[gs("window_bar_" .. (__ and "" or "in") .. "active_back")], hex[gs("window_bar_" .. (__ and "" or "in") .. "active_text")]
@@ -235,8 +233,18 @@ function create(x, y, width, height, visible, header, data)
 		if not apis.buffer.is_visible() then return nil end
 		local w, h = get_size()
 		local x, y = get_pos()
+		local is_top = data.env.multishell.getCurrent() == data.env.multishell.getFocus()
 		local _x, _y = x - 1 + my_data[3], y - 1 + my_data[4]
-		local success = (data.id < 0 or data.is_top()) and (not my_border or my_border and my_data[3] > 1 and my_data[3] < w and my_data[4] > 0 and my_data[4] < h)
+		local success = (
+			is_top
+		) and (
+			not my_border or
+			my_border and
+			my_data[3] > 1 and
+			my_data[3] < w and
+			my_data[4] > 0 and
+			my_data[4] < h
+		)
 		local only_off = my_data[3] < 1 or my_data[3] > w or my_data[4] < 1 or my_data[4] > h or false
 		if success and (not only_off or not my_blink) then
 			local mon_order = apis.buffer.get_devices()
@@ -244,7 +252,7 @@ function create(x, y, width, height, visible, header, data)
 			for i = apis.buffer.get_mode() == "extend" and #mon_order or 1, 1, -1 do
 				if _x > mon_order[i].offset then
 					if bblink() then
-						if cur_blink and data.is_top() then
+						if cur_blink and is_top then
 							st(i, "setTextColor", my_data[2])
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
 							st(i, "setCursorBlink", cur_blink)
@@ -255,7 +263,7 @@ function create(x, y, width, height, visible, header, data)
 							st(i, "setTextColor", my_data[2])
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
 							st(i, "write", "#")
-						else
+						elseif not cur_blink then
 							st(i, "setBackgroundColor", screen[my_data[3]].b)
 							st(i, "setTextColor", screen[my_data[3]].t)
 							st(i, "setCursorPos", _x - mon_order[i].offset, _y)
@@ -287,10 +295,6 @@ function create(x, y, width, height, visible, header, data)
 		local buffer_y = y - 1 + _y
 		write_to_global_buffer(nil, _y, cur, cur + text_len)
 		apis.buffer.redraw_global_cache_line(true, buffer_y, buffer_x, buffer_x + text_len)
-		local my_blink_old = my_blink
-		my_blink = false
-		set_cursor()
-		my_blink = my_blink_old
 		my_data[3] = my_data[3] + text_len
 		set_cursor()
 	end
@@ -340,6 +344,9 @@ function create(x, y, width, height, visible, header, data)
 	window.getBackgroundColor = function()
 		return my_data[1]
 	end
+	window.getBorder = function()
+		return my_border
+	end
 	window.getCursorBlink = function()
 		return cur_blink
 	end
@@ -349,7 +356,7 @@ function create(x, y, width, height, visible, header, data)
 	window.get_data = function()
 		local x, y = get_pos(true)
 		local w, h = get_size()
-		return x, y, w, h + (header and 1 or 0)
+		return x, y, w, h + (header and 1 or 0), my_visible
 	end
 	window.getPosition = function()
 		return my_pos[1], my_pos[2]
@@ -466,6 +473,14 @@ function create(x, y, width, height, visible, header, data)
 		my_data[3], my_data[4], my_blink = math.floor(a), math.floor(b), mb
 		set_cursor()
 	end
+	window.setPos = function(x, y, w, h)
+		if x then my_pos[1] = x end
+		if y then my_pos[2] = y end
+		if w then my_size[1] = w end
+		if h then my_size[2] = h end
+		window.redraw()
+		apis.buffer.redraw_global_cache(true)
+	end
 	window.set_maximized = function(a)
 		expect("set_maximized", a, 1, "boolean")
 		maximized = a
@@ -505,7 +520,19 @@ function create(x, y, width, height, visible, header, data)
 		expect("setVisible", a, 1, "boolean")
 		my_visible = a
 	end
+	window.toggle_maximized = function()
+		maximized = not maximized
+		create_header(true)
+		window.redraw()
+		apis.buffer.redraw_global_cache(true)
+	end
+	window.toggle_visible = function()
+		my_visible = not my_visible
+	end
 	window.toggle_border = function(a)
+		if type( a ) == 'nil' then
+			a = not my_border
+		end
 		if my_border ~= a then
 			my_border = a
 			local w, h = get_size()

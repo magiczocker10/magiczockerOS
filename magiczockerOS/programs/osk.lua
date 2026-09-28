@@ -1,7 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 -- Define global variables as local
 local cy = coroutine.yield
@@ -11,6 +8,7 @@ local tb, tc, tt, tw = term.setBackgroundColor or function() end, term.setCursor
 
 -- Variables
 local caps = false
+local running = true
 local glfw, mode = (_HOSTver or 0) >= 1132, 1
 local arrows, layout, view = {}, {}, {}
 
@@ -121,11 +119,13 @@ local function events(e, d, x, y)
 		tb( ( {32768, 32768, a} )[ c ] )
 		tt( ( {1, 1, a == 1 and 32768 or b} )[ c ] )
 		local w = draw()
-		set_pos(nil, nil, w, #layout + 1)
+		term.setPos(nil, nil, w, #layout)
 		draw()
+	elseif e == 'terminate' then
+		running = false
 	end
 end
 events( 'refresh_settings', {} )
-while true do
+while running do
 	events( cy() )
 end

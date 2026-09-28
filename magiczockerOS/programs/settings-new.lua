@@ -1,10 +1,8 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term = term
 local w, h = term.getSize()
-local width, offset, running, user_settings, col, generated, advanced = (" "):rep(w), 0, true, {}, {}, {}, term.isColor()
+local width, offset, running, user_settings, col, generated, advanced = (" "):rep(w), 0, true, {}, {}, {}, term.isColor and term.isColor()
 for i = 0, 15 do
 	col[2 ^ i] = i
 end
@@ -120,13 +118,8 @@ local function addItems(line, id)
 	end
 end
 local function removeItems(line)
-	local tmp = true
-	while tmp do
-		if generated[line + 1] and generated[line + 1][2] ~= "header" then
-			table.remove(generated, line + 1)
-		else
-			tmp = false
-		end
+	while generated[line + 1] and generated[line + 1][2] ~= "header" do
+		table.remove(generated, line + 1)
 	end
 end
 local function draw(line)
@@ -138,35 +131,33 @@ local function draw(line)
 			local a = user_settings[tmp[3]] or tmp[4]
 			term.setBackgroundColor(tmp[2] == "header" and 128 or 256)
 			if tmp[2] == "header" then
-				term.write((tmp[3] and " ^ " or " v ") .. tmp[1] .. width)
+				term.write((tmp[3] and " v " or " > ") .. tmp[1] .. width)
 			elseif tmp[2] == "color" then
-				term.write("   " .. tmp[1] .. (" "):rep(w - 7 - #tmp[1]) .. "<")
+				term.write((' %s%s<'):format(
+					tmp[1],
+					(' '):rep(w - 5 - #tmp[1])
+				) )
 				term.setBackgroundColor(a)
-				term.write(" ")
+				term.write(' ')
 				term.setBackgroundColor(256)
-				term.write("> ")
+				term.write('> ')
 			elseif tmp[2] == "boolean" then
-				term.write("   " .. tmp[1] .. (" "):rep(w - 7 - #tmp[1]))
-				if a then
-					term.setBackgroundColor(1)
-					term.write("  ")
-					term.setBackgroundColor(32)
-					term.write(" ")
-				else
-					term.setBackgroundColor(16384)
-					term.write(" ")
-					term.setBackgroundColor(1)
-					term.write("  ")
-				end
-				term.setBackgroundColor(256)
-				term.write(" ")
+				term.write( (' %s%s%s'):format(
+					tmp[1],
+					(" "):rep(w - 5 - #tmp[1]),
+					a and '--o ' or 'o-- '
+				) )
 			elseif tmp[2] == "text" then
-				term.write("   " .. tmp[1] .. ": " .. a .. width)
+				term.write( (' %s: %s%s'):format(
+					tmp[1],
+					a,
+					width
+				) )
 			elseif tmp[2] == "select" then
 				local a = user_settings[tmp[4]] or 1
-				term.write("   " .. (a == i - label_line and "x " or "o ") .. tmp[1] .. width)
+				term.write(" " .. (a == i - label_line and "x " or "o ") .. tmp[1] .. width)
 			elseif tmp[2] == "label" then
-				term.write("   " .. tmp[1] .. (a and ": " .. a or "") .. width)
+				term.write(" " .. tmp[1] .. (a and ": " .. a or "") .. width)
 				label_line = i
 			end
 		else
@@ -226,5 +217,7 @@ while running do
 		w, h = term.getSize()
 		width = (" "):rep(w)
 		draw()
+	elseif e == 'terminate' then
+		running = false
 	end
 end

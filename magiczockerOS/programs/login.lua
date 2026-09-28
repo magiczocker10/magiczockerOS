@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, fs = term, fs
 local w, h = term.getSize()
 local field, L1, mode, key_maps, fields, a = 1, "Login", 1, {}, {
@@ -54,15 +52,15 @@ local function set_blink()
 	end
 end
 local function draw()
-	local line = (" "):rep(w)
+	local line = (" "):rep(w - 9)
 	text_color(1, 1, 1)
 	back_color(32768, 128, 2048)
 	for y = 1, h do
 		term.setCursorPos(1, y)
 		if y == 2 or y == 4 or y == 6 and mode == 2 then
-			term.write(" ")
+			term.write" "
 			set_cursor(y == 2 and 1 or y == 6 and 3 or 2)
-			term.write(" ")
+			term.write" "
 		elseif y == (mode == 2 and 8 or 6) then
 			term.write((" "):rep(w - 3 - #L1))
 			back_color(1, 256, 256)
@@ -76,7 +74,7 @@ local function draw()
 			back_color(32768, 128, 2048)
 			term.write(" ")
 		else
-			term.write(line)
+			term.write("         " .. line)
 		end
 	end
 	set_blink()

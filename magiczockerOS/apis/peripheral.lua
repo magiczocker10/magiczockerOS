@@ -1,7 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 local component, term = component, term
 local p, modem, cached, translate, color_link, cur_name, w, h = peripheral, {}, {}, {monitor = "screen", screen = "monitor"}, {}, "", 51, 19
@@ -139,7 +136,7 @@ function create(is_system)
 		else
 			to_return = list
 		end
-		return table.unpack(to_return)
+		return unpack(to_return)
 	end
 	peri.getNames = function()
 		return get_devices(is_system, false, "monitor")

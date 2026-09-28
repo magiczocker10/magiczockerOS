@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 -- variables
 local _x, _y, cur_col
 local changelog_scroll = 0
@@ -33,7 +31,7 @@ local filter_login = not fs.exists("/magiczockerOS/programs/login.lua")
 local filter_osk = not fs.exists("/magiczockerOS/programs/osk.lua")
 local filter_search = not fs.exists("/magiczockerOS/programs/search.lua")
 local key_map_setting
-local events = function() end
+local events
 if not term.isColor or not term.isColor() then
 	filter_colors = true
 end
@@ -194,12 +192,12 @@ local categories = {
 		},
 	},
 	{
-		active = not user_data().server,
+		active = not magicOS.user_data().server,
 		title = "User",
 		entries = {},
 	},
 	{
-		active = not filter_login and not user_data().server,
+		active = not filter_login and not magicOS.user_data().server,
 		title = "Users",
 		entries = {},
 	},
@@ -861,7 +859,7 @@ local function setup_textfield(count, setting)
 	t_var.button_on_click = function()
 		local setting = setting
 		view = 0
-		setting.on_save(table.unpack(t_var.values))
+		setting.on_save(unpack(t_var.values))
 		redraw()
 	end
 	cur_textfield.cursor = 1
@@ -911,7 +909,7 @@ local function correct_scroll()
 	list_scroll = list_scroll < 0 and 0 or list_scroll
 end
 function load_settings()
-	settings = user_data().settings or {}
+	settings = magicOS.user_data().settings or {}
 end
 local function change_mon_setting(num)
 	local tmp = categories[num].entries[2]
@@ -988,7 +986,7 @@ local function save_system_settings(not_set)
 			file.write(textutils.serialize(sys_set))
 			file.close()
 			if not not_set and set_monitor_settings then
-				set_monitor_settings(sys_set.monitor_mode, table.unpack(sys_set.devices))
+				set_monitor_settings(sys_set.monitor_mode, unpack(sys_set.devices))
 			end
 			sys_set.monitor = __
 			sys_set.monitor_mode = mode
@@ -1003,7 +1001,7 @@ end
 local function load_default_settings()
 	for i = 1, #categories do
 		for _, v in next, categories[i].entries do
-			v.default = get_setting(nil, v.value) or v.default
+			v.default = magicOS.get_setting(nil, v.value) or v.default
 		end
 	end
 end
@@ -1014,7 +1012,7 @@ local function load_system_settings()
 		if file then
 			local content = file.readAll()
 			if content then
-				sys_set = unserialise(content)
+				sys_set = textutils.unserialise(content)
 				if sys_set and sys_set.monitor_mode then
 					local tmp = sys_set.monitor_mode
 					tmp = tmp == "duplicate" and 2 or tmp == "extend" and 3 or 1

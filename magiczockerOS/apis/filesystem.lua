@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, peripheral, fs = term or nil, peripheral, fs
 local to_complete = {"isDir", "isReadOnly", "getSize", "getFreeSpace", "getDrive"}
 local to_complete_ = {"copy", "move"}

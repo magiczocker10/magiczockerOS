@@ -1,23 +1,16 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
-local term, fs = term, fs
 local w, h, iconsw, iconsh, borderw, borderh, pages
-local settings
-local folder, offset, selected, last_click, iconw, iconh, page, col, col_, icon, cur_settings = "/desktop", 0, 0, {0, 0, os.clock()}, 10, 4, 1, {}, -1, {
-	file = {">_  ", "prog", "    "},
-	folder = {"  ", "    ", "Fldr"},
-}, {}
-local cs = cur_settings
+local settings = {}
+local folder, offset, selected, last_click, iconw, iconh, page, col, col_, icon = '/desktop', 0, 0, {0, 0, os.clock()}, 10, 4, 1, {}, -1, {
+	file = {'>_  ', 'prog', '    '},
+	folder = {'  ', '    ', 'Fldr'},
+}
 local items = fs.exists(folder) and fs.list(folder) or {}
 local color_conv = {}
 for i = 0, 15 do
 	color_conv[2 ^ i] = i
 	col[i] = (i + 8) % 16
-end
-local function update_cached_settings()
-	cs.db = get_setting(settings, "desktop_back")
 end
 local function invert()
 	col_ = col[col_]
@@ -35,26 +28,26 @@ local function draw_icon(id, line, x)
 	if selected == offset + x then
 		invert()
 	end
-	local tmpName = items[offset + x] or ""
+	local tmpName = items[offset + x] or ''
 	if line < 4 then
-		local tmp2 = #tmpName > 0 and (fs.isDir(folder .. tmpName) and "folder" or "file") or "empty"
-		term.write("   ")
-		if term.isColor and tmp2 ~= "empty" then
+		local tmp2 = #tmpName > 0 and (fs.isDir(folder .. tmpName) and 'folder' or 'file') or 'empty'
+		term.write('   ')
+		if term.isColor and tmp2 ~= 'empty' then
 			invert()
 			term.write(icon[tmp2][line])
 			invert()
 			if #icon[tmp2][line] < 4 then
-				term.write((" "):rep(4 - #icon[tmp2][line]))
+				term.write((' '):rep(4 - #icon[tmp2][line]))
 			end
 		else
-			term.write("    ")
+			term.write('    ')
 		end
-		term.write("   ")
+		term.write('   ')
 	else
 		term.setTextColor(32768)
-		local tmp2 = tmpName:sub(1, (tmpName:find("%.") or #tmpName + 1) - 1):sub(1, 10)
+		local tmp2 = tmpName:sub(1, (tmpName:find('%.') or #tmpName + 1) - 1):sub(1, 10)
 		local tmp3 = (10 - #tmp2) * 0.5
-		term.write((" "):rep(math.floor(tmp3)) .. tmp2 .. (" "):rep(math.ceil(tmp3)))
+		term.write((' '):rep(math.floor(tmp3)) .. tmp2 .. (' '):rep(math.ceil(tmp3)))
 		term.setTextColor(1)
 	end
 	if selected == offset + x then
@@ -62,8 +55,8 @@ local function draw_icon(id, line, x)
 	end
 end
 local function draw()
-	local _width, _f, _c = (" "):rep(w), math.floor(borderh), math.ceil(borderh)
-	term.setBackgroundColor(cs.db)
+	local _width, _f, _c = (' '):rep(w), math.floor(borderh), math.ceil(borderh)
+	term.setBackgroundColor(settings.db)
 	term.setTextColor(1)
 	offset = -iconsw
 	for y = 1, h do
@@ -77,51 +70,51 @@ local function draw()
 			if offset >= #items then
 				term.write(_width)
 			else
-				term.write((" "):rep(math.floor(borderw)))
+				term.write((' '):rep(math.floor(borderw)))
 				local line = (y - _f) % 5
 				for x = 1, iconsw do
 					draw_icon(nil, line, x)
 					if x < iconsw then
-						term.write(" ")
+						term.write(' ')
 					end
 				end
-				term.write((" "):rep(math.ceil(borderw)))
+				term.write((' '):rep(math.ceil(borderw)))
 			end
 		end
 	end
 	offset = 0
 	term.setCursorPos(1, h + 1)
-	term.write((" "):rep(math.floor((w - (pages * 2 - 1)) * 0.5)))
+	term.write((' '):rep(math.floor((w - (pages * 2 - 1)) * 0.5)))
 	for x = 1, pages do
 		term.setBackgroundColor(1)
 		term.setTextColor(32768)
-		term.write(x == page and "#" or " ")
-		term.setBackgroundColor(cs.db)
+		term.write(x == page and '#' or ' ')
+		term.setBackgroundColor(settings.db)
 		if x < pages then
-			term.write(" ")
+			term.write(' ')
 		end
 	end
-	term.write((" "):rep(math.ceil((w - (pages * 2 - 1)) * 0.5)))
+	term.write((' '):rep(math.ceil((w - (pages * 2 - 1)) * 0.5)))
 	term.setCursorPos(1, h + 2)
 	term.write(_width)
 	term.setTextColor(1)
 end
 local function events(e, _, x, y)
-	if e == "user" then
+	if e == 'user' then
 		items = fs.exists(folder) and fs.list(folder) or {}
 		pages = math.ceil(#items / (iconsw * iconsh))
 		draw()
-	elseif e == "mouse_click" then
+	elseif e == 'mouse_click' then
 		if x == last_click[1] and y == last_click[2] and os.clock() - last_click[3] < 0.2 and selected > 0 then
 			local tmp = folder .. items[selected]
 			if fs.isDir(tmp) then
-				error("Launcher explorer..")
+				error('Launching explorer..')
 			else
-				error("Launching program..")
+				multishell.launch({}, tmp)
 			end
 		else
 			-- if x == last_click[1] and y == last_click[2] and ((y-math.floor(borderh))/(iconh+1))%1 == 0.8 and selected > 0 then
-				-- error("Rename..")
+				-- error('Renaming..')
 			-- else
 				last_click = {x, y, os.clock()}
 				local bw, bh = math.floor(borderw), math.floor(borderh)
@@ -141,23 +134,22 @@ local function events(e, _, x, y)
 				end
 			-- end
 		end
-	elseif e == "term_resize" then
-		w, h = term.getSize()
-		h = h - 2
+	elseif e == 'term_resize' then
+		w, h = term.getSize(true)
+		h = h - 1
+		term.setPos(1, 2, w, h)
 		iconsw, iconsh = math.floor(w / (iconw + 1)), math.floor(h / (iconh + 1))
 		borderw, borderh = (w - ((iconw + 1) * iconsw - 1)) * 0.5, (h - ((iconh + 1) * iconsh - 1)) * 0.5
 		pages = math.ceil(#items / (iconsw * iconsh))
 		draw()
-	elseif e == "refresh_settings" then
-		settings = user_data().settings or {}
-		update_cached_settings()
-		col_ = color_conv[cs.db]
-		draw()
+	elseif e == 'refresh_settings' then
+		settings.db = 8192
+		col_ = color_conv[settings.db]
+		--draw()
 	end
 end
-update_cached_settings()
-col_ = cs.db
-events("term_resize")
+events('refresh_settings', {})
+events('term_resize')
 while true do
 	events(coroutine.yield())
 end

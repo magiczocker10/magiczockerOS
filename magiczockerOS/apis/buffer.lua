@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local peri, _computer_only, monitor_order, monitor_mode, global_visible, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, "normal", true, {6, 9}, {0, 0}
 local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
 local total_size_x, total_size_y = 0, 0
@@ -83,7 +81,7 @@ local function calculate_device_offset()
 		total_width = total_width + _size[1]
 		if monitor_mode ~= "extend" and i == 1 then
 			w, h = _size[1], _size[2]
-			total_size_x, total_size_y = w, h
+			total_size_x, total_size_y = 51, 19
 		end
 		h = monitor_mode == "extend" and h > _size[2] and _size[2] or h
 	end
@@ -177,22 +175,19 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 		local to_draw, cur_data = {-1, {}, -1, -1}, {0, -1, -1} -- x, text, bcol, tcol; x, backc, textc
 		local _sline, _bline, _tline = global_cache.s[line], global_cache.b[line], global_cache.t[line]
 		global_cache_old[line] = global_cache_old[line] or {}
-		local _l = global_cache_old[line]
+		local index = ( line - 1 ) * total_size_x + s.startx
 		startx, endx = not continue and 1 or startx, not continue and 0 or endx
 		for i = startx, endx do
-			local _lx = _l[i] or {}
+			local _lx = global_cache_old[index + i] or {}
 			local s, b, t, _s, _b, _t = _sline[i], _bline[i], _tline[i], _lx.s, _lx.b, _lx.t
-			if s and (not check_changes or not _l[i] or (b ~= _b or t ~= _t or s ~= _s) and not (b == _b and s == " " and _s == " ")) then
+			if s and (not check_changes or not global_cache_old[index + i] or (b ~= _b or t ~= _t or s ~= _s) and not (b == _b and s == " " and _s == " ")) then
 				if not can_added(to_draw, s, t, b, i) then
 					draw_text(screen, cur_data, to_draw, line, return_data and to_repeat)
 					to_draw[2] = {}
 					to_draw[4] = -1
 					can_added(to_draw, s, t, b, i)
 				end
-				_l[i] = _l[i] or {}
-				_l[i].b = to_draw[3]
-				_l[i].t = to_draw[4] < 1 and t or to_draw[4]
-				_l[i].s = s
+				global_cache_old[index + i] = {b = to_draw[3], t = to_draw[4] < 1 and t or to_draw[4], s = s}
 				_sline[i] = not (limit_set and screen == goto_limit) and s or nil
 			end
 		end
@@ -244,14 +239,14 @@ function write(x, y, pixel_data)
 	if x < 1 or x > total_size_x or y < 1 or y > total_size_y then
 		return
 	end
-	screen_cache[y] = screen_cache[y] or {}
-	if not screen_cache[y][x] or screen_cache[y][x] == pixel_data.id then
+	local i = ( y - 1 ) * total_size_x + x
+	if not screen_cache[i] or screen_cache[i] == pixel_data.id then
 		global_cache.t[y] = global_cache.t[y] or {}
 		global_cache.b[y] = global_cache.b[y] or {}
 		global_cache.s[y] = global_cache.s[y] or {}
 		global_cache.t[y][x] = pixel_data.t
 		global_cache.b[y][x] = pixel_data.b
 		global_cache.s[y][x] = pixel_data.s
-		screen_cache[y][x] = pixel_data.id
+		screen_cache[i] = pixel_data.id
 	end
 end

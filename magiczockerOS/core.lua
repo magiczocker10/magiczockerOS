@@ -1,30 +1,30 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 --[[
-	run_program: Copyright (c) 2016 Jason Chu (1lann) and Bennett Anderson (GravityScore).
+ ToDo:
+ * Only taskbar and startmenu should keep custom functions
+ ** every program could run without magiczockerOS for easier testing and optimization
+ * Add events
+ * Implement filesystem API
+ * Move settings to files/.settings.json to remove custom functions from settings.lua
+ * Remove _HOSTver
+ * Terminate startmenu and calendar to save memory if not visible
+ * Fix bugs
+]]--
 
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the 'Software'), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in
-	all copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-	THE SOFTWARE.
-]]
---require('strictmw')
+local user = 'system'
+local user_id = 0
+local last_id = 0
+local running = true
+local apis = {}
+local default_settings = {}
+local ggv, sgv
+local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ''):match('%s*(%S+)$') or ''):reverse():sub(2):reverse():gsub('%.', '')})[1] or '') or 0
+local last_header_click = nil
+local drag_x = 0
+local border_click_id, border_click_l, border_click_b, border_click_r = 0, false, false, false
+local window_min_width = 20
+local window_min_height = 10
 
 -- Move dumped functions to local table to not expose them to user windows
 local dumps = {}
@@ -33,1873 +33,458 @@ for k, v in pairs( _G.dumps ) do
 end
 _G.dumps = nil
 
--- Variables
-local boot_logger_enabled = false
-local use_old
-local my_protocol = "magiczockerOS-client"
-local my_computer_id = os and os.getComputerID and os.getComputerID() or nil
-local modem_side
-local send_id = 0
-local window_messages = {}
-local timers = {}
-local last_timer = 0
-local users = {}
-local cur_user = 0
-local queued_events = {}
-local qe = {}
-local has_errored
-local error_org = error
-local ggv, sgv
-local computer = computer
-local component = component
-local events
-local coro_create = coroutine.create
-local coro_resume = coroutine.resume
-local coro_yield = coroutine.yield
-local coro_status = coroutine.status
-local last_window
-local monitor_resized
-local w, h = 0, 0
-local change_user = {active = false}
-local key_timer
-local last_number = 0
-local monitor_last_clicked = 0
-local resize_mode = false
-local running = true
-local refresh_startbutton
-local cursorblink_timer
-local _HOSTver = ccemux and 1132 or tonumber(({((_HOST or ""):match("%s*(%S+)$") or ""):reverse():sub(2):reverse():gsub("%.", "")})[1] or "") or 0
-local default_settings = {}
-local drag_old = {0, 0}
-local events_to_break = {key = true, key_up = true, char = true, paste = true, terminate = true} -- this is for the last part from the main repeat loop and the send_event function for system windows
-local supported_mouse_events = {mouse_click = true, mouse_drag = true, mouse_up = true, mouse_scroll = true, mouse_click_monitor = true, mouse_drag_monitor = true}
-local total_size_x = 0
-local total_size_y = 0
-local system_settings = {}
-local window_timers = {}
-local position_to_add = {left = {-1, 0}, right = {1, 0}, up = {0, -1}, down = {0, 1}}
-local overrides
-local monitor_order
-local monitor_devices
-local apis = {}
-local click = {x = 0, y = 0}
-local key_maps = {}
-local last_click = {x = 0, y = 0, time = 0}
-local screen = {}
-local system_windows = {
-	contextmenu = {w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/contextmenu.lua", click_outside = true},
-	desktop = {need_resize = true, fs = true, y = 2, h = h - 1, visible = true, path = "/magiczockerOS/programs/desktop.lua", click_outside = false},
-	taskbar = {need_resize = true, h = 1, visible = true, path = "/magiczockerOS/programs/taskbar.lua", click_outside = false},
-	osk = {x = 2, y = 3, w = 1, h = 1, visible = false, path = "/magiczockerOS/programs/osk.lua", click_outside = false},
+-- use user ids for easier renaming
+local user_ids = {}
+local system_processes = {
+	{'taskbar', true, false},
+	--{'startmenu', false, false},
+	--{'calendar', false, false},
+	--{'osk', false, true},
+	--{'contextmenu', false, false},
+	{'desktop', true, false} -- Replace with login.lua for system user and design a better login UI
 }
-local system_window_order = {"osk", "contextmenu", "taskbar", "desktop"} -- osk needs to be the first entry
-local fs = fs or nil
-local term
-local textutils = textutils or {}
-local peripheral = peripheral or nil
-local math = math or nil
-local uptime = os.clock or os.time or function() return 0 end
-local registered_keys = {}
 
--- Functions
-local function fallback_serialise(data, processed)
-	local processed = processed or {}
-	local to_return = ""
-	if type(data) == "string" then
-		return ("%q"):format(data)
-	elseif type(data) == "number" or type(data) == "boolean" then
-		return data
-	elseif type(data) ~= "table" then
-		error("Can't serialize type \"" .. type(data) .. "\"!")
-	elseif processed[data] then
-		error("Recursive entry found!")
-	end
-	processed[data] = true
-	for k, v in next, data do
-		local _k = k
-		local serialised = fallback_serialise(v, processed)
-		if type(_k) == "string" then
-			_k = ("%q"):format(_k)
-		end
-		to_return = to_return .. (#to_return == 0 and "" or ",") .. "[" .. _k .. "]=" .. tostring(serialised)
-	end
-	processed[data] = nil
-	return "{" .. to_return .. "}"
-end
-local last_qe = 0
-local function _queue(...)
-	queued_events[#queued_events + 1] = {...}
-	local a = os.startTimer and os.startTimer(0.05) or "QE" .. last_qe
-	if not os.startTimer then
-		last_qe = last_qe + 1
-	end
-	if computer then
-		computer.pushSignal("timer", a)
-	end
-	qe[a] = #queued_events
-end
-local function add_timer(duration)
-	last_timer = last_timer + 1
-	timers[last_timer] = (computer and computer.uptime or os.clock)() + duration
-	return last_timer
-end
-local function stop_timer(id)
-	timers[id] = nil
-end
-local function send_message(receiver, content)
-	if not modem_side then
-		return nil
-	end
-	if component then
-		component.invoke(modem_side, "send", receiver, 65535, fallback_serialise(content))
-	elseif use_old then
-		peripheral.call(modem_side, "send", receiver, fallback_serialise(content))
-	else
-		peripheral.call(modem_side, "transmit", receiver, 0, content)
-	end
-end
-local function open_modem(modem, state)
-	modem_side = modem
-	apis.peripheral.set_block_modem(modem_side, os.getComputerID())
-	if component then
-		my_computer_id = modem
-	else
-		peripheral.call(modem_side, state or "open", my_computer_id) -- for receiving direct messages
-	end
-end
-local available_sides = {"top", "bottom", "left", "right", "front", "back"}
-local function search_modem()
-	modem_side = nil
-	local side = ""
-	if component then
-		for a in component.list("modem") do
-			side = a
-			break
-		end
-	else
-		for i = 1, #available_sides do
-			if peripheral.getType(available_sides[i]) == "modem" then
-				side = available_sides[i]
-				break
-			end
-		end
-	end
-	if #side == 0 then
-		return nil
-	end
-	open_modem(side)
-	local methods = peripheral and peripheral.getMethods(modem_side) or {}
-	for i = 1, #methods do
-		if methods[i] == "send" then
-			use_old = true -- version 1.3
-			break
-		end
-	end
-end
-local function get_timer()
-	local to_return
-	local to_check = (computer and computer.uptime or os.clock)()
-	for k, v in next, timers do
-		to_return = v and v <= to_check and (not to_return or v < to_return) and k or to_return
-	end
-	return to_return
-end
-local stop_time = os.cancelTimer
-local start_time = os.startTimer
-local function start_timer(old, duration)
-	local tmp = component and stop_timer or stop_time
-	if tmp and old then
-		tmp(old)
-	end
-	return component and add_timer and add_timer(duration) or start_time and start_time(duration)
-end
-local function error_message(program, message)
-	if term then
-		if term.setBackgroundColor then
-			term.setBackgroundColor(32768)
-		end
-		if term.setTextColor then
-			term.setTextColor(1)
-		end
-		if term.clear then
-			term.clear()
-		end
-		error(program .. ":" .. (message or ""))
-		term.setCursorPos(1, 1)
-		term.write(program .. "\n")
-	end
-	running = false
-	error_org(program .. ":" .. message)
-end
-local function resume_user(coro, ...)
-	if coro and coro_status(coro) == "suspended" then
-		local ok, err = coro_resume(coro, ...)
-		if not ok then
-			return error_org(err)
-		end
-	end
-end
-local function run_program(prog, errorhandling) -- xpcall -- copied from https://github.com/JasonTheKitten/Mimic/blob/gh-pages/lua/pre-bios.lua (2019-05-05)
-	local coro = coro_create(prog)
-	local ok = {coro_resume(coro)}
-	local args
-	while coro_status(coro) ~= "dead" do
-		args = {coro_yield()}
-		ok = {coro_resume(coro, table.unpack(args))}
-	end
-	if ok[1] then
-		return true, table.unpack(ok, 2)
-	else
-		return false, errorhandling and errorhandling(ok[2]) or ok[2]
-	end
-end
-local function unserialise(str)
-	local ok, err = (loadstring or load)("return " .. str, "core: unserialize", "t", {})
-	if ok then
-		local ok2, result = run_program(function() return ok() end, function(err) return err end)
-		if ok2 then
-			return result
-		end
-	end
-	return err
-end
-local function add_to_log(a)
-	if not fs or not boot_logger_enabled then
-		return nil
-	end
-	local org_content = ""
-	local file = fs.open("/magiczockerOS/log.txt", "r")
-	if file then
-		org_content = file.readAll()
-		file.close()
-	end
-	file = fs.open("/magiczockerOS/log.txt", "w")
-	if file then
-		if #org_content > 0 then
-			file.write(org_content)
-		end
-		file.write((uptime() or "unknown") .. " - " .. a .. "\n")
-		file.close()
-	end
-end
-local function load_api(name)
-	add_to_log("Loading " .. name)
-	local env = {}
-	local file = fs.open("/magiczockerOS/apis/" .. name .. ".lua", "r")
-	if not file then
-		error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
-	end
-	setmetatable(env, {__index = _G})
-	env.math, env.apis = math, apis
-	env.textutils = textutils
-	env.fs = fs
-	env.term = term
-	local content = file.readAll()
-	file.close()
-	local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
-	if api then
-		if setfenv then
-			setfenv(api, env)
-		end
-		local ok, err = run_program(function() return api() end, function(err) return err end)
-		if not ok then
-			if err and err ~= "" then
-				error_org(err, 0)
-			end
-			return nil
-		end
-		local api_ = {}
-		for k, v in next, env do
-			if v ~= env then
-				api_[k] = v
-			end
-		end
-		apis[name] = api_
-		add_to_log("Loaded " .. name .. "!")
-	elseif err and err ~= "" then
-		error_org(err, 0)
-	end
-end
-local function gUD(id) -- get_user_data
-	return users[id] or {}
-end
+-- process index for all windows
+-- drawing order for windows
+-- drawing order for taskbar after table.sort()
+-- taskbar, startmenu, calendar, osk, <user windows>, context menu, desktop
+local sessions = {}
+
+-- storing processes (coroutines) and automatically create a new index in sessions table
+--local processes = setmetatable( {}, {
+--	__newindex = function(t, k, v) -- table, key, value
+--		rawset(t, k, v)
+--		if v.system then
+--			table.insert(sessions[ v.user ], v)
+--		else
+--			table.insert(sessions[ v.user ], window_offset, v)
+--		end
+--	end
+--} )
+
 local function draw_windows()
 	if term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
 	apis.buffer.clear_cache(true)
-	local ud = gUD(cur_user)
 	local a = ggv()
 	sgv(false)
 	local temp_window, user_win
-	for i = 1, #system_window_order do
-		temp_window = system_windows[system_window_order[i]].window
+	for i = 1, #sessions[ user_id ] do
+		temp_window = sessions[ user_id ][ i ].window
 		if temp_window.get_visible() then
-			temp_window.redraw(i * -1)
-		end
-		user_win = system_window_order[i] == "taskbar" and ud.windows or ""
-		for j = 1, #user_win do
-			temp_window = user_win[j].window
-			if temp_window.get_visible() then
-				temp_window.redraw(j)
-				if temp_window.is_maximized() then
-					break
-				end
-			else
-				break
-			end
+			temp_window.redraw( i )
 		end
 	end
 	sgv(a)
 	apis.buffer.redraw_global_cache(true)
-	screen = apis.buffer.get_screen()
-	if #(ud.windows or "") > 0 and ud.windows[1].window.get_visible() then
-		ud.windows[1].window.restore_cursor()
-	elseif term.setCursorBlink then
+	--screen = apis.buffer.get_screen()
+	if term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
 end
-local function get_user_id(name, server)
-	for i = 1, #users do
-		if users[i].name == name and users[i].server == server then
-			return i
-		end
-	end
-	local to_return = cur_user + 1
-	users[to_return] = {name = name, server = server, windows = {}, labels = {}, desktop = {}, settings = {}, session_id = nil}
-	return to_return
-end
-local function copy_table(des, source, processed)
-	processed = processed or {}
-	for k, v in next, source or {} do
-		if not des[k] and v ~= source then
-			if type(v) == "table" then
-				if not processed[v] then
-					des[k] = {}
-					processed[v] = true
-					copy_table(des[k], v, processed)
-					processed[v] = nil
-				end
-			else
-				des[k] = v
-			end
-		end
-	end
-end
-local function load_settings(user)
-	local tmpU = gUD(user)
-	if tmpU.server then
-		send_message(tmpU.server, {return_id = my_computer_id, session_id = tmpU.session_id, protocol = my_protocol, username = tmpU.name, my_id = send_id, mode = "get_settings"})
-		window_messages[send_id] = {0, 0}
-		send_id = send_id + 1
-		tmpU.settings = {}
-	elseif #(tmpU.name or "") > 0 then
-		local file, content = fs.open("/magiczockerOS/users/" .. tmpU.name .. "/settings.json", "r"), ""
-		if file then
-			content = file.readAll()
-			file.close()
-		end
-		tmpU.settings = #content > 0 and unserialise(content) or {}
-	end
-end
-local function save_user_settings(user, data)
-	local tmp = gUD(user)
-	if user > 0 and tmp.settings then
-		if tmp.server then
-			send_message(tmp.server, {return_id = my_computer_id, session_id = tmp.session_id, protocol = my_protocol, username = tmp.name, my_id = send_id, mode = "update_settings", data = data})
-			window_messages[send_id] = {0, 0}
-			send_id = send_id + 1
-		else
-			local file = fs.open("/magiczockerOS/users/" .. tmp.name .. "/settings.json", "w")
-			if file then
-				file.write(fallback_serialise(data))
-				file.close()
-			end
-		end
-	end
-end
-local function move_windows_to_screen()
-	local total_x, total_y = apis.buffer.get_size()
-	local vv = nil
-	local temp_window, win_x, win_y, win_w, win_h, new_win_x, new_win_y
-	for _, v in next, users do
-		vv = v.windows
-		for j = 1, #vv do
-			temp_window = vv[j]
-			win_x, win_y, win_w, win_h = temp_window.window.get_data()
-			new_win_x = math.min(win_x, total_x)
-			new_win_y = math.min(win_y, total_y)
-			if win_x ~= new_win_x or win_y ~= new_win_y then
-				temp_window.window.reposition(new_win_x, new_win_y, win_w, win_h)
-			end
-			if temp_window.window.get_visible() and temp_window.window.is_maximized() or temp_window.is_system then
-				resume_user(temp_window.coroutine, "term_resize")
-			end
-		end
-	end
-end
-local function resume_system(name, coro, ...)
-	if coro_status(coro) ~= "dead" then
-		local cor_system_ok, cor_system_err = coro_resume(coro, ...)
-		if not cor_system_ok then
-			return error_message(name, cor_system_err)
-		end
-	end
-end
-local function resize_system_windows()
-	local size, win = {apis.buffer.get_size()}, nil
-	for i = 1, #system_window_order do
-		win = system_window_order[i]
-		if system_windows[win].need_resize and system_windows[win].window then
-			local x, y, w, h = system_windows[win].window.get_data()
-			if win == "desktop" then
-				w, h = size[1], size[2] - 1
-			elseif win == "taskbar" then
-				w = size[1]
-			end
-			system_windows[win].window.reposition(x, y, w, h)
-			resume_system("34" .. win, system_windows[win].coroutine, "term_resize")
-		end
-	end
-end
-local function setup_monitors(...)
-	monitor_resized, monitor_devices = {}, {}
-	apis.buffer.set_devices(system_settings.monitor_mode or "normal", ...)
-	monitor_order = apis.buffer.get_devices()
-	if #monitor_order == 0 then
-		return nil
-	end
-	for i = 1, #monitor_order do
-		local name = monitor_order[i].name
-		monitor_resized[name] = true
-		monitor_devices[name] = i
-	end
-	total_size_x, total_size_y = apis.buffer.get_size()
-	sgv(false)
-	resize_system_windows()
-	move_windows_to_screen()
-	sgv(true)
-end
-local function load_system_settings()
-	local file = fs.open("/magiczockerOS/settings.json", "r")
+
+local error2 = function(txt)
+	local org_content = ''
+	local file = fs.open('error.txt', 'r')
 	if file then
-		local content = file.readAll()
+		org_content = file.readAll()
 		file.close()
-		system_settings = content and (unserialise(content) or {}) or system_settings
 	end
-	local a = system_settings
-	a.monitor_mode = a.monitor_mode or "normal"
-	a.devices = a.devices or {"term"}
+	file = fs.open('error.txt', 'w')
+	if file then
+		if #org_content > 0 then
+			file.write(org_content)
+		end
+		file.write(txt .. '\n\n')
+		file.close()
+	end
 end
-local function update_windows(user)
-	local user = user or cur_user
-	local data = gUD(user)
-	local vis_old = ggv()
-	sgv(false)
-	apis.window.reload_color_palette(data)
-	local tmp, tmp2
-	for i = 1, #system_window_order do
-		tmp = system_windows[system_window_order[i]]
-		tmp2 = tmp.filesystem
-		if tmp2 then
-			tmp2.set_root_path(data.server and "/" or "/magiczockerOS/users/" .. data.name .. "/files")
-			tmp2.set_server(data.server)
-			tmp2.is_online(data.server ~= nil)
+
+local function load_api(name)
+	--add_to_log('Loading ' .. name)
+	local path = ('/magiczockerOS/apis/%s.lua'):format( name )
+	local env = setmetatable({
+		apis = apis
+	}, {__index = _G})
+	local file = fs.open( path, 'r')
+	if not file then
+		error2( ('%s: File not exists'):format( path ), 0)
+	end
+	local api, err = (loadstring or load)(file.readAll(), path, nil, env)
+	file.close()
+	if api then
+		if setfenv then
+			setfenv(api, env)
 		end
-		resume_system("33" .. system_window_order[i], tmp.coroutine, "user", user, change_user.logoff)
-		if data.settings then
-			resume_system("32" .. system_window_order[i], tmp.coroutine, "refresh_settings", data.settings)
+		local ok, err = pcall(function() return api() end)
+		if not ok then
+			if err and err ~= '' then
+				error2(err, 0)
+			end
+			return nil
 		end
-		if system_window_order[i] == "taskbar" then
-			resume_system("31taskbar", system_windows.taskbar.coroutine, "window_change")
-		end
-	end
-	for i = 1, #data.windows do
-		tmp = data.windows[i]
-		tmp.window.force_header_update(data.settings)
-		if tmp.is_system then
-			resume_user(tmp.coroutine, "refresh_settings", data.settings)
-		end
-	end
-	if system_windows.osk.window then
-		system_windows.osk.window.force_header_update(data.settings)
-	end
-	sgv(vis_old)
-	apis.buffer.clear_cache()
-	draw_windows()
-end
-local function setup_user(username, session)
-	add_to_log("Signing in " .. username)
-	add_to_log("Session " .. (session or ""))
-	local tmp = username:find("\\") or nil
-	local name = tmp and username:sub(tmp + 1) or username
-	local server = tmp and tonumber(username:sub(1, tmp - 1)) or nil
-	cur_user = get_user_id(name, server)
-	users[cur_user].session_id = session
-	if name then
-		apis.filesystem.remove_listener("/magiczockerOS/users/" .. name .. "/files/desktop")
-	end
-	if my_computer_id and peripheral then
-		search_modem()
-	else
-		apis.peripheral.set_block_modem()
-	end
-	if server and not modem_side then
-		return nil
-	end
-	last_window = nil
-	if not session and name ~= "" then
-		local a = "/magiczockerOS/users/" .. name .. "/files"
-		if fs.exists(a) and not fs.isDir(a) then fs.delete(a) end
-		if not fs.exists(a) then fs.makeDir(a) end
-		if not fs.exists(a .. "/desktop") then fs.makeDir(a .. "/desktop") end
-		apis.filesystem.add_listener(a .. "/desktop", {makeDir = true, open = true, delete = true})
-	end
-	load_settings(cur_user)
-	if #gUD(cur_user).windows > 0 then
-		local tmp = gUD(cur_user).windows
-		for j = 1, #tmp do
-			tmp[j].window.set_visible(true)
-		end
-	end
-	apis.window.init_user_palette(gUD(cur_user))
-	update_windows(cur_user)
-	return true
-end
-local function get_remote(id, suser, environment)
-	return function(server_id, func, ...)
-		local user_data = gUD(id > 0 and suser or cur_user)
-		send_message(server_id, {return_id = my_computer_id, session_id = user_data.session_id, mode = "execute", protocol = my_protocol, username = user_data.name, my_id = send_id, command = func, data = {...}})
-		window_messages[send_id] = {id, id > 0 and suser or nil}
-		local my_id = send_id
-		send_id = send_id + 1
-		local timer = environment.os.startTimer(1)
-		while true do
-			local e = {environment.coroutine.yield()}
-			if e[1] == "modem_message" and type(e[2]) == "number" then
-				if e[2] == my_id and type(e[3]) == "table" and e[3].protocol == "magiczockerOS-server" then
-					if timer then
-						environment.os.cancelTimer(timer)
-					end
-					window_messages[send_id] = nil
-					return table.unpack(e[3].data)
-				end
-			elseif e[1] == "timer" and e[2] == timer then
-				window_messages[send_id] = nil
-				return environment.error("Time out!")
-			elseif e[1] == "terminate" then
-				window_messages[send_id] = nil
-				return environment.error("Terminated!")
-			else
-				environment.os.queueEvent(table.unpack(e))
+		local out = {}
+		for k, v in next, env do
+			if v ~= env then
+				out[k] = v
 			end
 		end
+		return out
+	elseif err and err ~= '' then
+		error2(err, 0)
 	end
 end
-local function get_os_commands(win)
-	return {
-		contextmenu = system_windows.contextmenu.window and {
-			clear_map = function() win.contextmenu_data = nil end,
-			add_map = function(from_x, from_y, width_x, width_y, items)
-				if type(from_x) == "number" and type(width_x) == "number" and type(from_y) == "number" and type(width_y) == "number" and type(items) == "table" and width_x > 0 and width_y > 0 then
-					win.contextmenu_data = win.contextmenu_data or {}
-					local tmp = win.contextmenu_data
-					tmp[#tmp + 1] = {from_x, width_x, from_y, width_y, items}
-					return #tmp
-				end
-			end,
-			on_menu_key = function(no, x, y)
-				if type(no) == "number" and type(x) == "number" and type(y) == "number" and win.contextmenu_data and win.contextmenu_data[no] then
-					local _, _, win_w, win_h = win.window.get_data()
-					if x > 0 and y > 0 and x <= win_w and y <= win_h then
-						win.contextmenu_on_key = win.contextmenu_on_key or {data = nil, x = 0, y = 0}
-						local tmp = win.contextmenu_on_key
-						tmp.data = win.contextmenu_data[no][5]
-						tmp.x = x
-						tmp.y = y
-						return true
-					end
-				elseif type(no) == "nil" then
-					win.contextmenu_on_key = nil
-				end
-			end,
-		},
-	}
-end
-local function switch_user()
-	local user_data = gUD(cur_user)
-	if change_user.active then
-		for j = 1, #user_data.windows do
-			user_data.windows[j].window.set_visible(false)
-		end
-		if change_user.logoff then
-			users[cur_user] = nil
-		end
-		setup_user(change_user.user, change_user.session)
-		change_user.active = false
-	end
-	if refresh_startbutton then
-		refresh_startbutton = false
-		resume_system("7taskbar", system_windows.taskbar.coroutine, "window_change")
-	end
-	if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
-		user_data.windows[1].window.restore_cursor()
-	elseif term.setCursorBlink then
-		term.setCursorBlink(false)
-	end
-end
+
 local function get_default_settings()
-	if not fs.exists("/magiczockerOS/default_settings.json") then
-		error("Default settings not existing!")
+	if not fs.exists('/magiczockerOS/default_settings.json') then
+		error('Default settings not found!')
 	end
-	local file = fs.open("/magiczockerOS/default_settings.json", "r")
-	local a = file.readAll()
+	local file = fs.open('/magiczockerOS/default_settings.json', 'r')
+	local ok, err = (loadstring or load)(file.readAll(), 'core: unserialize', 't', {})
 	file.close()
-	return unserialise(a)
+	if ok then
+		local ok, err = pcall(ok)
+		return ok and err or 'core unserialize: Unknown error'
+	else
+		return {error = err}
+	end
+	return {}
 end
+
 local function get_setting(source, name)
 	local s = source and source[name]
-	if not s and type(s) == "nil" then
+	if not s and type(s) == 'nil' then
 		return default_settings[name]
 	end
 	return s
 end
-local function get_button(window, btn)
-	for i = 1, #window.buttons do
-		if window.buttons[i][1] == btn then
-			return window.buttons[i]
-		end
-	end
-end
-local function create_user_window(sUser, os_root, uenv, path, ...)
+
+local function expect(index, value, ...)
 	local args = {...}
-	local message = ""
-	local vis_old = ggv()
-	last_number = last_number + 1
-	local id = last_number
-	local user_ = sUser or cur_user
-	local user_data = gUD(user_)
-	local is_remote = user_data.server
-	add_to_log("Is server " .. tostring(is_remote))
-	user_data.windows = user_data.windows or {}
-	user_data.get_id = function()
-		for i = 1, #user_data.windows do
-			if user_data.windows[i].id == id then
-				return i
-			end
+	for k, v in next, args do
+		if type( value ) == v then
+			return value
 		end
 	end
-	table.insert(user_data.windows, 1, {id = id})
-	local my_window = user_data.windows[1]
-	local path = path and "/" .. apis.filesystem.get_path(path) or nil
-	local is_system_program = os_root
-	if is_remote and is_system_program then
-		is_remote = nil
-	end
-	my_window.user_data = function() return user_data end
-	my_window.get_setting = get_setting
-	my_window.is_top = function() return my_window.id == user_data.windows[1].id or false end -- Used for window.lua
-	my_window.user = user_
-	my_window.buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
-	my_window.window = apis.window.create(2, 3, 25, 10, true, true, my_window)
-	my_window.min_height = 5
-	my_window.min_width = 10
-	my_window.filesystem = apis.filesystem.create((#user_data.name == 0 or is_system_program or is_remote) and "/" or "/magiczockerOS/users/" .. user_data.name .. "/files", is_remote ~= nil, is_remote)
-	user_data.desktop = {}
-	--local uenv = uenv or {}
-	local env
-	my_window.contextmenu_data = nil
-	my_window.is_system = is_system_program
-	sgv(false)
-	local active_term = {}
-	local native_term = {}
-	local function set_env()
-		local native_id = os.getComputerID and os.getComputerID() or 0
-		env = {
-			_HOSTver = is_system_program and _HOSTver or nil,
-			fs = {},
-			multishell = {
-				getCount = function() return #user_data.windows end,
-				getCurrent = function() return id end,
-				getFocus = function() return user_data.windows[1].id end,
-				getTitle = function()
-					return my_window.label.name
-				end,
-				launch = function(environment, path, ...)
-					if type(path) ~= "string" then
-						return nil
-					end
-					local path = apis.filesystem.get_path(path)
-					create_user_window(user_, false, environment, path, ...)
-					return user_data.windows[1].id
-				end,
-				setFocus = function(_id)
-					if _id ~= id and _id > 0 and user_data.windows[_id] and not user_data.windows[_id].is_system then
-						if resize_mode then
-							resize_mode = false
-							user_data.windows[1].window.toggle_border(false)
-						end
-						local temp_window = user_data.windows[_id]
-						table.remove(user_data.windows, _id)
-						table.insert(user_data.windows, 1, temp_window)
-						draw_windows()
-						resume_system("30taskbar", system_windows.taskbar.coroutine, "window_change")
-					end
-				end,
-				setTitle = function(n, title)
-					if type(n) ~= "number" or type(title) ~= "string" then return end
-					title = title:gsub("\t", "")
-					for j = 1, #user_data.windows do
-						if user_data.windows[j].id == n and (user_data.name == "" or not user_data.windows[j].is_system) then
-							user_data.windows[j].label.name = title
-							user_data.windows[j].window.force_header_update(user_data.settings) -- Update header
-							_queue(system_windows.taskbar.id .. "", "", "window_change")
-							break
-						end
-					end
-				end,
-			},
-			os = {
-				cancelTimer = function(n)
-					if n and window_timers[n] and window_timers[n][1] == id and window_timers[n][2] == user_ then
-						window_timers[n] = nil
-					end
-				end,
-				computerID = function() return native_id end,
-				computerLabel = function() return user_data.settings.computer_label or "" end,
-				getComputerID = function() return native_id end,
-				getComputerLabel = function() return user_data.settings.computer_label or "" end,
-				setComputerLabel = function(new_label)
-					user_data.settings.computer_label = new_label or user_data.settings.computer_label
-					save_user_settings(user_)
-				end,
-				shutdown = is_system_program and os.shutdown or function() my_window.kill() end,
-				version = function() return "magiczockerOS 4.0" end,
-				queueEvent = function(...)
-					_queue(id .. "", user_, ...)
-				end,
-				startTimer = function(nTime)
-					local var = 0
-					if nTime <= 0 then
-						var = 1
-						env.os.queueEvent("timer", 1)
-					else
-						var = os.startTimer(nTime)
-						window_timers[var] = {id, user_}
-					end
-					return var
-				end,
-			},
-			sleep = function(sTime) -- copied from bios.lua
-				local timer = env.os.startTimer( sTime or 0 )
-				repeat
-					local _, param = env.os.pullEvent( "timer" )
-				until param == timer
-			end,
-			get_setting = is_system_program and get_setting or nil,
-			unserialise = is_system_program and unserialise or nil,
-			set_monitor_settings = is_system_program and function(mode, ...)
-				system_settings.monitor_mode = mode or "normal"
-				setup_monitors(...)
-				update_windows(user_)
-			end or nil,
-			create_window = is_system_program and function(path, root, env, ...)
-				create_user_window(user_, root, env, path, ...)
-			end,
-			save_settings = is_system_program and function(data)
-				save_user_settings(user_, data)
-			end or nil,
-			set_settings = is_system_program and function()
-				load_settings(user_)
-				update_windows(user_)
-			end or nil,
-			signin_user = is_system_program and function(server_id, user, pass)
-				send_message(server_id, {return_id = my_computer_id, protocol = my_protocol, username = user, password = pass, my_id = send_id, mode = "login"})
-				window_messages[send_id] = {id, user_}
-				send_id = send_id + 1
-			end or nil,
-			set_pos = is_system_program and function(x, y, width, height, not_redraw)
-				local _a, _b, _c, _d = my_window.window.get_data()
-				my_window.window.reposition(x or _a, y or _b, width or _c, height and height + (my_window.window.has_header() and 1 or 0) or _d)
-				apis.buffer.clear_cache()
-				_queue(id .. "", user_, "term_resize")
-				if not not_redraw and my_window.window.get_visible() then
-					draw_windows()
-				end
-			end or nil,
-			switch_user = is_system_program and function(logoff, username, session)
-				change_user.logoff = logoff
-				change_user.user = username
-				change_user.active = true
-				change_user.session = session
-				switch_user()
-			end or nil,
-			get_total_size = is_system_program and function() return total_size_x, total_size_y end or nil,
-			get_visible = is_system_program and function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
-			set_visible = is_system_program and function(name, state)
-				if system_windows[name] and system_windows[name].window then
-					system_windows[name].window.set_visible(state)
-					refresh_startbutton = true
-					draw_windows()
-				end
-			end or nil,
-			close_os = is_system_program and function() running = false end or nil,
-			set_user = is_system_program and function(a) user_ = a end or nil,
-			term = {},
-			user = is_system_program and user_ or nil,
-			user_data = is_system_program and function() return gUD(user_) end or nil,
-			peripheral = apis.peripheral and apis.peripheral.create(#user_data.name == 0 or path and is_system_program or false),
-			magiczockerOS = get_os_commands(my_window),
-		}
-		env._G = env
-		if (_VERSION or "") == "Lua 5.1" then -- Bug fix for shell
-			env._ENV = env
-		end
-		-- Use _G as fallback if variable is not specified above
-		setmetatable( env.os, {
-			__index = _G.os
-		} )
-		setmetatable( env, {
-			__index = _G
-		} )
-		env.os.reboot = is_system_program and os.reboot or env.os.shutdown
-		for k, v in next, my_window.window do
-			native_term[k] = v
-			active_term[k] = v
-			env.term[k] = function(...) return active_term[k](...) end
-		end
-		env.term.getGraphicsMode = term.getGraphicsMode or nil -- CraftOS-PC support
-		env.term.setGraphicsMode = term.setGraphicsMode or nil -- CraftOS-PC support
-		env.term.current = function() return active_term end
-		env.term.native = type(term.native) == "function" and function() return native_term end or native_term -- before 1.6 > table; since 1.6 > function
-		env.term.redirect = function(target)
-			if type(target) ~= "table" then
-				env.error("bad argument #1 (expected table, got " .. type(target) .. ")", 2)
-			elseif target == term then
-				env.error("term is not a recommended redirect target, try term.current() instead", 2)
-			end
-			for k, v in next, native_term do
-				if type(k) == "string" and type(v) == "function" and type(target[k]) ~= "function" then
-					target[k] = function()
-						env.error("Redirect object is missing method " .. k .. ".", 2)
-					end
-				end
-			end
-			local oldRedirectTarget = active_term
-			active_term = target
-			return oldRedirectTarget
-		end
-		my_window.env = env
-		env.os.run = function(_tEnv, path, ...)
-			if type(_tEnv) ~= "table" then
-				env.error("bad argument #1 (expected table, got " .. type(_tEnv) .. ")", 2)
-			elseif type(path) ~= "string" then
-				env.error("bad argument #2 (expected string, got " .. type(path) .. ")", 2)
-			end
-			local title_old = my_window.label.name
-			path = apis.filesystem.get_path(path)
-			if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
-				local name = path
-				local tmp = apis.filesystem.find_in_string(name:reverse(), "/")
-				if tmp then
-					name = name:sub(-tmp + 1)
-				end
-				if name:sub(-4) == ".lua" then
-					name = name:sub(1, -5)
-				end
-				my_window.label.name = name
-				my_window.window.force_header_update(user_data.settings)
-				resume_system("27taskbar", system_windows.taskbar.coroutine, "window_change")
-			end
-			local file = env.fs.open(path, "r")
-			if file then
-				local tEnv = _tEnv
-				setmetatable(tEnv, {__index = env._G})
-				local content = file.readAll()
-				file.close()
-				local program, err = (env.loadstring or env.load)(content, "@" .. path, "t", tEnv)
-				if program then
-					local args = {...}
-					tEnv._ENV = tEnv
-					if env.setfenv then
-						env.setfenv(program, tEnv)
-					end
-					local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
-					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
-						my_window.label.name = title_old
-						my_window.window.force_header_update(user_data.settings)
-						resume_system("26taskbar", system_windows.taskbar.coroutine, "window_change")
-					end
-					if not ok then
-						if err and err ~= "" then
-							env.printError(path .. ":" .. err, 0)
-						end
-						return nil
-					end
-					return true
-				end
-				if err and err ~= "" then
-					env.printError(path .. "::" .. err, 0)
-				end
-				return nil
-			end
-			env.printError(path .. ": File not exists", 0)
-		end
-		do
-			local tmp = my_window.filesystem
-			for k in next, is_system_program and tmp or _G.fs do
-				if tmp[k] then
-					env.fs[k] = tmp[k]
-				end
-			end
-			-- copy bios functions to env
-			for k, v in pairs( dumps ) do
-				env[k] = load(v, "Bios - " .. k, 't', env)
-				if setfenv then
-					setfenv(env[k], env)
-				end
-			end
-		end
-		env.os.unloadAPI = function(name)
-			name = name or ""
-			if type(env[name]) == "table" and name ~= "_G" and name ~= "_ENV" then
-				env[name] = nil
-			end
-		end
-		env.os.loadAPI = function(path)
-			path = apis.filesystem.get_path(path)
-			local name = path
-			local tmp = apis.filesystem.find_in_string(name:reverse(), "/")
-			name = tmp and name:sub(-tmp + 1) or name
-			local env2 = {}
-			local file = env.fs.open(path, "r")
-			if file then
-				setmetatable(env2, {__index = env._G})
-				local content = file.readAll()
-				file.close()
-				local api, err = (env.loadstring or env.load)(content, "@" .. path, "t", env2)
-				if api then
-					env2._ENV = env2
-					if setfenv then
-						setfenv(api, env2)
-					end
-					local ok, err = run_program(function() return api() end, function(err) return err end)
-					if not ok then
-						if err and err ~= "" then
-							env.error(path .. err)
-						end
-						return
-					end
-					local api_ = {}
-					copy_table(api_, env2)
-					env[name:gsub(".lua", "")] = api_
-					return true
-				end
-				if err and err ~= "" then
-					env.error(path .. err)
-				end
-				return nil
-			end
-			env.error(path .. ": File not exists")
-		end
-		if not fs.exists("/rom/apis/io.lua") and fs.exists("/magiczockerOS/CC/io.lua") then -- Fix for CraftOS-PC
-			local tEnv = {}
-			setmetatable(tEnv, {__index = env._G})
-			local file = fs.open("/magiczockerOS/CC/io.lua", "r")
-			local content = file.readAll()
-			file.close()
-			local program = (env.loadstring or env.load)(content, "@" .. path, "t", tEnv)
-			if program then
-				if env.setfenv then
-					env.setfenv(program, tEnv)
-				end
-				local ok = run_program(function() return program() end, function(err) return err end)
-				if ok then
-					env.io = {}
-					copy_table(env.io, tEnv)
-				end
-			end
-		elseif not fs.exists("/rom/apis") and io then -- io-Fix for MC 1.0 and higher without apis-folder
-			env.io = {}
-			for k, v in next, io do
-				if type(v) == "function" then
-					env.io[k] = (env.loadstring or env.load)(string.dump(v), nil, nil, env)
-					if setfenv then
-						setfenv(env.io[k], env)
-					end
-				end
-			end
-		end
-		-- load apis to env
-		if fs.isDir("/rom/apis/") then
-			local blacklist = {peripheral = true, settings = true, color = true, colours = true, keys = true, multishell = true, term = true}
-			for _, v in next, fs.list("/rom/apis/") do
-				if not blacklist[v:gsub(".lua", "")] and not fs.isDir("/rom/apis/" .. v) then
-					env.os.loadAPI("/rom/apis/" .. v)
-				end
-			end
-		end
-		env.shell = path and env.shell or nil
-	end
-	path = path or "/rom/programs/shell"
-	path = fs.exists(path .. ".lua") and path .. ".lua" or path
-	path = path:sub(1, 1) ~= "/" and "/" .. path or path
-	set_env()
-	do
-		local name = path
-		local tmp = apis.filesystem.find_in_string(name:reverse(), "/")
-		name = tmp and name:sub(-tmp + 1) or name
-		name = name:sub(-4) == ".lua" and name:sub(1, -5) or name
-		user_data.labels[#user_data.labels + 1] = {id = id, name = name}
-		my_window.label = user_data.labels[#user_data.labels]
-		my_window.title = name
-		my_window.window.force_header_update(user_data.settings)
-	end
-	my_window.filesystem.set_remote(get_remote(id, user_, env))
-	local file = is_system_program and fs.open(path, "r") or path and env.fs.open(path, "r")
-	local program, err, content
-	if file then
-		content = file.readAll()
-		file.close()
-	--elseif not is_system_program or is_remote and path then
-	--	content = "local tmp = fs.open(\"" .. path .. "\", \"r\")\nif tmp then\n(loadstring or load)(tmp.readAll(), \"" .. path .. "\", nil, _G)()\nelse\nerror(\"File not exists\")\nend"
-	else
-		message = "File not exists"
-	end
-	do
-		if content then
-			program, err = (env.loadstring or env.load)(content, "@" .. path, "t", env)
-		end
-		if program then
-			env._ENV = env
-			if setfenv then
-				setfenv(program, env)
-			end
-		else
-			message = (err or "") ~= "" and err or "Unknown error"
-		end
-	end
-	local function wait_error()
-		my_window.is_dead = true
-		if my_window.auto_kill then
-			if fs then
-				local file = fs.open("/magiczockerOS/error_log.log", "w")
-				file.write(message)
-				file.close()
-			end
-			return false
-		end
-		if env.term.setBackgroundColor then
-			env.term.setBackgroundColor(32768)
-		end
-		if env.term.setTextColor then
-			env.term.setTextColor(1)
-		end
-		if not env.term then
-			error(message or "Unknown error")
-		end
-		env.term.clear()
-		env.term.setCursorPos(1, 1)
-		error(message)
-		env.print(message)
-		env.print("Press any key to continue")
-		local _running = true
-		repeat
-			local e = {coroutine.yield()}
-			if e[1] == "key" then
-				_running = false
-			end
-		until not _running
-		return false
-	end
-	local function kill_window()
-		my_window.is_dead = true
-		local was_visible = my_window.window.get_visible()
-		my_window.window.set_visible(false)
-		for i = #user_data.windows, 1, -1 do
-			if my_window.id == user_data.windows[i].id then
-				if i == 1 then
-					resize_mode = false
-				end
-				for j = 1, #user_data.labels do
-					if user_data.labels[j].id == user_data.windows[i].id then
-						table.remove(user_data.labels, j)
-						break
-					end
-				end
-				table.remove(user_data.windows, i)
-			end
-		end
-		user_data.desktop = {}
-		_queue(system_windows.taskbar.id .. "", "", "window_change")
-		if was_visible then
-			draw_windows()
-		end
-	end
-	my_window.kill = kill_window
-	my_window.coroutine = coroutine.create(
-		function()
-			if #message > 0 then
-				wait_error()
-				kill_window()
-			else
-				local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
-				if not ok then
-					message = (err or "") ~= "" and err or "Unknown error"
-					wait_error()
-				end
-				kill_window()
-			end
-		end
-	)
-	resume_user(my_window.coroutine, "term_resize")
-	_queue(system_windows.taskbar.id .. "", "", "window_change")
-	if vis_old then
-		sgv(true)
-		_queue("redraw_windows")
-	end
+	error( ( 'bad argument #%d (%s expected, got %s)' ):format( index, table.concat(args, 'or'), type(value)), 3 )
 end
-local function create_system_windows(i)
-	local message = ""
-	local temp = system_window_order[i]
-	local path = system_windows[temp].path
-	local window_number = temp
-	add_to_log("Starting " .. temp)
-	system_windows[temp].contextmenu_data = nil
-	system_windows[temp].id = i * -1
-	system_windows[temp].user_data = function() return gUD(cur_user) end
-	system_windows[temp].filesystem = system_windows[temp].fs and apis.filesystem.create("/") or nil
-	system_windows[temp].buttons = {{"close", 128, 128, 2048, 256}, {"minimize", 128, 128, 512, 256}, {"maximize", 128, 128, 8, 256}}
-	system_windows[temp].window = apis.window.create(system_windows[temp].x or 1, system_windows[temp].y or 1, system_windows[temp].w or w, system_windows[temp].h or h, system_windows[temp].visible, temp == "osk", system_windows[temp])
-	system_windows[temp].min_width = 10
-	system_windows[temp].min_height = 5
-	system_windows[temp].get_setting = get_setting
-	if temp == "osk" then
-		system_windows[temp].label = {name = "On-Screen Keyboard"}
-		system_windows[temp].window.force_header_update(gUD(cur_user).settings) -- Update header
+
+local function create_process( user_id, system, custom_env, path, titlebar, ... )
+	local args = {...}
+	local env = setmetatable( custom_env, {
+			__index = _G
+	} )
+	local out = {
+		env = env,
+		magicOS = sessions[ user_id ].magic,
+		title = path:match('[^/]+$'),
+		user = user_id,
+		system = system,
+		index = #sessions[ user_id ] + 1
+	}
+
+	if sessions[ user_id ].offset then
+		table.insert( sessions[ user_id ], sessions[ user_id ].offset, out )
+	else
+		table.insert( sessions[ user_id ], out )
 	end
-	local env = {
-		os = {
-			queueEvent = _queue, -- contextmenu
-			startTimer = function(nTime) -- taskbar
-				local var = 0
-				if nTime <= 0 then
-					var = 1
-					_queue(system_windows[temp].id .. "", nil, "timer", 1)
-				else
-					var = start_timer(nil, nTime)
-					window_timers[var] = {system_windows[temp].id}
+
+	-- copy bios functions to env
+	for k, v in pairs( dumps ) do
+		env[k] = load(v, 'Bios - ' .. k, 't', env)
+		if setfenv then
+			setfenv(env[k], env)
+		end
+	end
+	env._HOSTver = _HOSTver
+	if system then
+		-- Use magicOS table to avoid conflicts with future CraftOS variables
+		-- and make searching for usage of them easier.
+		env.magicOS = sessions[ user_id ].magic
+		env.os = setmetatable( {
+			shutdown = function()
+				running = false
+			end
+		}, { __index=_G.os } )
+	else
+		--env.fs = ...
+	end
+	env.expect = expect
+	env.multishell = {
+		getCount = function() return #sessions[ user_id ] end,
+		getCurrent = function() return out.index end,
+		getFocus = function()
+			for k,v in ipairs(sessions[ user_id ]) do
+				if v.system == false then
+					return v.index
 				end
-				return var
-			end,
-			cancelTimer = function(n)
-				window_timers[n] = nil
 			end
-		},
-		apis = apis,
-		fs = system_windows[temp].filesystem or fs,
-		create_window = function(path, root, env, ...)
-			create_user_window(cur_user, root, env, path, ...)
+			return nil
 		end,
-		system_windows = system_windows, -- Contextmenu
-		system_window_order = system_window_order, -- Contextmenu
-		get_visible = function(name) return system_windows[name] and system_windows[name].window and system_windows[name].window.get_visible() or false end,
-		set_pos = function(posx, posy, posw, posh, not_redraw) -- contextmeu, osk, taskbar
-			local _x, _y, _w, _h = system_windows[window_number].window.get_data()
-			system_windows[window_number].window.reposition(posx or _x, posy or _y, posw or _w, posh or _h)
-			apis.buffer.clear_cache()
-			if not not_redraw and system_windows[window_number].window.get_visible() then
-				draw_windows()
+		getTitle = function(n) -- index
+			expect(1, n, 'number')
+			for k,v in ipairs(sessions[ user_id ]) do
+				if v.index == n then
+					return v.title
+				end
 			end
+			return nil
 		end,
-		get_button = get_button,
-		get_total_size = function() return total_size_x, total_size_y end,
-		set_visible = function(name, state)
-			if system_windows[name].window then
-				system_windows[name].window.set_visible(state)
-				refresh_startbutton = true
-				draw_windows()
+		launch = function(e, p, ...) -- Env, Path, Arguments
+			expect(1, e, 'table')
+			expect(2, p, 'string')
+			local pro = create_process( user_id, false, e, p, true, ... )
+			draw_windows()
+			return pro.index
+		end,
+		setFocus = function(n) -- index
+			expect(1, n, 'number')
+		end,
+		setTitle = function(n, t) -- index, title
+			expect(1, n, 'number')
+			expect(2, t, 'string')
+			t = t:gsub('\t', '')
+			for k, v in ipairs(sessions[ user_id ]) do
+				if v.index == n then
+					v.title = t
+					v.env.term.force_header_update() -- Update header
+					--_queue(system_windows.taskbar.id .. "", "", "window_change")
+					break
+				end
 			end
-		end,
-		term = system_windows[temp].window,
-		user = cur_user,
-		user_data = system_windows[temp].user_data,
-		get_setting = get_setting,
-		_HOSTver = _HOSTver, -- all
-		register_key = function(key, action)
-			registered_keys[key] = action
 		end
 	}
-	env._G = env
-	setmetatable( env, {
-		-- Use _G as fallback if variable is not specified above
-		__index = _G
-	} )
-	setmetatable( env.os, {
-		-- Use _G.os as fallback if variable is not specified above
-		__index = _G.os
-	} )
-	if system_windows[temp].filesystem then
-		env.os.queueEvent = function(...)
-			_queue(system_windows[temp].id .. "", "", ...)
-		end
-		system_windows[temp].filesystem.set_remote(get_remote(system_windows[temp].id, nil, env))
-	end
-	local file = fs.open(path, "r")
+
+	local message = ''
 	local program, err
+	env.term = apis.window.create(2, 3, 25, 10, true, titlebar, out)
+	local orgSize = env.term.getSize
+	env.term.getSize = function(s)
+		return (s and term.getSize or orgSize)()
+	end
+	env.term.redirect = function() end
+	local file = fs.open( path, 'r' )
 	if file then
-		local content = file.readAll()
+		program, err = (loadstring or load)( file.readAll(), '@' .. path, 't', env, function(err) return err end )
 		file.close()
-		program, err = (loadstring or load)(content, path, nil, env)
 		if program then
+			env._ENV = env
 			if setfenv then
-				setfenv(program, env)
+				setfenv( program, env )
 			end
 		else
-			message = (err or "") ~= "" and err or "unknown error"
+			message = (err or '') ~= '' and err or ('%s: Unknown error in load'):format( path )
 		end
 	else
-		message = "File not exists"
+		message = ('%s: File not found'):format( path )
 	end
-	system_windows[temp].coroutine = coroutine.create(
-		function()
-			if #message > 0 then
-				error_org(message)
-			else
-				local ok, err = run_program(function() return program() end, function(err) return err end)
-				if not ok then
-					message = (err or "") ~= "" and err or "unknown error"
-					error_org(message)
+	local coro = coroutine.create( function()
+		local ok, err
+		if #message == 0 then
+			local ok, err = pcall(function() program(table.unpack(args)) end)
+			if not ok then
+				if #err > 0 then
+					message = err
+				else
+					('%s: Unknown error in pcall'):format( path )
 				end
 			end
 		end
-	)
-	resume_system("20" .. temp, system_windows[temp].coroutine, "")
-	add_to_log("Finished " .. temp)
-end
-local function load_bios()
-	add_to_log("Loading bios...")
-	overrides = {}
-	local function_list = {read = true, print = true, printError = true, load = true, loadfile = true, write = true}
-	local start
-	local function check_expect_path(path)
-		if not _G["~expect"] and fs.exists(path) and not fs.isDir(path) then
-			local file = fs.open(path, "r")
-			if file then
-				local content = file.readAll() or ""
-				file.close()
-				_G["~expect"] = (loadstring or load)(content, "@expect.lua")().expect -- Fixed 2020-01-03
+		if #message > 0 then
+			error2( message or 'Unknown error' )
+			if env.term.setBackgroundColor then
+				env.term.setBackgroundColor( 32768 )
 			end
-		end
-	end
-	check_expect_path("/rom/modules/main/craftos/expect.lua")
-	-- https://github.com/SquidDev-CC/CC-Tweaked/commit/93310850d27286919c162d2387d6540430e2cbe6
-	check_expect_path("/rom/modules/main/cc/expect.lua")
-	if _G["~expect"] then
-		local file, tmp = fs.open("/magiczockerOS/CCTweaked/bios.lua", "r"), nil
-		if file then
-			for line in file.readLine do
-				tmp = line:sub(1, 9) == "function " and line:find("%(") and line:sub(10, ({line:find("%(")})[1] - 1)
-				if tmp and function_list[tmp] then
-					start = tmp
-					overrides[start] = ""
-					if tmp == "load" then
-						overrides[start] = overrides[start] .. "\nlocal nativeload = load\n"
-					end
-					overrides[start] = overrides[start] .. "local function dummy" .. line:sub(({line:find("%(")})[2])
-					overrides[start] = overrides[start] .. "\nlocal expect = _ENV[\"~expect\"]"
-				elseif start then
-					overrides[start] = overrides[start] .. "\n" .. line
-					if line == "end" then
-						overrides[start] = overrides[start] .. "\nreturn dummy"
-						start = nil
-					end
+			if env.term.setTextColor then
+				env.term.setTextColor( 1 )
+			end
+			env.term.clear()
+			env.term.setCursorPos(1, 1)
+			env.print( message )
+			env.print( 'Press any key to continue' )
+			while true do
+				local _, d = coroutine.yield()
+				if d == 'key' then
+					break
 				end
 			end
-			file.close()
 		end
-	end
-	add_to_log("Loaded bios!")
+	end )
+	coroutine.resume(coro, 'term_resize')
+	out.window = env.term
+	out.coroutine = coro
+	return out
 end
-local function check_click_outside(id)
-	local a = false
-	if id ~= (system_windows.osk.id or "") and id ~= (system_windows.taskbar.id or "") then
-		local tmp = nil
-		for i = 1, #system_window_order do
-			tmp = system_windows[system_window_order[i]]
-			if id * -1 ~= i and tmp.window and tmp.click_outside and tmp.window.get_visible() then
-				tmp.window.set_visible(false)
-				a = true
+
+local function login( u ) -- username
+	if user_ids[ u ] then
+		user = u
+		user_id = user_ids[ u ]
+	else
+		last_id = last_id + 1
+		user_ids[ u ] = last_id
+		user = u
+		user_id = user_ids[ u ]
+		sessions[ user_id ] = {
+			offset = 1
+		}
+		sessions[ user_id ].magic = { -- Keep in mind that only window, taskbar and startmenu can access these commands
+			register_key = function() end,
+			get_setting = get_setting,
+			toggle = function( id )
+				sessions[ user_id ][ id ].window.toggle_visible()
+				draw_windows()
+			end,
+			user_data = function() return {
+				settings = {}
+			} end,
+			isVisible = function( id )
+				if sessions[ user_id ][id] then
+					--error2((env.sessions[id]))
+				end
+				return sessions[ user_id ][ id ] and sessions[ user_id ][ id ].window.get_visible() or false
+			end,
+			buttons = {
+				{'close', 128, 128, 2048, 256, function( id )
+					table.remove( sessions[ user_id ], id )
+					draw_windows()
+				end},
+				{'minimize', 128, 128, 512, 256, function( id )
+					sessions[ user_id ][ id ].window.toggle_visible()
+					draw_windows()
+				end},
+				{'maximize', 128, 128, 8, 256, function( id )
+					local s = sessions[ user_id ][ id ]
+					s.window.toggle_maximized()
+					draw_windows()
+					coroutine.resume(s.coroutine, 'term_resize')
+				end}
+			}
+		}
+		local a = ggv()
+		sgv(false)
+		for k, v in next, system_processes do
+			if fs.exists( ('/magiczockerOS/programs/%s.lua'):format( v[ 1 ] ) ) then
+				local z = create_process( user_id, (v[ 1 ] == 'taskbar' or v[ 1 ] == 'startmenu'), {}, ('/magiczockerOS/programs/%s.lua'):format( v[ 1 ] ), v[ 3 ] )
+				z.system = true
+				if not v[ 2 ] then
+					z.window.set_visible(false)
+				end
+				--if v[ 1 ] == 'osk' then
+				--	z.title = 'On-Screen Keyboard'
+				--	sessions[ user_id ].offset = k + 1
+				--end
+				sessions[ user_id ][ v[ 1 ] ] = z
 			end
 		end
-		local ud = gUD(cur_user)
-		local b = false
-		for i = #(ud.windows or ""), 1, -1 do
-			if i ~= id and ud.windows[i].click_outside and ud.windows[i].window.get_visible() then
-				a, b = true, true
-				ud.windows[i].window.set_visible(false)
-				ud.windows[#ud.windows + 1] = ud.windows[i]
-				table.remove(ud.windows, i)
-				id = i <= id and id - 1 or id
-			end
-		end
-		if b then
-			resume_system("9taskbar", system_windows.taskbar.coroutine, "start_change")
-		end
+		sgv(a)
+		draw_windows()
 	end
-	return a
 end
--- start
-do
-	local a, b = _HOSTver >= 1132, {} -- GLFW or LWJGL
-	key_maps[a and 67 or 46] = "c"
-	key_maps[a and 77 or 50] = "m"
-	key_maps[a and 78 or 49] = "n"
-	key_maps[a and 82 or 19] = "r"
-	key_maps[a and 262 or 205] = "right"
-	key_maps[a and 263 or 203] = "left"
-	key_maps[a and 264 or 208] = "down"
-	key_maps[a and 265 or 200] = "up"
-	key_maps[a and 345 or 157] = "right_ctrl"
-	for k, v in next, key_maps do b[v] = k end
-	for k, v in next, b do key_maps[k] = v end
-end
-textutils.serialize = textutils.serialize or fallback_serialise
-textutils.serialise = textutils.serialize
-textutils.unserialize = textutils.unserialize or unserialise
-textutils.unserialise = textutils.unserialize
+
 default_settings = get_default_settings()
-load_system_settings()
-load_api("filesystem")
-load_api("peripheral")
-load_api("buffer")
-load_api("window2")
-apis.window = apis.window2
+apis.peripheral = load_api('peripheral')
+apis.buffer = load_api('buffer')
+apis.window = load_api('window2')
 ggv = apis.buffer.get_global_visible
 sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))
-term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, "term")[1] or apis.peripheral.get_devices(true, true, "monitor")[1])
-w, h = term.getSize()
-setup_monitors(table.unpack(system_settings.devices or {}))
+apis.buffer.set_devices('normal', 'computer')
 apis.window.reload_color_palette({settings = {color_mode = 1} })
-sgv(false)
-load_bios()
-do
-	for i = #system_window_order, 1, -1 do
-		if not fs.exists(system_windows[system_window_order[i]].path) then
-			table.remove(system_window_order, i)
+term = apis.peripheral.get_device(apis.peripheral.get_devices(true, true, 'term')[1] or apis.peripheral.get_devices(true, true, 'monitor')[1])
+w, h = term.getSize()
+login( 'system' )
+
+-- Events
+while running do
+	local e, d, x, y, z = coroutine.yield()
+	local s = sessions[ user_id ]
+	-- Comvert OpenComputers to ComputerCraft
+	if e == 'key_down' then
+		if x > 31 and x < 127 then
+			events('char', string.char(x))
 		end
+		e = 'key'
+		d = y
+	elseif e == 'touch' then
+		e = 'mouse_click'
+		d = z + 1
+	elseif e == 'drop' then
+		e = 'mouse_up'
+		d = z + 1
+	elseif e == 'drag' then
+		e = 'mouse_drag'
+		d = z + 1
+	elseif e == 'scroll' then
+		e = 'mouse_scroll'
+		d = z * -1
+	elseif e == 'screen_resized' then
+		--e = 'monitor_resize'
 	end
-	for i = #system_window_order, 1, -1 do
-		create_system_windows(i)
-	end
-end
-resize_system_windows()
-add_to_log("Starting user")
-do
-	local tmp = fs.exists("/magiczockerOS/programs/login.lua")
-	local tmp_user = tmp and "" or fs.list("/magiczockerOS/users/")[1]
-	if tmp and setup_user(tmp_user) then -- "1\\"
-		create_user_window(cur_user, true, nil, "/magiczockerOS/programs/login.lua")
-		local data = gUD(cur_user)
-		local a = data.windows[1]
-		table.remove(a.buttons, 1)
-		a.window.force_header_update(data.settings)
-	end
-end
-apis.filesystem.add_listener("/desktop", {makeDir = true, open = true, delete = true}) -- For remote users
-add_to_log("Loaded user")
-if not term.setCursorBlink then
-	cursorblink_timer = start_timer(cursorblink_timer, 0.5)
-end
-add_to_log("DRAW WINDOWS!")
-sgv(true)
-draw_windows()
--- events
-local _yield = computer and computer.pullSignal or coroutine.yield
-local ton = tonumber
-if component and os.clock then
-	computer.pushSignal("timer_health")
-end
-function events(...)
-	local e = {...}
-	local timer
-	local device = e[2]
-	if e[1] == "timer_health" then
-		timer = get_timer()
-		if timer then
-			stop_timer(timer)
-		end
-	elseif e[1] == "drag" and drag_old and drag_old[1] == e[3] and drag_old[2] == e[4] then
-		e[1] = nil
-	end
-	if e[1] == "key_down" then
-		if e[3] > 31 and e[3] < 127 then
-			events("char", string.char(e[3]))
-		end
-		e[1] = "key"
-		e[2] = e[4]
-	elseif e[1] == "touch" then
-		e[1] = "mouse_click"
-		e[2] = e[5] + 1
-	elseif e[1] == "drop" then
-		e[1] = "mouse_up"
-		e[2] = e[5] + 1
-	elseif e[1] == "drag" then
-		e[1] = "mouse_drag"
-		e[2] = e[5] + 1
-	elseif e[1] == "scroll" then
-		e[1] = "mouse_scroll"
-		e[2] = e[5] * -1
-	elseif e[1] == "screen_resized" then
-		--e[1] = "monitor_resize"
-	end
-	local user_data = gUD(cur_user)
-	if (monitor_devices.term or computer) and get_setting(user_data.settings, "mouse_left_handed") and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_up") then
-		e[2] = e[2] == 1 and 2 or e[2] == 2 and 1 or e[2]
-	end
-	if computer and (e[1] == "mouse_click" or e[1] == "mouse_drag" or e[1] == "mouse_scroll") then
-		e[3] = e[3] + monitor_order[monitor_devices[device]].offset
-	end
-	if supported_mouse_events[e[1]] then
-		if not (monitor_devices.term or computer) and e[1] ~= "mouse_click_monitor" and e[1] ~= "mouse_drag_monitor" and e[1] ~= "mouse_scroll" then
-			e[1] = nil
-		else
-			total_size_x, total_size_y = apis.buffer.get_size()
-		end
-	end
-	if e[1] == "timer" and qe[e[2]] and queued_events[qe[e[2]]] then
-		local tmp = qe[e[2]]
-		qe[e[2]] = nil
-		events(table.unpack(queued_events[tmp]))
-	elseif (e[1] == "mouse_drag" and (monitor_devices.term or computer) or e[1] == "mouse_drag_monitor") and (click.x ~= e[3] or click.y ~= e[4]) and e[4] <= total_size_y and e[3] <= total_size_x and last_window and last_window.window and last_window.window.get_visible() then
-		drag_old[1], drag_old[2] = e[3], e[4]
-		local has_changed = false
-		local tmp_window = last_window
-		local t_id = tmp_window.id
-		if tmp_window then
-			sgv(false)
-			local win_x, win_y, win_w, win_h = tmp_window.window.get_data()
-			local w_old, h_old = win_w, win_h
-			if tmp_window.window.has_header() and win_y == click.y then
-				if resize_mode then
-					resize_mode = false
-					tmp_window.window.toggle_border(false)
+
+	-- Passing events to windows
+	if e == 'mouse_click' or e == 'mouse_scroll' then
+		for k, v in ipairs( s ) do
+			local pX, pY, pW, pH, pV = v.window.get_data()
+			if v.window.has_header() and pV and x >= pX and x < pX+pW and y == pY then -- Window-Buttons
+				if k > s.offset then
+					table.remove(s, k)
+					table.insert(s, s.offset, v)
+					draw_windows()
+					k = s.offset
 				end
-				win_x = win_x + e[3] - click.x
-				win_y = e[4] < 2 and 2 or e[4]
-				if t_id < 0 and e[4] == 1 then
-					has_changed = true
-					click.y = 2
-					click.x = e[3]
-					tmp_window.window.reposition(win_x, 2, win_w, win_h)
-				elseif t_id > 0 and e[4] == 1 then
-					if not tmp_window.window.is_maximized() then
-						tmp_window.window.set_maximized(true)
-						resume_user(tmp_window.coroutine, "term_resize")
-						has_changed = true
-					end
-					click.x = e[3]
-					click.y = 2
-				elseif t_id > 0 and tmp_window.window.is_maximized() then
-					tmp_window.window.set_maximized(false)
-					win_x, win_y, win_w, win_h = tmp_window.window.get_data()
-					if win_x > e[3] or win_x + win_w - 1 < e[3] then
-						win_x = math.ceil(e[3] - win_w * 0.5)
-					end
-					tmp_window.window.reposition(win_x, e[4], win_w, win_h)
-					win_y = e[4]
-					resume_user(tmp_window.coroutine, "term_resize")
-					has_changed = true
-				else
-					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
+				border_click_id = 0
+				local btn = v.magicOS.buttons[ x - pX + 1 ]
+				if btn and btn[ 6 ] then
+					btn[ 6 ]( k )
+				elseif x == pX + pW - 1 and not v.window.is_maximized() then -- Toggle resize
+					v.window.toggle_border()
+				else -- Empty header space
+					last_header_click = k
+					drag_x = x - pX
 				end
-				if e[4] > 1 then
-					click.x = e[3]
-					click.y = win_y
-					has_changed = true
+				break
+			elseif v.window.getBorder() then
+				border_click_id, border_click_l, border_click_b, border_click_r = k, x == pX, y == pY + pH - 1, x == pX + pW - 1
+				if not border_click_l and not border_click_b and not border_click_r then
+					border_click_id = 0
+					v.window.toggle_border()
 				end
-			elseif resize_mode and t_id > 0 then
-				if click.x == win_x + win_w - 1 then -- border right
-					win_w = math.max(e[3] - win_x + 1, tmp_window.min_width)
-					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
-					click.x = win_x + win_w - 1
-				elseif click.x == win_x then -- border left
-					local org_w = win_x + win_w - 1
-					win_x = math.max(win_x + e[3] - click.x, org_w - win_w + 1)
-					win_w = math.max(win_w - e[3] + click.x, tmp_window.min_width)
-					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
-					click.x = win_x
+			elseif pV and x >= pX and x < pX+pW and y >= pY and y < pY+pH then
+				if e == 'mouse_click' and k > s.offset then
+					table.remove(s, k)
+					table.insert(s, s.offset, v)
+					draw_windows()
+					--k = s.offset
 				end
-				if click.y == win_y + win_h - 1 then -- border bottom
-					win_h = math.max(e[4] - win_y + 1, tmp_window.min_height)
-					tmp_window.window.reposition(win_x, win_y, win_w, win_h)
-					click.y = win_y + win_h - 1
-				end
-				if w_old ~= win_w or h_old ~= win_h then
-					resume_user(tmp_window.coroutine, "term_resize")
-					has_changed = true
-				end
-			else
-				has_changed = true
-				if t_id < 0 then
-					resume_system("19" .. system_window_order[tmp_window.id * -1], tmp_window.coroutine, "mouse_drag", e[2], e[3] - win_x + 1, e[4] - win_y)
-				else
-					resume_user(tmp_window.coroutine, "mouse_drag", e[2], e[3] - win_x + 1, e[4] - win_y)
-				end
-			end
-			sgv(true)
-		end
-		if has_changed then
-			draw_windows()
-		end
-	elseif e[1] == "peripheral_detach" and e[2] == modem_side then
-		search_modem()
-	elseif e[1] == "rednet_message" and use_old then
-		add_to_log("rednet_message")
-		_queue("modem_message", nil, my_computer_id, nil, unserialise(e[3]))
-	elseif e[1] == "monitor_touch" or e[1] == "monitor_scroll" then
-		if monitor_devices[e[2]] and monitor_order[monitor_devices[e[2]]] then
-			local is_scroll = e[1] == "monitor_scroll"
-			local a = uptime()
-			_queue(
-					is_scroll and "mouse_scroll" or a - monitor_last_clicked <= 0.4 and "mouse_drag_monitor" or "mouse_click_monitor",
-					is_scroll and e[5] * -1 or get_setting(user_data.settings, "mouse_left_handed") and 2 or 1,
-					e[3] + monitor_order[monitor_devices[e[2]]].offset,
-					e[4]
-				)
-			monitor_last_clicked = is_scroll and monitor_last_clicked or a
-		end
-	elseif e[1] == "double_click" then
-		if #user_data.windows > 0 and user_data.windows[1].window.get_visible() then
-			local temp_window = user_data.windows[1].window
-			local win_x, win_y, win_w = temp_window.get_data()
-			if e[3] >= win_x and e[3] < win_x + win_w and e[4] == win_y then
-				temp_window.set_maximized(not temp_window.is_maximized())
-				sgv(false)
-				resume_user(user_data.windows[1].coroutine, "term_resize")
-				sgv(true)
-				draw_windows()
-			end
-		end
-	elseif e[1] == "key" and (key_maps[e[2]] or "") == "right_ctrl" then
-		key_timer = start_timer(key_timer, 0.2)
-	elseif e[1] == "key" and key_timer and registered_keys[e[2]] then
-		registered_keys[e[2]]()
-		key_timer = nil
-	elseif e[1] == "key" and key_timer and key_maps[e[2]] then
-		local _key = key_maps[e[2]]
-		local temp_window = user_data.windows[1] and user_data.windows[1].window or nil
-		if _key == "r" and temp_window and temp_window.get_visible() then -- maximize/resize window
-			if resize_mode then
-				resize_mode = false
-				temp_window.toggle_border(false)
-			end
-			temp_window.set_maximized(not temp_window.is_maximized())
-			sgv(false)
-			resume_user(user_data.windows[1].coroutine, "term_resize")
-			sgv(true)
-			draw_windows()
-		elseif _key == "c" and temp_window and temp_window.get_visible() and get_button(user_data.windows[1], "close") then -- close window
-			user_data.windows[1].kill()
-		elseif _key == "n" and cur_user > 0 then -- new window
-			create_user_window(cur_user)
-		elseif position_to_add[_key] and temp_window.get_visible() and temp_window then -- move window
-			local pos_x, pos_y, win_w, win_h = temp_window.get_data()
-			local has_changed
-			pos_x = pos_x + position_to_add[_key][1]
-			pos_y = pos_y + position_to_add[_key][2]
-			if pos_y < 2 then
-				pos_y = 2
-			end
-			if pos_x > 0 and pos_x <= w and pos_y > 1 and pos_y <= h then
-				if pos_y == 2 and not temp_window.is_maximized() then
-					temp_window.set_maximized(true)
-					has_changed = true
-				elseif pos_y > 2 and temp_window.is_maximized() then
-					temp_window.set_maximized(false)
-					has_changed = true
-				end
-				if not temp_window.is_maximized() then
-					pos_x, pos_y, win_w, win_h = temp_window.get_data()
-					pos_x = pos_x + position_to_add[_key][1]
-					if not has_changed then
-						pos_y = pos_y + position_to_add[_key][2]
-					end
-					temp_window.reposition(pos_x, pos_y, win_w, win_h)
-				end
-				if has_changed then
-					sgv(false)
-					resume_user(user_data.windows[1].coroutine, "term_resize")
-					sgv(true)
-				end
-				draw_windows()
-			end
-		end
-		key_timer = nil
-	elseif (e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor") and screen[e[4]] and screen[e[4]][e[3]] and e[4] <= total_size_y and e[3] <= total_size_x then
-		drag_old[1] = 0
-		drag_old[2] = 0
-		last_window = nil
-		if e[1] == "mouse_click_monitor" then
-			e[1] = "mouse_click"
-		end
-		if e[1] == "mouse_click" then
-			click = {x = e[3], y = e[4]}
-		end
-		local need_redraw
-		local id = screen[e[4]][e[3]]
-		local cur_window = id > 0 and user_data.windows[id] or system_windows[system_window_order[id * -1]]
-		if cur_window then
-			local temp_window = cur_window.window
-			local win_x, win_y, win_w, win_h = temp_window.get_data()
-			if id ~= 1 and resize_mode then
-				resize_mode = false
-				user_data.windows[1].window.toggle_border(false)
-			end
-			if e[1] == "mouse_click" and id > 1 then
-				local temp_window = user_data.windows[id]
-				table.remove(user_data.windows, id)
-				table.insert(user_data.windows, 1, temp_window)
-				id = 1
-				need_redraw = true
-				resume_system("14taskbar", system_windows.taskbar.coroutine, "window_change")
-			end
-			if e[1] == "mouse_click" and e[4] == win_y and cur_window.window.has_header() then
-				if last_click.x == e[3] and last_click.y == e[4] and uptime() - last_click.time < get_setting(user_data.settings, "mouse_double_click_speed") then
-					_queue("double_click", e[2], e[3], e[4])
-				end
-				last_click.x = e[3]
-				last_click.y = e[4]
-				last_click.time = uptime()
-				if id > 0 and e[3] == win_x + win_w - 1 and not temp_window.is_maximized() then -- resize
-					resize_mode = not resize_mode
-					temp_window.toggle_border(resize_mode)
-				else
-					local a, b = cur_window.window.has_header() and cur_window.buttons or nil, false
-					local c = a and a[e[3] - win_x + 1]
-					if c and c[1] == "close" then
-						b = true
-						if id == 1 then
-							_queue("key", key_maps.right_ctrl)
-							_queue("key", key_maps.c)
-						elseif id < 0 then
-							temp_window.set_visible(false)
-							need_redraw = true
-						end
-						need_redraw = true
-					elseif c and id > 0 then
-						local d = c[1]
-						b = true
-						if d == "minimize" then
-							_queue("key", key_maps.right_ctrl)
-							_queue("key", key_maps.m)
-						elseif d == "maximize" then
-							_queue("key", key_maps.right_ctrl)
-							_queue("key", key_maps.r)
-						end
-					end
-					last_window = b and last_window or cur_window
-				end
-			elseif e[1] == "mouse_click" and id == 1 and resize_mode and (e[3] == win_x or e[3] == win_x - 1 + win_w or e[4] == win_y - 1 + win_h) then
-				last_window = cur_window
-			elseif e[1] == "mouse_click" and resize_mode and e[3] > win_x and e[3] < win_x + win_w - 1 and e[4] > win_y and e[4] < win_y + win_h - 1 then
-				resize_mode = false
-				temp_window.toggle_border(false)
-			elseif e[1] == "mouse_scroll" and (id < 0 or id == 1 or get_setting(user_data.settings, "mouse_inactive_window_scroll") ~= false) then
-				resume_user(cur_window.coroutine, e[1], e[2], e[3] - win_x + 1, e[4] - win_y + (cur_window.window.has_header() and 0 or 1))
-			elseif e[1] == "mouse_click" and check_click_outside(id) then
-				need_redraw = true
-			elseif (id == 1 or id < 0) and not resize_mode then
-				last_window = cur_window
-				local tmp = false
-				local tmp_ = cur_window.contextmenu_data
-				if e[2] == 2 and tmp_ then
-					local tmpcord = {e[3] - win_x + 1, e[4] - win_y + 1}
-					for i = #tmp_, 1, -1 do
-						if tmpcord[1] >= tmp_[i][1] and tmpcord[1] <= tmp_[i][1] + tmp_[i][2] - 1 and tmpcord[2] >= tmp_[i][3] and tmpcord[2] <= tmp_[i][3] + tmp_[i][4] - 1 then
-							tmp = true
-							resume_system("11contextmenu", system_windows.contextmenu.coroutine, "set_data", tmp_[i][5], e[3], e[4], cur_window)
-							resume_system("10contextmenu", system_windows.contextmenu.coroutine, "redraw_items")
-							system_windows.contextmenu.window.set_visible(true)
-							need_redraw = true
-							break
-						end
-					end
-				end
-				if not tmp then
-					if id > 0 then
-						resume_user(cur_window.coroutine, e[1], e[2], e[3] - win_x + 1, e[4] - win_y + (cur_window.window.has_header() and 0 or 1))
-					else
-						resume_system("9" .. system_window_order[cur_window.id * -1], cur_window.coroutine, e[1], e[2], e[3] - win_x + 1, e[4] - win_y + (cur_window.window.has_header() and 0 or 1))
-					end
-				end
-			end
-			if e[1] == "mouse_click" then
-				local a = check_click_outside(id)
-				need_redraw = need_redraw or a
-			end
-			if need_redraw then
-				draw_windows()
-			end
-		end
-	elseif e[1] == "mouse_drag" or e[1] == "mouse_click" or e[1] == "mouse_up" or e[1] == "mouse_scroll" or e[1] == "mouse_click_monitor" then
-	elseif e[1] == "timer" and tostring(e[2]) == tostring(cursorblink_timer) then
-		if user_data.windows[1] then
-			user_data.windows[1].window.toggle_cursor_blink()
-		end
-		cursorblink_timer = start_timer(cursorblink_timer, 0.5)
-	elseif e[1] == "timer" then
-		local tmp = window_timers
-		if tmp[e[2]] and (tmp[e[2]][1] or 0) > 0 then
-			local tmpu = gUD(tmp[e[2]][2])
-			local tmp1 = tmpu.windows or {}
-			for i = 1, #tmp1 do
-				if tmp1[i].id == tmp[e[2]][1] then
-					resume_user(tmp1[i].coroutine, table.unpack(e))
-					break
-				end
-			end
-		elseif tmp[e[2]] and (tmp[e[2]][1] or 0) < 0 then
-			local tmp_ = system_window_order[tmp[e[2]][1] * -1]
-			resume_system("5" .. tmp_, system_windows[tmp_].coroutine, table.unpack(e))
-		end
-		tmp[e[2]] = nil
-	elseif e[1] == "modem_message" then
-		if type(e[5]) == "string" then
-			e[5] = textutils.unserialise(e[5])
-		end
-		local data = e[5]
-		if type(data) == "table" then
-			local tmp = window_messages[data.my_id] or nil
-			if not tmp then
-				return
-			end
-			data.data = data.data or {}
-			if tmp[1] < 0 and tmp[2] == nil then
-				tmp[1] = tmp[1] * -1
-			end
-			if tmp[1] > 0 and tmp[2] then
-				local tmp1 = gUD(tmp[2]).windows or ""
-				for i = 1, #tmp1 do
-					if tmp1[i].id == tmp[1] then
-						resume_user(tmp1[i].coroutine, e[1], data.my_id, data)
-						tmp[e[2]] = nil
-						break
-					end
-				end
-			elseif tmp[1] > 0 and tmp[2] == nil then
-				if system_windows[system_window_order[tmp[1]]] then
-					resume_system("4" .. system_window_order[tmp[1]], system_windows[system_window_order[tmp[1]]].coroutine, e[1], data.my_id, data)
-				end
-			elseif tmp[1] == 0 and data.mode == "get_settings-answer" then
-				window_messages[data.my_id] = nil
-				for k, v in next, users do
-					if v.name == data.username and v.server == data.return_id then
-						copy_table(gUD(k).settings, data.data)
-						update_windows(k)
-					end
-				end
-			end
-		end
-	elseif type(ton(e[1])) == "number" then
-		local _id = ton(e[1])
-		if _id > 0 then
-			local tmp = gUD(e[2]).windows or ""
-			for i = 1, #tmp do
-				if tmp[i].id == _id then
-					resume_user(tmp[i].coroutine, table.unpack(e, 3))
-					break
-				end
-			end
-		elseif _id < 0 then
-			resume_system("3" .. system_window_order[_id * -1], system_windows[system_window_order[_id * -1]].coroutine, table.unpack(e, 3))
-		end
-	elseif e[1] == "term_resize" then
-		w, h = term.getSize()
-		setup_monitors(table.unpack(system_settings.devices or {}))
-		draw_windows()
-	elseif e[1] == "monitor_resize" and monitor_devices[e[2]] then
-		if monitor_resized and monitor_resized[e[2]] then
-			monitor_resized[e[2]] = nil
-		else
-			setup_monitors(table.unpack(system_settings.devices or {}))
-			draw_windows()
-		end
-	elseif e[1] == "peripheral" and (apis.peripheral.get_type(e[2]) or "") == "monitor" then
-	elseif e[1] == "peripheral_detach" and monitor_devices[e[2]] then
-		for i = 1, #system_settings.devices do
-			if system_settings.devices[i] == e[2] then
-				for _ = i, #system_settings.devices - 1 do
-					system_settings.devices[i] = system_settings.devices[i + 1]
-				end
-				system_settings.devices[#system_settings.devices] = nil
+				last_header_click = nil
+				coroutine.resume( v.coroutine, e, d, x-pX+1, y-pY+1 - ( v.window.has_header() and 1 or 0 ) )
 				break
 			end
 		end
-		setup_monitors(table.unpack(system_settings.devices or {}))
+	elseif e == 'mouse_drag' and border_click_id > 0 then
+		local pX, pY, pW, pH = s[ border_click_id ].window.get_data()
+		if border_click_l then -- Left border
+			pW = pW + (pX - x)
+			pX = x
+		end
+		if border_click_b then -- Bottom border
+			pH = y - pY + 1
+		end
+		if border_click_r then -- Right border
+			pW = x - pX + 1
+		end
+		pW = math.max( window_min_width, pW )
+		pH = math.max( window_min_height, pH )
+		s[ border_click_id ].window.reposition( pX, pY, pW, pH )
 		draw_windows()
-	elseif e[1] == "redraw_windows" then
+		coroutine.resume( s[ border_click_id ].coroutine, 'term_resize' )
+	elseif e == 'mouse_drag' and last_header_click then
+		local pX, pY, pW, pH = s[ last_header_click ].window.get_data()
+		s[ last_header_click ].window.reposition( x - drag_x, y, pW, pH )
 		draw_windows()
-	elseif e[1] == "filesystem_changed" then
-		if e[3] == "/magiczockerOS/users/" .. user_data.name .. "/files/desktop" then
-			resume_system("2desktop", system_windows.desktop.coroutine, "term_resize")
-		elseif e[3] == "/desktop" and user_data.server then
-			resume_system("3desktop", system_windows.desktop.coroutine, "term_resize")
-		end
-	elseif e[1] and not resize_mode then
-		local temp_window
-		for i = 1, #system_window_order do
-			temp_window = system_windows[system_window_order[i]]
-			if temp_window.window.get_visible() then
-				local continue = system_window_order[i] ~= "desktop" or not user_data.windows[1] or
-							user_data.windows[1].window and not user_data.windows[1].window.get_visible()
-				if continue then
-					resume_system("1" .. system_window_order[i], temp_window.coroutine, table.unpack(e))
-					if events_to_break[e[1]] and system_window_order[i] ~= "desktop" and system_window_order[i] ~= "taskbar" then
-						break
-					end
-				end
-			end
-			if system_window_order[i] == "taskbar" and #user_data.windows > 0 then
-				for j = 1, #user_data.windows do
-					temp_window = user_data.windows[j]
-					if temp_window.window.get_visible() then
-						resume_user(temp_window.coroutine, table.unpack(e))
-						if events_to_break[e[1]] then
-							break
-						end
-					end
-				end
-			end
-		end
-	end
-	if computer and os.clock then
-		if timer then
-			computer.pushSignal("timer", timer)
-			computer.pushSignal("timer_health")
-		elseif e[1] == "timer_health" then
-			computer.pushSignal("timer_health")
-		end
-	end
-end
-while running do
-	events(_yield())
-end
-if not has_errored then
-	if term.setBackgroundColor then
-		term.setBackgroundColor(32768)
-	end
-	if term.setTextColor then
-		term.setTextColor(1)
-	end
-	if term.clear then
-		term.clear()
-	end
-	if term.setCursorBlink then
-		term.setCursorBlink(true)
-	end
-	if term.setCursorPos then
-		term.setCursorPos(1, 1)
+	elseif e == 'terminate' then
+		running = false
 	end
 end

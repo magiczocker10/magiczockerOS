@@ -1,7 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 -- Define global variables as local
 local cy = coroutine.yield
@@ -10,10 +7,11 @@ local mc, mf = math.ceil, math.floor
 local tb, tc, tt, tw = term.setBackgroundColor or function() end, term.setCursorPos, term.setTextColor or function() end, term.write
 
 -- Variables
-local my_win = user_data().windows[1]
 local bw = term and term.isColor and (term.isColor() and 3 or (_VERSION):match('^Lua%s') and 2 or 1) or 0
 local cursor, menu, sb, sia, st, w
+local running = true
 local km = {}
+local oskId = 0
 
 -- Functions
 local function draw()
@@ -55,42 +53,32 @@ local function add(a, b)
 		w = #a
 	end
 end
-local function set_my_vis(a)
-	if my_win.window.get_visible() == a then return nil end
-	my_win.window.set_visible(a)
-	local b = user_data().windows
-	for k, v in next, b do
-		if my_win == v then
-			local tmp = v
-			table.remove(b, k)
-			table.insert(b, a and 1 or #b + 1, tmp)
-		end
-	end
-end
 local function create( user )
 	cursor = 1
 	menu = {}
 	w = 1
-	if user ~= '' then
+	if user ~= 'system' then
 		add( 'CraftOS', function() close_os() end)
 		if fe('/magiczockerOS/programs/settings.lua') then
-			add( 'Settings', function() set_my_vis(false) create_window('/magiczockerOS/programs/settings.lua', true) end )
+			add( 'Settings', function() multishell.launch({ magicOS = magicOS }, '/magiczockerOS/programs/settings.lua') end )
 		end
 		if fe('/magiczockerOS/programs/settings-new.lua') then
-			add( 'Settings New', function() set_my_vis(false) create_window('/magiczockerOS/programs/settings-new.lua', true) end )
+			add( 'Settings New', function() multishell.launch({ magicOS = magicOS }, '/magiczockerOS/programs/settings-new.lua') end )
 		end
 		local shellPath = fs.exists( '/rom/programs/shell.lua' ) and '/rom/programs/shell.lua' or '/rom/programs/shell'
-		add( 'Shell', function() set_my_vis(false) create_window() end)
+		add( 'Shell', function() multishell.launch({}, shellPath) end)
 		add( 'Show Desktop', function() show_desktop() end)
 		add( '' )
 	end
-	if fe('/magiczockerOS/programs/login.lua') and user ~= '' then
-		add( 'Sign out', function() switch_user(true, '') end )
-		add( 'Switch User', function() switch_user(false, '') end )
+	if fe('/magiczockerOS/programs/login.lua') and user ~= 'system' then
+		add( 'Sign out', function() magicOS.switch_user(true, '') end )
+		add( 'Switch User', function() magicOS.switch_user(false, '') end )
 		add( '' )
 	end
 	if fe('/magiczockerOS/programs/osk.lua') then
-		add( 'Keyboard', function() set_my_vis(false) set_visible('osk', not get_visible('osk')) end )
+		add( 'Keyboard', function()
+			oskId = multishell.launch( {}, 'magiczockerOS/programs/osk.lua' )
+		end )
 		add( '' )
 	end
 	if os.reboot then
@@ -98,7 +86,7 @@ local function create( user )
 	end
 	add( 'Shutdown', os.shutdown )
 	w = w + 2
-	set_pos(1, 2, w, #menu)
+	term.setPos(1, 2, w, #menu)
 	draw()
 end
 local function show_desktop() -- need rework
@@ -145,7 +133,7 @@ local function events(e, d, _, y)
 		end
 		draw()
 	elseif e == 'user' then
-		create( user_data().name )
+		create( d )
 	elseif e == 'term_resize' then
 		draw()
 	elseif e == 'refresh_settings' then
@@ -153,6 +141,8 @@ local function events(e, d, _, y)
 		tb( ( { 32768, 256, sb } )[ bw ] )
 		tt( ( { 1, 1, st } )[ bw ] )
 		draw()
+	elseif e == 'terminate' then
+		running = false
 	end
 end
 do
@@ -163,6 +153,6 @@ do
 end
 events( 'user', '' )
 events( 'refresh_settings', {} )
-while true do
+while running do
 	events( cy() )
 end

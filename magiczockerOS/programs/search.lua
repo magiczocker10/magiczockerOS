@@ -1,17 +1,18 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
-local term = term
 local data = user_data()
 if not data.server then
 	fs.set_root_path("/magiczockerOS/users/" .. data.name .. "/files/")
 end
 local w, h = term.getSize()
-local user, results, key_maps, settings, reposed, last_pos, cur_settings = user or "", {}, {}, nil, false, {0, 0, 0, 0}, {}
+local user = user or ""
+local results = {}
+local key_maps = {}
+local reposed = false
+local last_pos = {0, 0, 0, 0}
+local settings = {}
 local results_scroll, entry_selected
 local a = term and term.isColor and (term.isColor() and 3 or textutils and textutils.complete and 2 or 1) or 0
-local cs = cur_settings
 local field = {
 	allowed_pattern = "[a-zA-Z0-9-/%.+_%(%)%s]",
 	cursor = 1,
@@ -30,12 +31,6 @@ local function text_color(...)
 end
 local function write_text(a, b, c, d)
 	term.write(not term.isColor and a or term.isColor() and d or textutils and textutils.complete and c or b)
-end
-local function update_cached_settings()
-	cs.sb = get_setting(settings, "search_back")
-	cs.sft = get_setting(settings, "search_field_text")
-	cs.sst = get_setting(settings, "search_seperator_text")
-	cs.st = get_setting(settings, "search_text")
 end
 local function set_position(a)
 	local wt, ht = get_total_size()
@@ -94,8 +89,8 @@ local function draw_field(block_pos)
 		term.setCursorPos(2, 2)
 	end
 	local a = data.text or ""
-	back_color(32768, 128, cs.sb)
-	text_color(1, 1, cs.sft)
+	back_color(32768, 128, settings.sb)
+	text_color(1, 1, settings.sft)
 	if #a == 0 then
 		a = data.watermark or ""
 	end
@@ -132,14 +127,14 @@ local function scroll_to_result(dir)
 	results_scroll = results_scroll < 0 and 0 or results_scroll
 end
 local function set_blink()
-	text_color(1, 1, cs.sft)
+	text_color(1, 1, settings.sft)
 	term.setCursorPos(1 + field.cursor - field.offset, 2)
 	term.setCursorBlink(true)
 end
 local function draw()
 	term.setCursorBlink(false)
 	local empty = (" "):rep(w)
-	back_color(32768, 128, cs.sb)
+	back_color(32768, 128, settings.sb)
 	term.setCursorPos(1, 1)
 	term.write(empty)
 	term.setCursorPos(1, 2)
@@ -147,7 +142,7 @@ local function draw()
 	set_cursor(true)
 	term.write" "
 	term.setCursorPos(1, 3)
-	text_color(1, 256, cs.sst)
+	text_color(1, 256, settings.sst)
 	term.write(#results == 0 and empty or empty:gsub(" ", "_"))
 	for i = 4, h do
 		term.setCursorPos(1, i)
@@ -160,7 +155,7 @@ local function draw()
 			if temp.type == "empty_line" then
 				a = empty
 			else
-				text_color(1, selected and 1 or 256, cs.st)
+				text_color(1, selected and 1 or 256, settings.st)
 				a = (" " .. temp.text .. empty):sub(1, w)
 			end
 			if selected then
@@ -256,9 +251,11 @@ local function events(e, d, x, y)
 		w, h = term.getSize()
 		correct_entries_scroll()
 		draw()
-	elseif e == "refresh_settings" then
-		settings = user_data().settings or {}
-		update_cached_settings()
+	elseif e == 'refresh_settings' then
+		settings.sb = d.search_back or 256
+		settings.sft = d.search_field_text or 1
+		settings.sst = d.search_seperator_text or 128
+		settings.st = d.search_text or 1
 		draw()
 	end
 end

@@ -1,8 +1,4 @@
 -- Calender works from 15.10.1582 until 31.12.9999
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 
 -- Define global variables as local
 local cy = coroutine.yield
@@ -16,6 +12,7 @@ local day, month, year = date.day or 1, date.month or 1, date.year or 1970
 local k = {}
 local w = 23
 local h = 8
+local running = true
 local offsets = {
 	0,31,60,91,121,152,182,213,244,274,305,335,
 	0,31,59,90,120,151,181,212,243,273,304,334
@@ -161,15 +158,17 @@ local function events( e, d, x, y )
 			year = year + 1
 		end
 		fix_date()
+	elseif e == 'terminate' then
+		running = false
 	elseif e == 'term_resize' then
 		local parentW, parentH = term.getSize(true)
-		set_pos(nil, nil, w, h)
+		term.setPos(parentW - w + 1, 2, w, h)
 	elseif e == 'refresh_settings' then
-		cb = d.calendar_back or 1
-		cl = d.calender_label or 256
-		ct = d.calendar_text or 128
-		ctb = d.calendar_today_back or 2048
-		ctt = d.calendar_today_text or 1
+		cb = tonumber( d.calendar_back or '1' )
+		cl = tonumber( d.calender_label or '256' )
+		ct = tonumber( d.calendar_text or '128' )
+		ctb = tonumber( d.calendar_today_back or '2048' )
+		ctt = tonumber( d.calendar_today_text or '1' )
 		draw()
 	end
 end
@@ -184,6 +183,6 @@ do
 end
 events( 'term_resize' )
 events( 'refresh_settings', {} )
-while true do
+while running do
 	events( cy() )
 end

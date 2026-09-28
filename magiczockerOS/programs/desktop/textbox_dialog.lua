@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term = term
 local w, h = term.getSize()
 local running, button_text, empty, key_maps, settings, user_input, user_input_cursor, textline_width, textline_offset = true, other[2], (" "):rep(w), {}, get_settings(), "", 1, w - 2, 0

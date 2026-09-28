@@ -1,11 +1,9 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local file = fs.open('/magiczockerOS/core.lua', 'r')
 local env = setmetatable( {
 	dumps = {
-		dofile = _G.dofile and string.dump( _G.dofile, true ) or nil,
+		--load = string.dump( _G.load, true ),
 		loadfile = _G.loadfile and string.dump( _G.loadfile, true ) or nil,
 		print = _G.print and string.dump( _G.print, true ) or nil,
 		printError = _G.printError and string.dump( _G.printError, true ) or nil,
@@ -16,10 +14,6 @@ local env = setmetatable( {
 	__index = _G
 } )
 env._G = env
-if _G.table.unpack == nil then
-	-- Polyfill for Lua 5.1
-	_G.table.unpack = unpack
-end
 if not file then
 	error('/magiczockerOS/core.lua: File not exists', 0)
 end
@@ -36,9 +30,9 @@ else
 	end
 	return
 end
-local ok, err = xpcall(function() return content() end, function(err) return err end)
+local ok, err = pcall(function() return content() end)
 if not ok then
-	if err and err ~= '' then
+	if err and err ~= "" then
 		error(err, 0)
 	end
 end
