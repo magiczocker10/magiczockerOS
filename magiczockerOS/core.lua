@@ -1,17 +1,5 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
---[[
- ToDo:
- * Only taskbar and startmenu should keep custom functions
- ** every program could run without magiczockerOS for easier testing and optimization
- * Add events
- * Implement filesystem API
- * Move settings to files/.settings.json to remove custom functions from settings.lua
- * Remove _HOSTver
- * Terminate startmenu and calendar to save memory if not visible
- * Fix bugs
-]]--
-
 local user = 'system'
 local user_id = 0
 local last_id = 0
