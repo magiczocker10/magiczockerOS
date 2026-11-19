@@ -66,38 +66,38 @@ local function draw()
 	local ly = leap_year( year )
 	local days = days_in_month( month, ly )
 	a = 1 - a
-	back( 32768, 1, cb )
+	back( 1, 1, cb )
 	for y = 1, h do
 		tc( 1, y )
 		if y == 1 then
-			text( 1, 256, cl )
+			text( 32768, 256, cl )
 			tw( '< ' )
-			text( 1, 128, ct )
+			text( 32768, 128, ct )
 			tw( ('JanFebMarAprMayJunJulAugSepOctNovDec'):sub(3 * month - 2, 3 * month) )
-			text( 1, 256, cl )
+			text( 32768, 256, cl )
 			tw( ' >        < ' )
-			text( 1, 128, ct )
+			text( 32768, 128, ct )
 			tw( ( '%4d' ):format( year ) )
-			text( 1, 256, cl )
+			text( 32768, 256, cl )
 			tw( ' >' )
 		elseif y == 2 then
-			text( 1, 256, cl )
+			text( 32768, 256, cl )
 			tw( '   Mo Th We Th Fr Sa Su' )
 		else
 			for x = 1, 7 do
 				a = a + 1
 				if x == 1 then
-					text( 1, 256, cl )
+					text( 32768, 256, cl )
 					tw( a <= days and ( '%2d' ):format( week( a > 0 and a or 1, month, year, ly ) ) or '  ' )
-					text( 1, 128, ct )
+					text( 32768, 128, ct )
 				end
 				if a == day and month == date.month and year == date.year then
 					tw( ' ' )
-					back( 1, 128, ctb )
-					text( 32768, 1, ctt )
+					back( 32768, 128, ctb )
+					text( 1, 1, ctt )
 					write( '##', ( '%2d' ):format( a ), ( '%2d' ):format( a ), ( '%2d' ):format( a ) )
-					back( 32768, 1, cb )
-					text( 1, 128, ct )
+					back( 1, 1, cb )
+					text( 32768, 128, ct )
 				else
 					tw( (a > 0 and a <= days) and ( ' %2d' ):format( a ) or '   ' )
 				end
