@@ -18,14 +18,16 @@ local function draw()
 	for k, v in next, menu do
 		v = v[1]
 		tc( 1, k )
+		tb( ( { 1, 256, sb } )[ bw ] )
+		tt( ( { 32768, 1, st } )[ bw ] )
 		if v == '' then
 			tw( (' %s '):format(
 				('-'):rep( w - 2 )
 			) )
 		else
 			if bw > 0 and bw < 3 and cursor == k then
-				tb( ( { 1, 128, sb } )[ bw ] )
-				tt( ( { 32768, 1, st } )[ bw ] )
+				tb( ( { 32768, 128, sb } )[ bw ] )
+				tt( ( { 1, 1, st } )[ bw ] )
 				tw( ('%s%s%s%s%s'):format(
 					' ',
 					sia == 'right' and (' '):rep( w - #v - 2 ) or sia == 'left' and '' or (' '):rep( mf( (w - #v - 2) * 0.5 ) ),
@@ -33,8 +35,6 @@ local function draw()
 					sia == 'left' and (' '):rep( w - #v - 2 ) or sia == 'right' and '' or (' '):rep( mc( (w - #v - 2) * 0.5 ) ),
 					' '
 				) )
-				tb( ( { 32768, 256, sb } )[ bw ] )
-				tt( ( { 1, 1, st } )[ bw ] )
 			else
 				tw( ('%s%s%s%s%s'):format(
 					bw < 3 and cursor == k and '>' or ' ',
