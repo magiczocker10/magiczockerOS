@@ -116,8 +116,8 @@ local function events(e, d, x, y)
 		local a, b = d.window_bar_active_back or 256, d.window_bar_active_text or 1
 		local c = term and term.isColor and (term.isColor() and 3 or (_VERSION):match('^Lua%s') and 2 or 1) or 0
 		load_keys( d.osk_key_mapping or 'qwerty' )
-		tb( ( {32768, 32768, a} )[ c ] )
-		tt( ( {1, 1, a == 1 and 32768 or b} )[ c ] )
+		tb( ( {1, 32768, a} )[ c ] )
+		tt( ( {32768, 1, a == 1 and 32768 or b} )[ c ] )
 		local w = draw()
 		term.setPos(nil, nil, w, #layout)
 		draw()
