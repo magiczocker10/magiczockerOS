@@ -295,12 +295,12 @@ local function add_to_log(a)
 		file.close()
 	end
 end
-local function require2( name )
-	local f = fs.open( ('/magiczockerOS/apis/%s.lua'):format( name ), 'r' )
+local function require2( path )
+	local f = fs.open( path, 'r' )
 	local env = setmetatable({
 		apis = apis
 	}, {__index = _G})
-	local api, err = (loadstring or load)( f.readAll(), ('@%s (API)'):format( name ), nil, env )
+	local api, err = (loadstring or load)( f.readAll(), ('[OS] %s'):format( path ), nil, env )
 	f.close()
 	if api then
 		if setfenv then
@@ -645,15 +645,6 @@ local function switch_user()
 	elseif term.setCursorBlink then
 		term.setCursorBlink(false)
 	end
-end
-local function get_default_settings()
-	if not fs.exists("/magiczockerOS/default_settings.json") then
-		error("Default settings not existing!")
-	end
-	local file = fs.open("/magiczockerOS/default_settings.json", "r")
-	local a = file.readAll()
-	file.close()
-	return unserialise(a)
 end
 local function get_setting(source, name)
 	local s = source and source[name]
@@ -1366,12 +1357,12 @@ textutils.serialize = textutils.serialize or fallback_serialise
 textutils.serialise = textutils.serialize
 textutils.unserialize = textutils.unserialize or unserialise
 textutils.unserialise = textutils.unserialize
-default_settings = get_default_settings()
+default_settings = require2("magiczockerOS/default_settings.lua")
 load_system_settings()
-apis.filesystem = require2("filesystem")
-apis.peripheral = require2("peripheral")
-apis.buffer = require2("buffer")
-apis.window = require2("window2")
+apis.filesystem = require2("magiczockerOS/apis/filesystem.lua")
+apis.peripheral = require2("magiczockerOS/apis/peripheral.lua")
+apis.buffer = require2("magiczockerOS/apis/buffer.lua")
+apis.window = require2("magiczockerOS/apis/window2.lua")
 ggv = apis.buffer.get_global_visible
 sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))

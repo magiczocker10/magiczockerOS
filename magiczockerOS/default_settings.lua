@@ -1,5 +1,5 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2026
-{
+return {
 	calendar_back = 128,
 	calendar_text = 1,
 	calendar_text_highlight = 1,
