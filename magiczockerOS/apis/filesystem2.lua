@@ -27,7 +27,7 @@ local functions = {
 -- Functions
 local function fix( user, sPath )
 	local path = { 'magiczockerOS', 'users', user }
-	for word in string.gmatch(sPath, '([^/]+)') do
+	for word in (sPath or ''):gmatch('([^/]+)') do
 		if word == '..' then
 			table.remove( path )
 			if #path < minDepth then

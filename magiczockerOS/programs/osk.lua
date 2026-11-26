@@ -39,7 +39,7 @@ local function load_keys( okm )
 				out1[y] = out1[y] or {}
 				out2[y] = out2[y] or {}
 				layout[y] = layout[y] or {}
-				for word in l:gmatch('%S+') do
+				for word in l:gmatch('(%S+)') do
 					c_word = codes[word]
 					if word:match('^PLACEHOLDER_') then
 						local c = ( ' ' ):rep( tonumber( word:sub( 13 ) ) - 1 )
