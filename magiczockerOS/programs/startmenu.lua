@@ -96,7 +96,7 @@ local function create( user )
 	add( 'Shutdown', os.shutdown )
 	w = w + 2
 	set_pos(1, 2, w, #menu)
-	draw()
+	--draw()
 end
 local function show_desktop() -- need rework
 	term.setVisible(false)
@@ -146,7 +146,7 @@ local function events(e, d, _, y)
 	elseif e == 'term_resize' then
 		draw()
 	elseif e == 'refresh_settings' then
-		sb, sia, st = tonumber( d.startmenu_back or '256' ), d.startmenu_items_align or 'left', tonumber( d.startmenu_text or '1' )
+		sb, sia, st = d.startmenu_back or 256, d.startmenu_items_align or 'left', d.startmenu_text or 1
 		tb( ( { 32768, 256, sb } )[ bw ] )
 		tt( ( { 1, 1, st } )[ bw ] )
 		draw()

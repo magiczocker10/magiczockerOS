@@ -1,28 +1,5 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
---[[
-	run_program: Copyright (c) 2016 Jason Chu (1lann) and Bennett Anderson (GravityScore).
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the 'Software'), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in
-	all copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-	THE SOFTWARE.
-]]
---require('strictmw')
-
 -- Move dumped functions to local table to not expose them to user windows
 local dumps = {}
 for k, v in pairs( _G.dumps ) do
@@ -252,24 +229,10 @@ local function resume_user(coro, ...)
 		end
 	end
 end
-local function run_program(prog, errorhandling) -- xpcall -- copied from https://github.com/JasonTheKitten/Mimic/blob/gh-pages/lua/pre-bios.lua (2019-05-05)
-	local coro = coro_create(prog)
-	local ok = {coro_resume(coro)}
-	local args
-	while coro_status(coro) ~= "dead" do
-		args = {coro_yield()}
-		ok = {coro_resume(coro, table.unpack(args))}
-	end
-	if ok[1] then
-		return true, table.unpack(ok, 2)
-	else
-		return false, errorhandling and errorhandling(ok[2]) or ok[2]
-	end
-end
 local function unserialise(str)
 	local ok, err = (loadstring or load)("return " .. str, "core: unserialize", "t", {})
 	if ok then
-		local ok2, result = run_program(function() return ok() end, function(err) return err end)
+		local ok2, result = pcall(function() return ok() end)
 		if ok2 then
 			return result
 		end
@@ -919,7 +882,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if env.setfenv then
 						env.setfenv(program, tEnv)
 					end
-					local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
+					local ok, err = pcall(function() return program(table.unpack(args)) end)
 					if not fs.exists("/rom/programs/advanced/multishell") and not fs.exists("/rom/programs/advanced/multishell.lua") then
 						my_window.label.name = title_old
 						my_window.window.force_header_update(user_data.settings)
@@ -978,7 +941,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 					if setfenv then
 						setfenv(api, env2)
 					end
-					local ok, err = run_program(function() return api() end, function(err) return err end)
+					local ok, err = pcall(function() return api() end)
 					if not ok then
 						if err and err ~= "" then
 							env.error(path .. err)
@@ -1008,7 +971,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				if env.setfenv then
 					env.setfenv(program, tEnv)
 				end
-				local ok = run_program(function() return program() end, function(err) return err end)
+				local ok = pcall(function() return program() end)
 				if ok then
 					env.io = {}
 					copy_table(env.io, tEnv)
@@ -1077,11 +1040,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 	local function wait_error()
 		my_window.is_dead = true
 		if my_window.auto_kill then
-			if fs then
-				local file = fs.open("/magiczockerOS/error_log.log", "w")
-				file.write(message)
-				file.close()
-			end
+			error2( message )
 			return false
 		end
 		if env.term.setBackgroundColor then
@@ -1138,7 +1097,7 @@ local function create_user_window(sUser, os_root, uenv, path, ...)
 				wait_error()
 				kill_window()
 			else
-				local ok, err = run_program(function() return program(table.unpack(args)) end, function(err) return err end)
+				local ok, err = pcall(function() return program(table.unpack(args)) end)
 				if not ok then
 					message = (err or "") ~= "" and err or "Unknown error"
 					wait_error()
@@ -1228,7 +1187,11 @@ local function create_system_windows(i)
 	env._G = env
 	setmetatable( env, {
 		-- Use _G as fallback if variable is not specified above
-		__index = _G
+		__index = _G,
+		__newindex = function (t, n, v)
+			error2( ('[OS][%s] assign to undeclared variable "%s"'):format( path, n ), 2 )
+			rawset(t, n, v)
+		end
 	} )
 	setmetatable( env.os, {
 		-- Use _G.os as fallback if variable is not specified above
@@ -1261,7 +1224,7 @@ local function create_system_windows(i)
 			if #message > 0 then
 				error_org(message)
 			else
-				local ok, err = run_program(function() return program() end, function(err) return err end)
+				local ok, err = pcall(function() return program() end)
 				if not ok then
 					message = (err or "") ~= "" and err or "unknown error"
 					error_org(message)
