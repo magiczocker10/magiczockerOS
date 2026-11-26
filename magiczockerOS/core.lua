@@ -84,41 +84,30 @@ local error2 = function(txt)
 		if #org_content > 0 then
 			file.write(org_content)
 		end
-		file.write(txt .. '\n\n')
+		file.write((txt or '') .. '\n\n')
 		file.close()
 	end
 end
 
-local function load_api(name)
-	--add_to_log('Loading ' .. name)
-	local path = ('/magiczockerOS/apis/%s.lua'):format( name )
+local function require2( name )
+	local f = fs.open( ('/magiczockerOS/apis/%s.lua'):format( name ), 'r' )
 	local env = setmetatable({
 		apis = apis
 	}, {__index = _G})
-	local file = fs.open( path, 'r')
-	if not file then
-		error2( ('%s: File not exists'):format( path ), 0)
-	end
-	local api, err = (loadstring or load)(file.readAll(), path, nil, env)
-	file.close()
+	local api, err = (loadstring or load)( f.readAll(), ('@%s (API)'):format( name ), nil, env )
+	f.close()
 	if api then
 		if setfenv then
 			setfenv(api, env)
 		end
-		local ok, err = pcall(function() return api() end)
+		local ok, result = pcall(function() return api() end)
 		if not ok then
-			if err and err ~= '' then
+			if result and result ~= '' then
 				error2(err, 0)
 			end
 			return nil
 		end
-		local out = {}
-		for k, v in next, env do
-			if v ~= env then
-				out[k] = v
-			end
-		end
-		return out
+		return result
 	elseif err and err ~= '' then
 		error2(err, 0)
 	end
@@ -189,6 +178,7 @@ local function create_process( user_id, system, custom_env, path, titlebar, ... 
 	if system then
 		-- Use magicOS table to avoid conflicts with future CraftOS variables
 		-- and make searching for usage of them easier.
+		env.close_os = function() running = false end
 		env.magicOS = sessions[ user_id ].magic
 		env.os = setmetatable( {
 			shutdown = function()
@@ -196,7 +186,7 @@ local function create_process( user_id, system, custom_env, path, titlebar, ... 
 			end
 		}, { __index=_G.os } )
 	else
-		--env.fs = ...
+		env.fs = apis.filesystem.new( sessions[ user_id ].username )
 	end
 	env.expect = expect
 	env.multishell = {
@@ -222,7 +212,7 @@ local function create_process( user_id, system, custom_env, path, titlebar, ... 
 		launch = function(e, p, ...) -- Env, Path, Arguments
 			expect(1, e, 'table')
 			expect(2, p, 'string')
-			local pro = create_process( user_id, false, e, p, true, ... )
+			local pro = create_process( user_id, p == 'magiczockerOS/programs/startmenu.lua' or p == 'magiczockerOS/programs/osk.lua', e, p, true, ... )
 			draw_windows()
 			return pro.index
 		end,
@@ -315,7 +305,8 @@ local function login( u ) -- username
 		user = u
 		user_id = user_ids[ u ]
 		sessions[ user_id ] = {
-			offset = 1
+			offset = 1,
+			username = u
 		}
 		sessions[ user_id ].magic = { -- Keep in mind that only window, taskbar and startmenu can access these commands
 			register_key = function() end,
@@ -372,9 +363,10 @@ local function login( u ) -- username
 end
 
 default_settings = get_default_settings()
-apis.peripheral = load_api('peripheral')
-apis.buffer = load_api('buffer')
-apis.window = load_api('window2')
+apis.filesystem = require2( 'filesystem2' )
+apis.peripheral = require2('peripheral')
+apis.buffer = require2('buffer')
+apis.window = require2('window2')
 ggv = apis.buffer.get_global_visible
 sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))
@@ -476,3 +468,12 @@ while running do
 		running = false
 	end
 end
+
+if type( term.setBackgroundColor ) == 'function' then
+	term.setBackgroundColor( 32768 )
+end
+if type( term.setTextColor ) == 'function' then
+	term.setTextColor( 1 )
+end
+term.clear()
+term.setCursorPos( 1, 1 )

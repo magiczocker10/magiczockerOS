@@ -1,5 +1,6 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
+local out = {}
 local peri, _computer_only, monitor_order, monitor_mode, global_visible, pixel_size, cdo_args = apis.peripheral.create(true), component and {} or {"term"}, {}, "normal", true, {6, 9}, {0, 0}
 local global_cache, global_cache_old, peri_call, peri_type, colored, h, term
 local total_size_x, total_size_y = 0, 0
@@ -9,7 +10,7 @@ local validate_modes = {
 	["extend"] = true,
 	["duplicate"] = true,
 }
-function set_peripheral(object)
+out.set_peripheral = function(object)
 	peri_call = object and object.call or nil
 	peri_type = object and object.getType or nil
 	term = peri.wrap(peri.find("term") or peri.find("monitor"))
@@ -19,20 +20,20 @@ function set_peripheral(object)
 		error("Method \"type\" is missing.")
 	end
 end
-function set_global_visible(status)
+out.set_global_visible = function(status)
 	if type(status) == "boolean" then
 		global_visible = status
 	end
 end
-function get_global_visible()
+out.get_global_visible = function()
 	return global_visible
 end
-function clear_cache(keep_old)
+out.clear_cache = function(keep_old)
 	screen_cache = not keep_old and screen_cache or {}
 	global_cache = keep_old and global_cache or {t = {}, b = {}, s = {}}
 	global_cache_old = keep_old and global_cache_old or {}
 end
-function set_term(device, mode, ...)
+out.set_term = function(device, mode, ...)
 	for i = monitor_mode == "duplicate" and 1 or device or 1, monitor_mode == "duplicate" and #monitor_order or device or 1 do
 		peri_call(monitor_order[i].name, mode, ...)
 	end
@@ -92,7 +93,7 @@ local function calculate_device_offset()
 		error"No valid devices."
 	end
 end
-function set_devices(mode, ...)
+out.set_devices = function(mode, ...)
 	monitor_mode = validate_modes[mode] and mode or "normal"
 	local bw, list = false, monitor_mode == "normal" and _computer_only or {...}
 	local m_o = monitor_order
@@ -114,7 +115,7 @@ function set_devices(mode, ...)
 	end
 	monitor_order[#monitor_order + 1] = #monitor_order == 0 and {name = component and peri.find("monitor") or "term"} or nil
 	calculate_device_offset()
-	clear_cache()
+	out.clear_cache()
 end
 local function can_added(data, content, text, back, x)
 	if #data[2] == 0 or data[1] == x - #data[2] and back == data[3] and (content == " " or data[4] == -1 or text == data[4]) then
@@ -146,20 +147,20 @@ function draw_text(screen, data, new, line, rdata)
 		rdata[#rdata + 1] = {copy_table(data), copy_table(new), line}
 	end
 	if data[1] < 1 or data[1] ~= new[1] then
-		set_term(screen, "setCursorPos", new[1] - monitor_order[screen].startx + 1, line)
+		out.set_term(screen, "setCursorPos", new[1] - monitor_order[screen].startx + 1, line)
 		data[1] = new[1] + #new[2]
 	end
 	if data[2] ~= new[3] then
 		data[2] = new[3]
-		set_term(screen, "setBackgroundColor", new[3])
+		out.set_term(screen, "setBackgroundColor", new[3])
 	end
 	if new[4] > 0 and data[3] ~= new[4] then
 		data[3] = new[4]
-		set_term(screen, "setTextColor", new[4])
+		out.set_term(screen, "setTextColor", new[4])
 	end
-	set_term(screen, "write", _tconcat(new[2]))
+	out.set_term(screen, "write", _tconcat(new[2]))
 end
-function redraw_global_cache_line(check_changes, line, startx, endx, return_data)
+out.redraw_global_cache_line = function(check_changes, line, startx, endx, return_data)
 	if not global_visible or not line or line > h or not global_cache.s[line] then return nil end
 	local monitor_mode_ = monitor_mode
 	monitor_mode = return_data and "extend" or monitor_mode
@@ -197,10 +198,10 @@ function redraw_global_cache_line(check_changes, line, startx, endx, return_data
 	global_cache.s[line], monitor_mode = not empty and global_cache.s[line] or nil, monitor_mode_
 	return to_repeat
 end
-function redraw_global_cache(check_changes)
+out.redraw_global_cache = function(check_changes)
 	local rd = {}
 	for i = 1, h do
-		rd[#rd + 1] = redraw_global_cache_line(check_changes, i, nil, nil, monitor_mode == "duplicate" and #monitor_order > 1)
+		rd[#rd + 1] = out.redraw_global_cache_line(check_changes, i, nil, nil, monitor_mode == "duplicate" and #monitor_order > 1)
 	end
 	for i = 2, monitor_mode == "duplicate" and #monitor_order or 1 do
 		for j = 1, #rd do
@@ -211,31 +212,31 @@ function redraw_global_cache(check_changes)
 		end
 	end
 end
-function get_screen()
+out.get_screen = function()
 	return screen_cache
 end
-function get_mode()
+out.get_mode = function()
 	return monitor_mode
 end
-function get_devices()
+out.get_devices = function()
 	return monitor_order
 end
-function get_size()
+out.get_size = function()
 	return total_size_x, total_size_y
 end
-function has_palette()
+out.has_palette = function()
 	return not not term.setPaletteColor
 end
-function has_cursor_blink()
+out.has_cursor_blink = function()
 	return not not term.setCursorBlink
 end
-function is_colored()
+out.is_colored = function()
 	return colored
 end
-function is_visible()
+out.is_visible = function()
 	return global_visible
 end
-function write(x, y, pixel_data)
+out.write = function(x, y, pixel_data)
 	if x < 1 or x > total_size_x or y < 1 or y > total_size_y then
 		return
 	end
@@ -250,3 +251,4 @@ function write(x, y, pixel_data)
 		screen_cache[i] = pixel_data.id
 	end
 end
+return out
