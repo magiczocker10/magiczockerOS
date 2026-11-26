@@ -101,12 +101,12 @@ local registered_keys = {}
 -- Functions
 local function error2(txt)
 	local org_content = ''
-	local file = fs.open('/magiczockerOS/error_log.txt', 'r')
+	local file = fs.open('/magiczockerOS/error.txt', 'r')
 	if file then
 		org_content = file.readAll()
 		file.close()
 	end
-	file = fs.open('error.txt', 'w')
+	file = fs.open('/magiczockerOS/error.txt', 'w')
 	if file then
 		if #org_content > 0 then
 			file.write(org_content)
@@ -299,8 +299,14 @@ local function require2( path )
 	local f = fs.open( path, 'r' )
 	local env = setmetatable({
 		apis = apis
-	}, {__index = _G})
-	local api, err = (loadstring or load)( f.readAll(), ('[OS] %s'):format( path ), nil, env )
+	}, {
+		__index = _G,
+		__newindex = function (t, n, v)
+			error2( ('[OS][%s] assign to undeclared variable "%s"'):format( path, n ), 2 )
+			rawset(t, n, v)
+		end
+	} )
+	local api, err = (loadstring or load)( f.readAll(), ('@%s'):format( path ), nil, env )
 	f.close()
 	if api then
 		if setfenv then
