@@ -89,12 +89,12 @@ local error2 = function(txt)
 	end
 end
 
-local function require2( name )
-	local f = fs.open( ('/magiczockerOS/apis/%s.lua'):format( name ), 'r' )
+local function require2( path )
+	local f = fs.open( path, 'r' )
 	local env = setmetatable({
 		apis = apis
 	}, {__index = _G})
-	local api, err = (loadstring or load)( f.readAll(), ('@%s (API)'):format( name ), nil, env )
+	local api, err = (loadstring or load)( f.readAll(), ('[OS] %s'):format( path ), nil, env )
 	f.close()
 	if api then
 		if setfenv then
@@ -111,22 +111,6 @@ local function require2( name )
 	elseif err and err ~= '' then
 		error2(err, 0)
 	end
-end
-
-local function get_default_settings()
-	if not fs.exists('/magiczockerOS/default_settings.json') then
-		error('Default settings not found!')
-	end
-	local file = fs.open('/magiczockerOS/default_settings.json', 'r')
-	local ok, err = (loadstring or load)(file.readAll(), 'core: unserialize', 't', {})
-	file.close()
-	if ok then
-		local ok, err = pcall(ok)
-		return ok and err or 'core unserialize: Unknown error'
-	else
-		return {error = err}
-	end
-	return {}
 end
 
 local function get_setting(source, name)
@@ -362,11 +346,11 @@ local function login( u ) -- username
 	end
 end
 
-default_settings = get_default_settings()
-apis.filesystem = require2( 'filesystem2' )
-apis.peripheral = require2('peripheral')
-apis.buffer = require2('buffer')
-apis.window = require2('window2')
+default_settings = require2( 'magiczockerOS/default_settings.lua' )
+apis.filesystem = require2( 'magiczockerOS/apis/filesystem2.lua' )
+apis.peripheral = require2('magiczockerOS/apis/peripheral.lua' )
+apis.buffer = require2( 'magiczockerOS/apis/buffer.lua' )
+apis.window = require2( 'magiczockerOS/apis/window2.lua' )
 ggv = apis.buffer.get_global_visible
 sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))
