@@ -1,7 +1,4 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 --[[
 	run_program: Copyright (c) 2016 Jason Chu (1lann) and Bennett Anderson (GravityScore).
@@ -102,6 +99,22 @@ local uptime = os.clock or os.time or function() return 0 end
 local registered_keys = {}
 
 -- Functions
+local function error2(txt)
+	local org_content = ''
+	local file = fs.open('/magiczockerOS/error_log.txt', 'r')
+	if file then
+		org_content = file.readAll()
+		file.close()
+	end
+	file = fs.open('error.txt', 'w')
+	if file then
+		if #org_content > 0 then
+			file.write(org_content)
+		end
+		file.write((txt or '') .. '\n\n')
+		file.close()
+	end
+end
 local function fallback_serialise(data, processed)
 	local processed = processed or {}
 	local to_return = ""
@@ -282,42 +295,27 @@ local function add_to_log(a)
 		file.close()
 	end
 end
-local function load_api(name)
-	add_to_log("Loading " .. name)
-	local env = {}
-	local file = fs.open("/magiczockerOS/apis/" .. name .. ".lua", "r")
-	if not file then
-		error_org("/magiczockerOS/apis/" .. name .. ".lua: File not exists", 0)
-	end
-	setmetatable(env, {__index = _G})
-	env.math, env.apis = math, apis
-	env.textutils = textutils
-	env.fs = fs
-	env.term = term
-	local content = file.readAll()
-	file.close()
-	local api, err = (loadstring or load)(content, "/magiczockerOS/apis/" .. name .. ".lua", nil, env)
+local function require2( name )
+	local f = fs.open( ('/magiczockerOS/apis/%s.lua'):format( name ), 'r' )
+	local env = setmetatable({
+		apis = apis
+	}, {__index = _G})
+	local api, err = (loadstring or load)( f.readAll(), ('@%s (API)'):format( name ), nil, env )
+	f.close()
 	if api then
 		if setfenv then
 			setfenv(api, env)
 		end
-		local ok, err = run_program(function() return api() end, function(err) return err end)
+		local ok, result = pcall(function() return api() end)
 		if not ok then
-			if err and err ~= "" then
-				error_org(err, 0)
+			if result and result ~= '' then
+				error2(err, 0)
 			end
 			return nil
 		end
-		local api_ = {}
-		for k, v in next, env do
-			if v ~= env then
-				api_[k] = v
-			end
-		end
-		apis[name] = api_
-		add_to_log("Loaded " .. name .. "!")
-	elseif err and err ~= "" then
-		error_org(err, 0)
+		return result
+	elseif err and err ~= '' then
+		error2(err, 0)
 	end
 end
 local function gUD(id) -- get_user_data
@@ -1370,11 +1368,10 @@ textutils.unserialize = textutils.unserialize or unserialise
 textutils.unserialise = textutils.unserialize
 default_settings = get_default_settings()
 load_system_settings()
-load_api("filesystem")
-load_api("peripheral")
-load_api("buffer")
-load_api("window2")
-apis.window = apis.window2
+apis.filesystem = require2("filesystem")
+apis.peripheral = require2("peripheral")
+apis.buffer = require2("buffer")
+apis.window = require2("window2")
 ggv = apis.buffer.get_global_visible
 sgv = apis.buffer.set_global_visible
 apis.buffer.set_peripheral(apis.peripheral.create(true))

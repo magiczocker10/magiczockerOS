@@ -1,8 +1,5 @@
 -- Calender works from 15.10.1582 until 31.12.9999
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 -- Define global variables as local
 local cy = coroutine.yield

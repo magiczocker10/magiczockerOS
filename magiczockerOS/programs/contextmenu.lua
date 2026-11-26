@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term = term
 local max_height, max_width, my_size, key_maps, settings, my_pos, scrollable, cur_settings = 15, 20, {0, 0}, {}, user_data().settings or {}, {0, 0}, false, {}
 local cursor, items, scroll, caller, parents, cur_raw

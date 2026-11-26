@@ -1,11 +1,9 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 local component, term = component, term
+local out = {}
 local p, modem, cached, translate, color_link, cur_name, w, h = peripheral, {}, {}, {monitor = "screen", screen = "monitor"}, {}, "", 51, 19
-function get_type(side)
+out.get_type = function(side)
 	if side == "term" then
 		return "monitor"
 	elseif p then
@@ -61,7 +59,7 @@ local function get_mon_device(name)
 	to_return.setBackgroundColour = to_return.setBackgroundColor
 	return to_return
 end
-function get_device(name)
+out.get_device = function(name)
 	local to_return = {}
 	if term and name == "term" then
 		for k, v in next, term do
@@ -73,7 +71,7 @@ function get_device(name)
 			to_return[tmp[i]] = function(...) return peripheral.call(name, tmp[i], ...) end
 		end
 	elseif component then
-		if get_type(name) == "monitor" then
+		if out.get_type(name) == "monitor" then
 			cached[name] = cached[name] or get_mon_device(name)
 			to_return = cached[name]
 		else
@@ -82,7 +80,7 @@ function get_device(name)
 	end
 	return to_return
 end
-function get_devices(system, whitelist, ...) -- whitelist: true/false
+out.get_devices = function(system, whitelist, ...) -- whitelist: true/false
 	local to_filter, to_return = {}, {}
 	local whitelist = not not whitelist
 	for _, v in next, {...} do
@@ -111,16 +109,16 @@ function get_devices(system, whitelist, ...) -- whitelist: true/false
 end
 local function filter_monitor(list)
 	for i = #list, 1, -1 do
-		if get_type(list[i]) == "monitor" then
+		if out.get_type(list[i]) == "monitor" then
 			table.remove(list, i)
 		end
 	end
 	return list
 end
-set_block_modem = function(side, port)
+out.set_block_modem = function(side, port)
 	modem[1], modem[2] = side, port
 end or nil
-function create(is_system)
+out.create = function(is_system)
 	if type(is_system) ~= "boolean" then
 		is_system = false
 	end
@@ -129,11 +127,11 @@ function create(is_system)
 		if type(stype) ~= "string" then
 			error("Wrong type at parameter #1!")
 		end
-		local list = get_devices(is_system, true, "monitor", stype)
+		local list = out.get_devices(is_system, true, "monitor", stype)
 		local to_return = {}
 		if func then
 			for i = 1, #list do
-				local tmp = get_device(list[i])
+				local tmp = out.get_device(list[i])
 				to_return[#to_return + 1] = func(list[i], tmp) and list[i] or nil
 			end
 		else
@@ -142,25 +140,25 @@ function create(is_system)
 		return table.unpack(to_return)
 	end
 	peri.getNames = function()
-		return get_devices(is_system, false, "monitor")
+		return out.get_devices(is_system, false, "monitor")
 	end
 	peri.isPresent = function(side)
-		local tmp = get_type(side)
+		local tmp = out.get_type(side)
 		if is_system or tmp and tmp ~= "monitor" then
 			return true
 		end
 		return false
 	end
 	peri.getType = function(side)
-		local tmp = get_type(side)
+		local tmp = out.get_type(side)
 		if is_system or (tmp or "") ~= "monitor" then
 			return tmp
 		end
 	end
 	peri.getMethods = function(side)
-		if is_system or (get_type(side) or "") ~= "monitor" then
+		if is_system or (out.get_type(side) or "") ~= "monitor" then
 			local to_return = {}
-			local tmp = get_device(side)
+			local tmp = out.get_device(side)
 			for k in next, tmp do
 				to_return[#to_return + 1] = k
 			end
@@ -169,12 +167,12 @@ function create(is_system)
 		end
 	end
 	peri.wrap = function(side)
-		if is_system or (get_type(side) or "") ~= "monitor" then
-			return get_device(side)
+		if is_system or (out.get_type(side) or "") ~= "monitor" then
+			return out.get_device(side)
 		end
 	end
 	peri.call = function(side, _type, arg1, ...)
-		local tmp = get_type(side) or ""
+		local tmp = out.get_type(side) or ""
 		if is_system or tmp ~= "monitor" then
 			if is_system and side == "term" then
 				if term[_type] then
@@ -203,3 +201,4 @@ function create(is_system)
 	end
 	return peri
 end
+return out

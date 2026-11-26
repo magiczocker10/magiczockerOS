@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term = term
 local w, h = term.getSize()
 local width, offset, running, user_settings, col, generated, advanced = (" "):rep(w), 0, true, {}, {}, {}, term.isColor()

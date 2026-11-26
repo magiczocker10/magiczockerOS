@@ -1,7 +1,6 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+local p = {}
 local hex, get_color = {}, {}
 local apis, textutils = apis, textutils
 local st = apis.buffer.set_term
@@ -80,7 +79,7 @@ local function expect(a, b, c, ...)
 	end
 	return error(a .. ": Invalid arg #" .. c .. " (" .. (#d > 1 and _tconcat(d, ", ", 1, #d - 1) .. " or " or "") .. d[#d] .. " expected)")
 end
-function reload_color_palette(user_data)
+p.reload_color_palette = function(user_data)
 	local settings = user_data.settings
 	if apis.buffer.is_colored() and apis.buffer.has_palette() then
 		if cp[settings.color_mode] and ((settings.color_mode or 1) ~= last_palette.mode or (settings.invert_colors or false) ~= last_palette.inverted or (settings.original_colors or false) ~= last_palette.original) then
@@ -113,13 +112,13 @@ function reload_color_palette(user_data)
 		end
 	end
 end
-function init_user_palette(data)
+p.init_user_palette = function(data)
 	data.color_codes = data.color_codes or {}
 	for k, v in next, color_palette.original do
 		data.color_codes[2 ^ (k - 1)] = {v[1], v[2], v[3]}
 	end
 end
-function create(x, y, width, height, visible, header, data)
+p.create = function(x, y, width, height, visible, header, data)
 	local header_tmp
 	local data = data
 	local header = header
@@ -489,7 +488,7 @@ function create(x, y, width, height, visible, header, data)
 				new_color[1], new_color[2], new_color[3] = r, g, b
 			end
 			ud.color_codes[a] = new_color
-			reload_color_palette(ud)
+			p.reload_color_palette(ud)
 		end
 	end
 	window.setTextColor = function(a)
@@ -540,3 +539,4 @@ function create(x, y, width, height, visible, header, data)
 	window.clear()
 	return window
 end
+return p

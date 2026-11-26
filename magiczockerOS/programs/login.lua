@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
 local term, fs = term, fs
 local w, h = term.getSize()
 local field, L1, mode, key_maps, fields, a = 1, "Login", 1, {}, {

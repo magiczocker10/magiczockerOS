@@ -1,7 +1,5 @@
--- magiczockerOS - Copyright by Julian Kriete 2016-2021
-
--- My ComputerCraft-Forum account:
--- http://www.computercraft.info/forums2/index.php?showuser=57180
+-- magiczockerOS - Copyright by Julian Kriete 2016-2026
+local p = {}
 local term, peripheral, fs = term or nil, peripheral, fs
 local to_complete = {"isDir", "isReadOnly", "getSize", "getFreeSpace", "getDrive"}
 local to_complete_ = {"copy", "move"}
@@ -18,7 +16,7 @@ local function call_func(remote, is_remote, id, func, ...)
 		return fs[func](...)
 	end
 end
-function find_in_string(str, data) -- string.find in older cc versions is broken :/
+p.find_in_string = function(str, data) -- string.find in older cc versions is broken :/
 	local datalength = #data
 	for i = 1, #str - datalength + 1 do
 		if str:sub(i, i + datalength - 1) == data then
@@ -27,7 +25,7 @@ function find_in_string(str, data) -- string.find in older cc versions is broken
 	end
 	return nil
 end
-function get_path(path)
+p.get_path = function(path)
 	path = (path or ""):gsub("\\", "/"):gsub("^/+", ""):gsub("/+$", "") .. "/"
 	local cur_path = {}
 	for k in path:gmatch("[^/]+") do
@@ -84,7 +82,7 @@ local function addMissingFolders(path, normalPath, remote, is_remote, server_id)
 	end
 	return items
 end
-function rom_checking(path)
+p.rom_checking = function(path)
 	local driveList = getDrives()
 	local path_ = path or ""
 	path_ = path_:gsub("\\", "/"):gsub("^/+", ""):gsub("/+$", "") .. "/"
@@ -99,7 +97,7 @@ function rom_checking(path)
 	end
 	return false
 end
-function add_listener(path, methods)
+p.add_listener = function(path, methods)
 	if path and methods then
 		path_to_listen[path] = {}
 		local tmp = path_to_listen[path]
@@ -108,12 +106,12 @@ function add_listener(path, methods)
 		end
 	end
 end
-function remove_listener(path)
+p.remove_listener = function(path)
 	path_to_listen[path] = nil
 end
 local function send_event(path, method)
 	if event_active then
-		local folder = find_in_string(path:reverse(), "/")
+		local folder = p.find_in_string(path:reverse(), "/")
 		folder = folder and path:sub(1, #path - folder) or ""
 		local tmp = path_to_listen[folder]
 		if tmp and tmp[method] then
@@ -121,7 +119,7 @@ local function send_event(path, method)
 		end
 	end
 end
-function create(root_path, is_remote, server_id)
+p.create = function(root_path, is_remote, server_id)
 	local filesystem = {}
 	local remote
 	local is_remote = server_id and is_remote or false
@@ -147,22 +145,22 @@ function create(root_path, is_remote, server_id)
 		return root_path
 	end
 	filesystem.exists = fs.exists and function(path)
-		local path = get_path(path)
-		local rc = rom_checking(path)
+		local path = p.get_path(path)
+		local rc = p.rom_checking(path)
 		local tmp = (not rc and root_path .. "/" or "") .. path
 		send_event(tmp, "exists")
 		return call(not rc and is_remote, "exists", tmp)
 	end
 	filesystem.list = fs.list and function(path)
-		local path = event_active and get_path(path) or path
-		local rc = rom_checking(path)
+		local path = event_active and p.get_path(path) or path
+		local rc = p.rom_checking(path)
 		local tmp = (not rc and root_path .. "/" or "") .. path
 		send_event(tmp, "list")
 		return addMissingFolders(tmp, path, remote, not rc and is_remote, server_id)
 	end
 	filesystem.delete = fs.delete and function(path)
-		local path = get_path(path)
-		local rc = rom_checking(path)
+		local path = p.get_path(path)
+		local rc = p.rom_checking(path)
 		path = rc and path or root_path .. "/" .. path
 		if path == root_path .. "/desktop" then -- added for magiczockerOS
 			return nil
@@ -174,7 +172,7 @@ function create(root_path, is_remote, server_id)
 	filesystem.find = function(wildcard)
 		event_active = false
 		local to_return = {}
-		wildcard = "^" .. get_path(wildcard):gsub("^/+", ""):gsub("/+", "/"):gsub("*", "[^/]-") .. "$"
+		wildcard = "^" .. p.get_path(wildcard):gsub("^/+", ""):gsub("/+", "/"):gsub("*", "[^/]-") .. "$"
 		local fts = {""} -- FoldersToSearch
 		for _, v in next, fts do
 			local files = filesystem.list(v)
@@ -193,27 +191,27 @@ function create(root_path, is_remote, server_id)
 		return to_return
 	end
 	filesystem.combine = function(a, b)
-		return get_path((a or "") .. (a and b and "/" or "") .. (b or ""))
+		return p.get_path((a or "") .. (a and b and "/" or "") .. (b or ""))
 	end
 	filesystem.getDir = function(str)
-		local tmp = get_path(str):gsub("/+$", "")
-		local _found = find_in_string(tmp:reverse(), "/")
+		local tmp = p.get_path(str):gsub("/+$", "")
+		local _found = p.find_in_string(tmp:reverse(), "/")
 		return _found and tmp:sub(1, #tmp - _found) or ""
 	end
 	filesystem.getName = function(str)
-		local tmp = "/" .. get_path(str):gsub("/+$", "")
-		local _found = find_in_string(tmp:reverse(), "/")
+		local tmp = "/" .. p.get_path(str):gsub("/+$", "")
+		local _found = p.find_in_string(tmp:reverse(), "/")
 		tmp = _found and tmp:sub(-_found + 1) or ""
 		return #tmp == 0 and "root" or tmp
 	end
 	filesystem.isDriveRoot = fs and fs.isDriveRoot and function(path) -- added for support for CC-Tweaked 1.15.2
-		local path = get_path(path)
-		local rc = rom_checking(path)
+		local path = p.get_path(path)
+		local rc = p.rom_checking(path)
 		return call(not rc and is_remote, "isDriveRoot", rc and path or root_path .. "/" .. path)
 	end or nil
 	filesystem.makeDir = fs.makeDir and function(path)
-		local path = get_path(path)
-		local rc = rom_checking(path)
+		local path = p.get_path(path)
+		local rc = p.rom_checking(path)
 		local to_add = (rc and "" or root_path) .. "/"
 		local tmp = ""
 		for k in path:gmatch("[^/]+") do
@@ -225,8 +223,8 @@ function create(root_path, is_remote, server_id)
 		end
 	end or nil
 	filesystem.open = fs.open and function(path, mode)
-		local path = get_path(path)
-		local rc = rom_checking(path)
+		local path = p.get_path(path)
+		local rc = p.rom_checking(path)
 		local tmp = rc and path or root_path .. "/" .. path
 		local file
 		if not rc and is_remote then
@@ -322,7 +320,7 @@ function create(root_path, is_remote, server_id)
 		end
 		file_table[#file_table] = file_table[#file_table]:sub(1, -2)
 		if #file_table > 1 then
-			file = file:sub(1, -find_in_string(file:reverse(), "/") - 1)
+			file = file:sub(1, -p.find_in_string(file:reverse(), "/") - 1)
 		else
 			file = ""
 		end
@@ -335,11 +333,11 @@ function create(root_path, is_remote, server_id)
 			end
 			to_return[#to_return + 1] = ".." .. (include_slashes and "" or "/")
 		end
-		local rc = rom_checking(get_path(parent_path .. "/" .. file))
+		local rc = p.rom_checking(p.get_path(parent_path .. "/" .. file))
 		if not rc then
-			local path = get_path(parent_path)
+			local path = p.get_path(parent_path)
 			parent_path = root_path .. "/" .. path
-			include_rom = get_path(file) == ""
+			include_rom = p.get_path(file) == ""
 		end
 		local _list = call(not rc and is_remote, "exists", parent_path .. "/" .. file) and call(not rc and is_remote, "isDir", parent_path .. "/" .. file) and call(not rc and is_remote, "list", parent_path .. "/" .. file) or {}
 		if include_rom and term then
@@ -384,8 +382,8 @@ function create(root_path, is_remote, server_id)
 		if fs[to_complete[i]] then
 			local tmp = to_complete[i]
 			filesystem[tmp] = function(path)
-				local path = event_active and get_path(path) or path
-				local rc = rom_checking(path)
+				local path = event_active and p.get_path(path) or path
+				local rc = p.rom_checking(path)
 				path = rc and path or root_path .. "/" .. path
 				send_event(path, tmp)
 				return call(not rc and is_remote, tmp, path)
@@ -394,3 +392,4 @@ function create(root_path, is_remote, server_id)
 	end
 	return filesystem
 end
+return p
