@@ -21,24 +21,21 @@ local function text_color(...)
 	if b then term.setTextColor(b) end
 end
 local function get_time()
-	if settings.cv and (os.time or os.date) then
-		local c_f = settings.cf
-		if os.date then
-			return os.date( c_f and ' %H:%M ' or ' %I:%M %p ' )
-		else
-			local a = nil
-			local b = os.time()
-			if not c_f then
-				a = b > 11 and "PM" or "AM"
-				if b >= 13 then
-					b = b - 12
-				end
-			end
-			local hour = math_floor(b)
-			local minute = math_floor((b - hour) * 60)
-			local tmp = not term.isColor and (get_visible("calendar") and "-" or "_") or " "
-			return tmp .. ('%02d'):format( hour ) .. ":" .. ('%02d'):format( minute ) .. (a and " " .. a or "") .. tmp
-		end
+	local c_f = settings.cf
+	if settings.cv and os.date then
+		return os.date( c_f and ' %H:%M ' or ' %I:%M %p ' )
+	elseif settings.cv and os.time then
+		local time = os.time()
+		local hour = math_floor(time)
+		local minute = math_floor((time - hour) * 60)
+		local tmp = not term.isColor and (get_visible('calendar') and '-' or '_') or ' '
+		return ('%s%02d:%02d%s%s'):format(
+			tmp,
+			(not c_f and time > 12 and hour-12) or hour,
+			minute,
+			(not c_f and (time > 11 and ' PM' or ' AM') or ''),
+			tmp
+		)
 	else
 		return ''
 	end
@@ -141,8 +138,7 @@ local function draw_items()
 	if ({term.getCursorPos()})[1] < w - (user == "" and -1 or 2) - #time then
 		back_color(1, 128, settings.tb)
 		local e = w - (user == "" and -1 or 2) - #time - ({term.getCursorPos()})[1]
-		local f = (" "):rep(e)
-		term.write(not term.isColor and ("_"):rep(e) or f)
+		term.write((not term.isColor and '_' or ' '):rep(e))
 	end
 	w = tmp
 end
@@ -177,8 +173,7 @@ local function set_items()
 		end
 		if offset > 0 and #line - offset < _width then
 			offset = #line - _width
-		end
-		if offset < 0 then
+		elseif offset < 0 then
 			offset = 0
 		end
 	end
@@ -346,7 +341,7 @@ function events(a, b, c)
 		if c > 3 and c <= w - #time - (search and 3 or 0) then
 			if b == -1 and offset > 0 then
 				offset = offset - 1
-			elseif b == 1 and #line > w - #time - 3 + offset then
+			elseif b == 1 and #line > w - #time - (search and 3 or 0) - 3 + offset then
 				offset = offset + 1
 			end
 			draw_items()

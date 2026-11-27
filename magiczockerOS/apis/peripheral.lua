@@ -1,13 +1,13 @@
 -- magiczockerOS - Copyright by Julian Kriete 2016-2026
 
 local component, term = component, term
-local out = {}
-local p, modem, cached, translate, color_link, cur_name, w, h = peripheral, {}, {}, {monitor = "screen", screen = "monitor"}, {}, "", 51, 19
-out.get_type = function(side)
+local p = {}
+local peripheral, modem, cached, translate, color_link, cur_name, w, h = peripheral, {}, {}, {monitor = "screen", screen = "monitor"}, {}, "", 51, 19
+p.get_type = function(side)
 	if side == "term" then
 		return "monitor"
-	elseif p then
-		return p.getType(side)
+	elseif peripheral then
+		return peripheral.getType(side)
 	elseif component then
 		local tmp = component.type(side)
 		return translate[tmp] or tmp
@@ -59,19 +59,19 @@ local function get_mon_device(name)
 	to_return.setBackgroundColour = to_return.setBackgroundColor
 	return to_return
 end
-out.get_device = function(name)
+p.get_device = function(name)
 	local to_return = {}
 	if term and name == "term" then
 		for k, v in next, term do
 			to_return[k] = function(...) return v(...) end
 		end
-	elseif p then
-		local tmp = p.getMethods(name)
+	elseif peripheral then
+		local tmp = peripheral.getMethods(name)
 		for i = 1, #tmp do
 			to_return[tmp[i]] = function(...) return peripheral.call(name, tmp[i], ...) end
 		end
 	elseif component then
-		if out.get_type(name) == "monitor" then
+		if p.get_type(name) == "monitor" then
 			cached[name] = cached[name] or get_mon_device(name)
 			to_return = cached[name]
 		else
@@ -80,7 +80,7 @@ out.get_device = function(name)
 	end
 	return to_return
 end
-out.get_devices = function(system, whitelist, ...) -- whitelist: true/false
+p.get_devices = function(system, whitelist, ...) -- whitelist: true/false
 	local to_filter, to_return = {}, {}
 	local whitelist = not not whitelist
 	for _, v in next, {...} do
@@ -88,11 +88,11 @@ out.get_devices = function(system, whitelist, ...) -- whitelist: true/false
 			to_filter[v] = true
 		end
 	end
-	if p then
+	if peripheral then
 		to_return[1] = system and term and whitelist == (to_filter.term or false) and "term" or nil
-		local list = p.getNames()
+		local list = peripheral.getNames()
 		for i = 1, #list do
-			local tmp = p.getType(list[i]) or ""
+			local tmp = peripheral.getType(list[i]) or ""
 			if (system or tmp ~= "monitor") and whitelist == (to_filter[tmp] or false) then
 				to_return[#to_return + 1] = list[i]
 			end
@@ -109,16 +109,16 @@ out.get_devices = function(system, whitelist, ...) -- whitelist: true/false
 end
 local function filter_monitor(list)
 	for i = #list, 1, -1 do
-		if out.get_type(list[i]) == "monitor" then
+		if p.get_type(list[i]) == "monitor" then
 			table.remove(list, i)
 		end
 	end
 	return list
 end
-out.set_block_modem = function(side, port)
+p.set_block_modem = function(side, port)
 	modem[1], modem[2] = side, port
 end or nil
-out.create = function(is_system)
+p.create = function(is_system)
 	if type(is_system) ~= "boolean" then
 		is_system = false
 	end
@@ -127,11 +127,11 @@ out.create = function(is_system)
 		if type(stype) ~= "string" then
 			error("Wrong type at parameter #1!")
 		end
-		local list = out.get_devices(is_system, true, "monitor", stype)
+		local list = p.get_devices(is_system, true, "monitor", stype)
 		local to_return = {}
 		if func then
 			for i = 1, #list do
-				local tmp = out.get_device(list[i])
+				local tmp = p.get_device(list[i])
 				to_return[#to_return + 1] = func(list[i], tmp) and list[i] or nil
 			end
 		else
@@ -140,25 +140,25 @@ out.create = function(is_system)
 		return table.unpack(to_return)
 	end
 	peri.getNames = function()
-		return out.get_devices(is_system, false, "monitor")
+		return p.get_devices(is_system, false, "monitor")
 	end
 	peri.isPresent = function(side)
-		local tmp = out.get_type(side)
+		local tmp = p.get_type(side)
 		if is_system or tmp and tmp ~= "monitor" then
 			return true
 		end
 		return false
 	end
 	peri.getType = function(side)
-		local tmp = out.get_type(side)
+		local tmp = p.get_type(side)
 		if is_system or (tmp or "") ~= "monitor" then
 			return tmp
 		end
 	end
 	peri.getMethods = function(side)
-		if is_system or (out.get_type(side) or "") ~= "monitor" then
+		if is_system or (p.get_type(side) or "") ~= "monitor" then
 			local to_return = {}
-			local tmp = out.get_device(side)
+			local tmp = p.get_device(side)
 			for k in next, tmp do
 				to_return[#to_return + 1] = k
 			end
@@ -167,19 +167,19 @@ out.create = function(is_system)
 		end
 	end
 	peri.wrap = function(side)
-		if is_system or (out.get_type(side) or "") ~= "monitor" then
-			return out.get_device(side)
+		if is_system or (p.get_type(side) or "") ~= "monitor" then
+			return p.get_device(side)
 		end
 	end
 	peri.call = function(side, _type, arg1, ...)
-		local tmp = out.get_type(side) or ""
+		local tmp = p.get_type(side) or ""
 		if is_system or tmp ~= "monitor" then
 			if is_system and side == "term" then
 				if term[_type] then
 					return term[_type](arg1, ...)
 				end
 			elseif type(_type) == "string" and _type == "getNamesRemote" then
-				return filter_monitor(p.call(side, _type))
+				return filter_monitor(peripheral.call(side, _type))
 			elseif modem[1] and tmp == "modem" and type(_type) == "string" and _type == "close" and side == modem[1] and arg1 == modem[2] then
 				-- Do nothing
 			else
@@ -194,11 +194,11 @@ out.create = function(is_system)
 	peri.native = function()
 		return peri
 	end
-	for k, v in next, p or {} do
-		if p and not peri[k] then
+	for k, v in next, peripheral or {} do
+		if peripheral and not peri[k] then
 			peri[k] = v
 		end
 	end
 	return peri
 end
-return out
+return p
